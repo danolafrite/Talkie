@@ -1,8 +1,8 @@
-# Tablée
+# Talkie
 
 Parle de ce que tu veux, avec quelqu'un qui est là maintenant.
 
-Application web installable (PWA) : salon en direct, conversations de 2 à 4 personnes, notification quand quelqu'un publie un thème.
+Application web installable (PWA) : salon en direct, conversations de 2 à 4 personnes, notification quand quelqu'un publie un thème, assistant IA qui tient compagnie en attendant, sujets du jour, statistiques anonymes.
 
 ## Lancer en local
 
@@ -15,16 +15,16 @@ Puis ouvre http://localhost:3000. Les notifications demandent une adresse en htt
 
 | Nom | Rôle |
 | --- | --- |
-| `VAPID_PUBLIC` | Clé publique des notifications |
-| `VAPID_PRIVATE` | Clé privée des notifications (à garder secrète, ne jamais la mettre dans le code) |
-| `VAPID_SUBJECT` | `mailto:` suivi de ton adresse e-mail (recommandé) |
+| `VAPID_PUBLIC`, `VAPID_PRIVATE` | Clés des notifications (la privée reste secrète). `npm run keys` en génère. |
+| `VAPID_SUBJECT` | `mailto:` suivi de ton adresse e-mail |
+| `ANTHROPIC_API_KEY` | Active l'assistant IA et les sujets du jour. Sans elle : liste de sujets fixe, pas d'assistant. |
+| `AI_DAILY_CAP` | Nombre maximum d'appels à l'IA par jour (300 par défaut) pour maîtriser le coût |
+| `AI_MODEL` | Modèle utilisé (`claude-haiku-5-5` par défaut) |
+| `ADMIN_KEY` | Mot de passe de la page de statistiques : `/admin?key=ton-mot-de-passe` |
 | `PORT` | Fourni par l'hébergeur |
 
-Générer une paire de clés : `npm run keys`.
+## Limites actuelles
 
-## Ce que ce prototype ne fait pas encore
-
-- Pas de base de données : les invitations et les conversations vivent en mémoire et disparaissent au redémarrage.
-- Les signalements sont écrits dans les journaux du serveur et dans `data/reports.jsonl`. Personne ne les examine automatiquement.
-- Pas de comptes : chaque téléphone a un identifiant aléatoire. Quelqu'un qui vide les données de son navigateur change d'identité.
-- Pas de vérification d'âge. À prévoir avant d'ouvrir au public.
+- Pas de base de données : invitations, conversations et statistiques vivent en mémoire et disparaissent au redémarrage.
+- Les signalements sont écrits dans les journaux du serveur. Personne ne les examine automatiquement.
+- Pas de comptes, pas de vérification d'âge. À prévoir avant d'ouvrir au public.
