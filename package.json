@@ -1,0 +1,10 @@
+{
+  "name": "talkie",
+  "version": "0.1.0",
+  "private": true,
+  "description": "Talkie : parle de ce que tu veux, avec quelqu'un qui est là maintenant.",
+  "main": "server.js",
+  "scripts": { "start": "node server.js", "keys": "node -e \"const w=require('web-push');console.log(JSON.stringify(w.generateVAPIDKeys(),null,2))\"" },
+  "engines": { "node": ">=18" },
+  "dependencies": { "web-push": "3.6.7", "ws": "8.18.0" }
+}
