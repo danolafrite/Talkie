@@ -259,7 +259,7 @@
       w.hidden = false;
       if (room.ai) {
         w.className = 'wait';
-        w.textContent = 'Ton invitation est visible dans le salon. En attendant, Talkie, une IA, te tient compagnie. Elle s’efface dès que quelqu’un arrive.';
+        w.textContent = 'Ton invitation est visible dans le salon. En attendant, Mika, une IA, te tient compagnie. Elle s’efface dès que quelqu’un arrive.';
       } else {
         w.className = 'wait plain';
         w.textContent = isHost
@@ -343,7 +343,7 @@
   function addChat(m) {
     var text = clean(m.text, 500);
     if (!text) return;
-    if (m.ai) { typingOn = false; removeTyping(); addLine('msg ai', text, 'Talkie', true); }
+    if (m.ai) { typingOn = false; removeTyping(); addLine('msg ai', text, 'Mika', true); }
     else if (m.pid === myPid) addLine('msg mine', text, nick);
     else addLine('msg', text, clean(m.nick, 20) || 'Quelqu’un');
   }
@@ -360,7 +360,7 @@
     el.id = 'typing';
     var w = document.createElement('div');
     w.className = 'who';
-    w.appendChild(document.createTextNode('Talkie'));
+    w.appendChild(document.createTextNode('Mika'));
     var badge = document.createElement('span');
     badge.className = 'badge';
     badge.textContent = 'IA';
