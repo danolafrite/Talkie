@@ -2,11 +2,12 @@
   'use strict';
 
   function $(id) { return document.getElementById(id); }
-  function clean(s, n) {
-    return String(s == null ? '' : s)
-      .replace(/[\u0000-\u001f\u007f-\u009f​-‏‪-‮⁠-⁯﻿]/g, ' ')
-      .replace(/\s+/g, ' ').trim().slice(0, n);
-  }
+  var INVISIBLE = '\\u0000-\\u001f\\u007f-\\u009f\\u200b-\\u200f\\u202a-\\u202e\\u2060-\\u206f\\ufeff';
+  var RE_CLEAN = new RegExp('[' + INVISIBLE + ']', 'g');
+  // Pour les messages : on garde le joint de largeur nulle (U+200D) dont certains emojis ont besoin.
+  var RE_CHAT = new RegExp('[\\u0000-\\u001f\\u007f-\\u009f\\u200b\\u200c\\u200e\\u200f\\u202a-\\u202e\\u2060-\\u206f\\ufeff]', 'g');
+  function clean(s, n) { return String(s == null ? '' : s).replace(RE_CLEAN, ' ').replace(/\s+/g, ' ').trim().slice(0, n); }
+  function chatClean(s, n) { return String(s == null ? '' : s).replace(RE_CHAT, ' ').replace(/[ \t]+/g, ' ').trim().slice(0, n); }
   function store(k, v) {
     try {
       if (v === undefined) return localStorage.getItem(k);
@@ -20,10 +21,18 @@
     (window.crypto || window.msCrypto).getRandomValues(a);
     return Array.prototype.map.call(a, function (b) { return ('0' + b.toString(16)).slice(-2); }).join('');
   }
+  function el(tag, cls, text) {
+    var e = document.createElement(tag);
+    if (cls) e.className = cls;
+    if (text != null) e.textContent = text;
+    return e;
+  }
 
   var NAMES = ['Hirondelle', 'Noisetier', 'Luciole', 'Marée', 'Brume', 'Cormoran', 'Sureau', 'Galet', 'Pervenche', 'Renard'];
-  var THEMES = ['Les frites', 'La série du moment', 'Ce que je cuisine ce soir', 'Une chanson en boucle', 'Je veux juste discuter', 'Un film à voir ce week-end'];
-  var themeSource = 'default';
+  // Thèmes proposés en permanence (d'origine)
+  var CHIPS = ['Les frites', 'Une journée difficile', 'La série du moment', 'Ce que je cuisine ce soir', 'Je veux juste discuter', 'Musique'];
+  var TREND_THEMES = [];
+  var GIF_URL_RE = /^https:\/\/(?:media\d*|i)\.giphy\.com\/[A-Za-z0-9_\/.\-]{1,160}(?:\?[A-Za-z0-9_=&.\-%]{0,200})?$/;
 
   var cid = store('tablee.cid');
   if (!/^[A-Za-z0-9-]{16,64}$/.test(cid || '')) { cid = uuid(); store('tablee.cid', cid); }
@@ -34,10 +43,11 @@
 
   var ws = null, open = false, replaced = false, retry = 0, retryTimer = null;
   var myPid = null, online = 0, invites = [], room = null, toastTimer = null, typingOn = false;
-  var pushOn = false;
+  var pushOn = false, aiOn = false, gifOn = false;
   var deferredInstall = null;
+  var grp = { key: null, ts: 0 }, dayShown = false;
 
-  /* ---------- Utilitaires d'affichage ---------- */
+  /* ---------- Utilitaires ---------- */
   function toast(text) {
     var t = $('toast');
     t.textContent = text;
@@ -48,6 +58,26 @@
   function send(obj) {
     if (ws && ws.readyState === 1) { ws.send(JSON.stringify(obj)); return true; }
     return false;
+  }
+  function hhmm(ts) {
+    try { return new Date(Number(ts) || Date.now()).toLocaleTimeString('fr-FR', { hour: '2-digit', minute: '2-digit' }); }
+    catch (e) { return ''; }
+  }
+  function tint(str) {
+    var n = 0, s = String(str || '');
+    for (var i = 0; i < s.length; i++) n += s.charCodeAt(i);
+    return ['', 'g', 'b'][n % 3];
+  }
+  function initial(s) {
+    var m = String(s || '').match(/[A-Za-z0-9À-ɏ]/);
+    return (m ? m[0] : '?').toUpperCase();
+  }
+  function ago(ts) {
+    var s = Math.max(0, Math.round((Date.now() - (Number(ts) || Date.now())) / 1000));
+    if (s < 60) return 'à l’instant';
+    var m = Math.round(s / 60);
+    if (m < 60) return 'il y a ' + m + ' min';
+    return 'il y a ' + Math.round(m / 60) + ' h';
   }
 
   /* ---------- Connexion ---------- */
@@ -61,6 +91,7 @@
       open = true; retry = 0;
       send({ t: 'hello', cid: cid, nick: nick, blocked: blocked, visible: document.visibilityState !== 'hidden' });
       renderLobby();
+      if (room) renderConvState();
     };
     ws.onmessage = function (ev) {
       var m;
@@ -71,6 +102,7 @@
       if (ws !== mine) return;
       open = false;
       renderLobby();
+      if (room) renderConvState();
       if (!replaced) scheduleRetry();
     };
     ws.onerror = function () {};
@@ -84,6 +116,9 @@
     switch (m.t) {
       case 'welcome':
         myPid = m.pid;
+        aiOn = !!m.ai;
+        gifOn = !!m.gif;
+        applyFlags();
         pushOn = !!m.push && 'Notification' in window && Notification.permission === 'granted';
         renderNotif();
         resyncPush();
@@ -104,7 +139,7 @@
         break;
       case 'chat': addChat(m); break;
       case 'typing': setTyping(!!m.on); break;
-      case 'sys': addLine('sys', m.text); break;
+      case 'sys': addSys(m.text); break;
       case 'left':
         room = null;
         typingOn = false;
@@ -120,27 +155,42 @@
     }
   }
 
+  function applyFlags() {
+    $('hero-ai').hidden = !aiOn;
+    $('hint-ai').hidden = !aiOn;
+    $('foot-ai').hidden = !aiOn;
+    $('foot-gif').hidden = !gifOn;
+    $('btn-gif').hidden = !gifOn;
+    $('tab-gif').hidden = !gifOn;
+    if (typeof updateTip === 'function') updateTip();
+  }
+
   /* ---------- Salon ---------- */
-  function renderThemes() {
+  function renderChips() {
+    var box = $('chips');
+    box.textContent = '';
+    CHIPS.forEach(function (t) {
+      var b = el('button', 'chip', t);
+      b.type = 'button';
+      b.addEventListener('click', function () { $('theme').value = t; $('theme').focus(); });
+      box.appendChild(b);
+    });
+  }
+
+  function renderTrends() {
+    var sec = $('trends');
     var box = $('themes');
     box.textContent = '';
-    THEMES.forEach(function (t) {
-      var b = document.createElement('button');
+    if (!TREND_THEMES.length) { sec.hidden = true; return; }
+    sec.hidden = false;
+    TREND_THEMES.forEach(function (t) {
+      var b = el('button', 'tcard');
       b.type = 'button';
-      b.className = 'tcard';
-      var lab = document.createElement('span');
-      lab.className = 'lab';
-      lab.textContent = themeSource === 'trends' ? 'Tendance' : 'Idée';
-      var txt = document.createElement('span');
-      txt.className = 'txt';
-      txt.textContent = t;
-      var go = document.createElement('span');
-      go.className = 'go';
-      go.textContent = 'En parler →';
-      var top = document.createElement('span');
-      top.style.display = 'flex'; top.style.flexDirection = 'column'; top.style.gap = '6px';
-      top.appendChild(lab); top.appendChild(txt);
-      b.appendChild(top); b.appendChild(go);
+      var top = el('span');
+      top.appendChild(el('span', 'lab', 'Tendance'));
+      top.appendChild(el('span', 'txt', t));
+      b.appendChild(top);
+      b.appendChild(el('span', 'go', 'En parler →'));
       b.addEventListener('click', function () {
         $('theme').value = t;
         $('compose').scrollIntoView({ behavior: 'smooth', block: 'center' });
@@ -149,30 +199,15 @@
       });
       box.appendChild(b);
     });
-    var sub = $('themes-sub');
-    if (themeSource === 'trends') {
-      sub.textContent = new Date().toLocaleDateString('fr-FR', { weekday: 'long', day: 'numeric', month: 'long' });
-    } else {
-      sub.textContent = 'Pour démarrer';
-    }
+    $('themes-sub').textContent = new Date().toLocaleDateString('fr-FR', { weekday: 'long', day: 'numeric', month: 'long' });
   }
 
   function loadThemes() {
     fetch('/api/themes').then(function (r) { return r.json(); }).then(function (d) {
-      if (d && Array.isArray(d.themes) && d.themes.length) {
-        THEMES = d.themes.map(function (t) { return clean(t, 60); }).filter(Boolean).slice(0, 10);
-        themeSource = d.source === 'trends' ? 'trends' : 'default';
-        renderThemes();
-      }
+      TREND_THEMES = (d && d.source === 'trends' && Array.isArray(d.themes))
+        ? d.themes.map(function (t) { return clean(t, 60); }).filter(Boolean).slice(0, 10) : [];
+      renderTrends();
     }).catch(function () {});
-  }
-
-  function ago(ts) {
-    var s = Math.max(0, Math.round((Date.now() - (Number(ts) || Date.now())) / 1000));
-    if (s < 60) return 'à l’instant';
-    var m = Math.round(s / 60);
-    if (m < 60) return 'il y a ' + m + ' min';
-    return 'il y a ' + Math.round(m / 60) + ' h';
   }
 
   function renderLobby() {
@@ -196,26 +231,19 @@
       ? 'Aucun thème ne correspond. Efface le filtre ou lance le tien.'
       : 'Personne n’attend pour le moment. Lance un thème : dès que quelqu’un l’ouvre, il apparaît ici et vous pouvez discuter.';
     shown.forEach(function (inv) {
-      var li = document.createElement('li');
-      li.className = 'invite';
-      var av = document.createElement('div');
-      av.className = 'avatar';
-      av.textContent = (clean(inv.nick, 20).charAt(0) || '?').toUpperCase();
-      li.appendChild(av);
-      var main = document.createElement('div');
-      main.className = 'invite-main';
-      var th = document.createElement('div');
-      th.className = 'invite-theme';
-      th.textContent = inv.theme;
-      var meta = document.createElement('div');
-      meta.className = 'invite-meta';
-      meta.textContent = clean(inv.nick, 20) + ' · ' + ago(inv.ts) + ' · ' + inv.here + '/' + inv.max;
-      main.appendChild(th);
+      var li = el('li', 'invite');
+      li.appendChild(el('div', 'avatar ' + tint(inv.nick), initial(inv.nick)));
+      var main = el('div', 'invite-main');
+      main.appendChild(el('div', 'invite-theme', inv.theme));
+      var meta = el('div', 'invite-meta');
+      meta.appendChild(el('span', null, clean(inv.nick, 20) + ' · ' + ago(inv.ts)));
+      var seats = el('span', 'seats');
+      seats.setAttribute('aria-label', inv.here + ' sur ' + inv.max + ' places prises');
+      for (var s = 0; s < inv.max; s++) seats.appendChild(el('i', s < inv.here ? 'on' : ''));
+      meta.appendChild(seats);
       main.appendChild(meta);
-      var b = document.createElement('button');
+      var b = el('button', 'primary', 'Rejoindre');
       b.type = 'button';
-      b.className = 'primary';
-      b.textContent = 'Rejoindre';
       b.addEventListener('click', function () { send({ t: 'join', id: inv.id }); });
       li.appendChild(main);
       li.appendChild(b);
@@ -224,20 +252,43 @@
   }
 
   function showLobby() {
+    closePanel();
+    closeSheets();
     $('conv').hidden = true;
     $('lobby').hidden = false;
-    $('app').classList.remove('chatting');
+    document.documentElement.style.overflow = '';
     renderLobby();
   }
 
   /* ---------- Conversation ---------- */
+  function fit() {
+    var vv = window.visualViewport;
+    var root = document.documentElement.style;
+    if (!vv) return;
+    root.setProperty('--vvh', Math.round(vv.height) + 'px');
+    root.setProperty('--vvt', Math.round(vv.offsetTop) + 'px');
+    $('conv').classList.toggle('kb', window.innerHeight - vv.height > 140);
+  }
+  if (window.visualViewport) {
+    visualViewport.addEventListener('resize', fit);
+    visualViewport.addEventListener('scroll', fit);
+  }
+
   function showConv() {
     $('lobby').hidden = true;
     $('conv').hidden = false;
-    $('app').classList.add('chatting');
+    document.documentElement.style.overflow = 'hidden';
     $('log').textContent = '';
-    $('safety').hidden = true;
-    $('btn-safety').setAttribute('aria-expanded', 'false');
+    grp = { key: null, ts: 0 };
+    dayShown = false;
+    closePanel();
+    closeSheets();
+    $('msg').value = '';
+    $('conv-theme').textContent = room.theme;
+    var av = $('conv-av');
+    av.className = 'avatar ' + tint(room.theme);
+    av.textContent = initial(room.theme);
+    fit();
     renderConvState();
   }
 
@@ -251,9 +302,16 @@
     var o = othersInRoom();
     var present = o.filter(function (p) { return p.online; });
     var isHost = room.host === myPid;
-    $('conv-sub').textContent = o.length
-      ? 'Avec ' + o.map(function (p) { return clean(p.nick, 20) + (p.online ? '' : ' (hors ligne)'); }).join(', ')
-      : (isHost ? 'En attente de quelqu’un…' : 'Personne d’autre pour l’instant');
+    var sub = $('conv-sub');
+    sub.className = '';
+    if (typingOn) { sub.textContent = 'Mika écrit…'; sub.className = 'live-on'; }
+    else if (present.length) {
+      sub.textContent = present.map(function (p) { return clean(p.nick, 20); }).join(', ') + ' · en ligne';
+      sub.className = 'live-on';
+    } else if (o.length) sub.textContent = o.map(function (p) { return clean(p.nick, 20); }).join(', ') + ' · hors ligne';
+    else if (room.ai) sub.textContent = 'Mika (IA) te tient compagnie';
+    else sub.textContent = isHost ? 'En attente de quelqu’un…' : 'Personne d’autre pour l’instant';
+
     var w = $('wait');
     if (!o.length) {
       w.hidden = false;
@@ -267,115 +325,359 @@
           : 'Plus personne d’autre n’est là. Tu peux quitter pour revenir au salon.';
       }
     } else { w.hidden = true; }
-    var aiHere = !!room.ai;
-    var can = (present.length > 0 || aiHere) && open;
+
+    var can = (present.length > 0 || !!room.ai) && open;
     $('msg').disabled = !can;
-    $('btn-send').disabled = !can;
+    $('btn-emoji').disabled = !can;
+    $('btn-gif').disabled = !can;
     $('msg').placeholder = !open ? 'Reconnexion…' : (!can ? 'Tu pourras écrire dès que quelqu’un est là.' : 'Écris un message…');
+    updateSend();
     renderSafety(o);
+    updateTip();
   }
+
+  function updateSend() {
+    $('btn-send').disabled = $('msg').disabled || !chatClean($('msg').value, 500);
+    updateMention();
+  }
+
+  /* ---------- @Mika ---------- */
+  var MENTION_RE = /(^|[^\p{L}\p{N}_])(@mika)(?![\p{L}\p{N}_])/iu;
+  function txtNode(text) {
+    var span = el('span', 'txt');
+    var re = /(^|[^\p{L}\p{N}_])(@mika)(?![\p{L}\p{N}_])/giu;
+    var last = 0, m;
+    while ((m = re.exec(text))) {
+      var start = m.index + m[1].length;
+      if (start > last) span.appendChild(document.createTextNode(text.slice(last, start)));
+      span.appendChild(el('span', 'mention', m[2]));
+      last = start + m[2].length;
+    }
+    if (last < text.length) span.appendChild(document.createTextNode(text.slice(last)));
+    return span;
+  }
+  function tipDismissed() { return store('talkie.tipMika') === '1'; }
+  function updateTip() {
+    var show = aiOn && !!room && !room.ai && !tipDismissed() && !$('conv').hidden;
+    $('mika-tip').hidden = !show;
+  }
+  function mentionQuery() {
+    var inp = $('msg');
+    var pos = inp.selectionStart == null ? inp.value.length : inp.selectionStart;
+    var m = /(^|\s)@([\p{L}]{0,5})$/u.exec(inp.value.slice(0, pos));
+    if (!m) return null;
+    var q = m[2].toLowerCase();
+    if (q === 'mika' || 'mika'.indexOf(q) !== 0) return null;
+    return { pos: pos, len: q.length + 1 };
+  }
+  function updateMention() {
+    $('mention-pop').hidden = !(aiOn && room && !room.ai && !$('msg').disabled && mentionQuery());
+  }
+  function pickMention() {
+    var inp = $('msg'), q = mentionQuery();
+    if (!q) { inp.value = (inp.value && !/\s$/.test(inp.value) ? inp.value + ' ' : inp.value) + '@Mika '; }
+    else inp.value = inp.value.slice(0, q.pos - q.len) + '@Mika ' + inp.value.slice(q.pos);
+    if (inp.value.length > 500) inp.value = inp.value.slice(0, 500);
+    inp.focus();
+    try { inp.setSelectionRange(inp.value.length, inp.value.length); } catch (x) { /* ignore */ }
+    updateSend();
+  }
+
+  /* ---------- Messages ---------- */
+  function scrollLog(force, nearBefore) {
+    var log = $('log');
+    if (force || nearBefore) log.scrollTop = log.scrollHeight;
+  }
+  function isNear(log) { return log.scrollHeight - log.scrollTop - log.clientHeight < 90; }
+
+  function ensureDay() {
+    if (dayShown) return;
+    dayShown = true;
+    var d = el('div', 'day');
+    d.appendChild(el('span', null, 'Aujourd’hui'));
+    $('log').appendChild(d);
+  }
+
+  function addSys(text) {
+    var log = $('log');
+    var near = isNear(log);
+    removeTypingNode();
+    ensureDay();
+    var s = el('div', 'sys');
+    s.appendChild(el('span', null, clean(text, 200)));
+    log.appendChild(s);
+    grp = { key: null, ts: 0 };
+    if (typingOn) showTypingNode();
+    scrollLog(false, near);
+  }
+
+  var EMOJI_ONLY = null;
+  try { EMOJI_ONLY = new RegExp('^(?:[\\p{Extended_Pictographic}\\p{Emoji_Modifier}\\u200d\\ufe0f\\s])+$', 'u'); } catch (e) { EMOJI_ONLY = null; }
+  function emojiOnly(text) {
+    if (!EMOJI_ONLY || !EMOJI_ONLY.test(text)) return false;
+    if (window.Intl && Intl.Segmenter) {
+      var n = 0, it = new Intl.Segmenter(undefined, { granularity: 'grapheme' }).segment(text.replace(/\s/g, ''));
+      for (var x of it) { void x; n++; if (n > 3) return false; }
+      return n >= 1;
+    }
+    return text.replace(/\s/g, '').length <= 8;
+  }
+
+  function addChat(m) {
+    var gif = null;
+    if (m.gif && typeof m.gif === 'object' && typeof m.gif.url === 'string' && GIF_URL_RE.test(m.gif.url)) {
+      gif = { url: m.gif.url, title: clean(m.gif.title, 80) };
+    }
+    var text = chatClean(m.text, 500);
+    if (!gif && !text) return;
+    var log = $('log');
+    var near = isNear(log);
+    var ai = !!m.ai;
+    var mine = !ai && m.pid === myPid;
+    if (ai) typingOn = false;
+    removeTypingNode();
+    ensureDay();
+
+    var ts = Number(m.ts) || Date.now();
+    var key = ai ? 'ai' : m.pid;
+    var first = key !== grp.key || ts - grp.ts > 180000;
+    grp = { key: key, ts: ts };
+
+    var row = el('div', 'msg' + (mine ? ' mine' : '') + (ai ? ' ai' : '') + (first ? ' first' : ''));
+    var showName = first && !mine && (ai || (room && room.members.length > 2));
+    if (showName) {
+      var who = el('div', 'who', ai ? 'Mika' : (clean(m.nick, 20) || 'Quelqu’un'));
+      if (ai) who.appendChild(el('span', 'badge', 'IA'));
+      row.appendChild(who);
+    }
+    var b = el('div', 'bubble');
+    if (gif) {
+      b.className = 'bubble gif';
+      var img = el('img');
+      img.src = gif.url;
+      img.alt = gif.title || 'GIF';
+      img.loading = 'lazy';
+      img.addEventListener('load', function () { if (near) $('log').scrollTop = $('log').scrollHeight; });
+      b.appendChild(img);
+      b.appendChild(el('span', 'gtag', 'GIF'));
+      b.appendChild(el('span', 'time', hhmm(ts)));
+    } else {
+      var big = emojiOnly(text);
+      if (big) b.className = 'bubble big';
+      b.appendChild(txtNode(text));
+      b.appendChild(el('span', 'time', hhmm(ts)));
+    }
+    row.appendChild(b);
+    log.appendChild(row);
+    if (typingOn) showTypingNode();
+    scrollLog(mine, near);
+  }
+
+  function removeTypingNode() {
+    var t = document.getElementById('typing');
+    if (t && t.parentNode) t.parentNode.removeChild(t);
+  }
+  function showTypingNode() {
+    removeTypingNode();
+    var log = $('log');
+    var row = el('div', 'msg ai typing first');
+    row.id = 'typing';
+    var b = el('div', 'bubble');
+    b.setAttribute('aria-label', 'Mika écrit');
+    b.innerHTML = '<i></i><i></i><i></i>';
+    row.appendChild(b);
+    log.appendChild(row);
+    log.scrollTop = log.scrollHeight;
+  }
+  function setTyping(on) {
+    typingOn = on;
+    if (on) showTypingNode(); else removeTypingNode();
+    renderConvState();
+  }
+
+  /* ---------- Envoi ---------- */
+  function sendText() {
+    var text = chatClean($('msg').value, 500);
+    if (!text) return;
+    if (send({ t: 'chat', text: text })) {
+      $('msg').value = '';
+      updateSend();
+    } else toast('Le message n’a pas pu partir. Réessaie.');
+  }
+  function sendGif(g) {
+    if (!g || !GIF_URL_RE.test(g.url)) return;
+    if (send({ t: 'chat', gif: { url: g.url, w: g.w, h: g.h, title: g.title } })) closePanel();
+    else toast('Le GIF n’a pas pu partir. Réessaie.');
+  }
+
+  /* ---------- Emojis ---------- */
+  var EMOJI = [
+    ['😀', 'Smileys', '😀 😃 😄 😁 😆 😅 😂 🤣 🥲 😊 😇 🙂 🙃 😉 😌 😍 🥰 😘 😗 😋 😛 😜 🤪 😝 🤗 🤭 🤫 🤔 🫡 😐 😑 😶 🙄 😏 😬 😮 😯 😲 🥱 😴 😪 😷 🤒 🤕 🤢 🤮 🥵 🥶 🥴 😵 🤯 🤠 🥳 😎 🤓 🧐 😕 😟 🙁 😮‍💨 😢 😭 😱 😖 😞 😓 😩 😫 😤 😡 😠 🤬 😈 💀 🤡 👻 👽 🤖'],
+    ['👍', 'Gestes', '👍 👎 👌 🤌 ✌️ 🤞 🫶 🤟 🤘 🤙 👈 👉 👆 👇 ☝️ ✋ 🤚 🖐️ 👋 🤝 🙏 👏 🙌 💪 🫰 🫵 ✍️ 🤳 💅 👀 🧠 🫂'],
+    ['❤️', 'Cœurs', '❤️ 🧡 💛 💚 💙 💜 🖤 🤍 🤎 💔 ❤️‍🔥 💕 💞 💓 💗 💖 💘 💝 ✨ 💫 ⭐ 🌟 🔥 💥 💯 ✅ ❌ ❓ ❗'],
+    ['🍟', 'Miam', '🍟 🍔 🌭 🍕 🌮 🌯 🥙 🥪 🥗 🍝 🍜 🍣 🍱 🍛 🍤 🥟 🧀 🥖 🥐 🥞 🧇 🍳 🥓 🍗 🍖 🥩 🥔 🍠 🥕 🌽 🍅 🥑 🍓 🍒 🍑 🍌 🍉 🍇 🍍 🥭 🍎 🍫 🍬 🍭 🍩 🍪 🎂 🍰 🧁 🍦 ☕ 🍵 🥤 🍺 🍷 🥂 🍸'],
+    ['🎉', 'Fête', '🎉 🎊 🎈 🎁 🎂 🥂 🍾 🎶 🎵 🎤 🎧 🎸 🥁 🎹 🎬 🍿 🎮 🕹️ 🎲 🎯 🎨 📺 📸 🪩 💃 🕺'],
+    ['🐶', 'Nature', '🐶 🐱 🐭 🐹 🐰 🦊 🐻 🐼 🐨 🐯 🦁 🐮 🐷 🐸 🐵 🙈 🙉 🙊 🐔 🐧 🐦 🦆 🦉 🦄 🐝 🦋 🐢 🐙 🐬 🐳 🌸 🌹 🌻 🌈 ☀️ 🌙 ☁️ ⛈️ ❄️ 🌊 🌍'],
+    ['⚽', 'Sport', '⚽ 🏀 🏈 ⚾ 🎾 🏐 🏉 🎱 🏓 🏸 🥊 🥋 ⛳ 🏊 🚴 🏃 🧘 🏆 🥇 🥈 🥉 🏅'],
+    ['✈️', 'Voyage et objets', '✈️ 🚗 🚕 🚌 🚲 🛵 🚆 🚀 🏖️ 🏝️ ⛰️ 🏕️ 🗺️ 🧳 🏠 🌆 🌃 ⏰ 📱 💻 💡 📚 💰']
+  ];
+  var emojiCat = 0;
+
+  function recents() {
+    try { var r = JSON.parse(store('tablee.recent') || '[]'); return Array.isArray(r) ? r.slice(0, 24) : []; } catch (e) { return []; }
+  }
+  function pushRecent(e) {
+    var r = recents().filter(function (x) { return x !== e; });
+    r.unshift(e);
+    store('tablee.recent', JSON.stringify(r.slice(0, 24)));
+  }
+  function categories() {
+    var cats = EMOJI.map(function (c) { return { icon: c[0], name: c[1], list: c[2].split(' ') }; });
+    var r = recents();
+    if (r.length) cats.unshift({ icon: '🕘', name: 'Récents', list: r });
+    return cats;
+  }
+  function renderEmoji() {
+    var cats = categories();
+    if (emojiCat >= cats.length) emojiCat = 0;
+    var tabs = $('ecats');
+    tabs.textContent = '';
+    cats.forEach(function (c, i) {
+      var b = el('button', 'ecat', c.icon);
+      b.type = 'button';
+      b.setAttribute('role', 'tab');
+      b.setAttribute('aria-label', c.name);
+      b.setAttribute('aria-selected', String(i === emojiCat));
+      b.addEventListener('click', function () { emojiCat = i; renderEmoji(); });
+      tabs.appendChild(b);
+    });
+    var grid = $('egrid');
+    grid.textContent = '';
+    grid.scrollTop = 0;
+    grid.appendChild(el('div', 'glabel', cats[emojiCat].name));
+    cats[emojiCat].list.forEach(function (e) {
+      var b = el('button', null, e);
+      b.type = 'button';
+      b.setAttribute('aria-label', e);
+      b.addEventListener('click', function () { insertEmoji(e); });
+      grid.appendChild(b);
+    });
+  }
+  function insertEmoji(e) {
+    var inp = $('msg');
+    var max = 500;
+    var s = inp.selectionStart == null ? inp.value.length : inp.selectionStart;
+    var t = inp.selectionEnd == null ? s : inp.selectionEnd;
+    var v = inp.value.slice(0, s) + e + inp.value.slice(t);
+    if (v.length > max) return;
+    inp.value = v;
+    try { inp.setSelectionRange(s + e.length, s + e.length); } catch (x) { /* ignore */ }
+    pushRecent(e);
+    updateSend();
+  }
+
+  /* ---------- GIF ---------- */
+  var gifTimer = null, gifLoaded = false, gifSeq = 0;
+  function loadGifs(q) {
+    var grid = $('ggrid');
+    var seq = ++gifSeq;
+    grid.textContent = '';
+    grid.appendChild(el('div', 'gmsg', 'Chargement…'));
+    fetch('/api/gifs?q=' + encodeURIComponent(q || '')).then(function (r) { return r.json().then(function (d) { return { ok: r.ok, d: d }; }); }).then(function (res) {
+      if (seq !== gifSeq) return;
+      grid.textContent = '';
+      var list = (res.d && Array.isArray(res.d.gifs)) ? res.d.gifs : [];
+      if (!res.ok) { grid.appendChild(el('div', 'gmsg', 'Les GIF ne répondent pas pour le moment. Réessaie dans un instant.')); return; }
+      if (!list.length) { grid.appendChild(el('div', 'gmsg', 'Aucun GIF trouvé. Essaie un autre mot.')); return; }
+      gifLoaded = true;
+      list.forEach(function (g) {
+        if (!GIF_URL_RE.test(g.url) || !GIF_URL_RE.test(g.preview)) return;
+        var b = el('button');
+        b.type = 'button';
+        b.setAttribute('aria-label', g.title || 'GIF');
+        var img = el('img');
+        img.src = g.preview;
+        img.alt = g.title || '';
+        img.loading = 'lazy';
+        if (g.w && g.h) { img.width = g.w; img.height = g.h; }
+        b.appendChild(img);
+        b.addEventListener('click', function () { sendGif(g); });
+        grid.appendChild(b);
+      });
+    }).catch(function () {
+      if (seq !== gifSeq) return;
+      grid.textContent = '';
+      grid.appendChild(el('div', 'gmsg', 'Les GIF ne répondent pas pour le moment. Réessaie dans un instant.'));
+    });
+  }
+
+  /* ---------- Panneau ---------- */
+  var panelTab = 'emoji';
+  function selectTab(name) {
+    panelTab = name;
+    $('tab-emoji').setAttribute('aria-selected', String(name === 'emoji'));
+    $('tab-gif').setAttribute('aria-selected', String(name === 'gif'));
+    $('pane-emoji').hidden = name !== 'emoji';
+    $('pane-gif').hidden = name !== 'gif';
+    if (name === 'emoji') renderEmoji();
+    else if (!gifLoaded) loadGifs(clean($('gq').value, 50));
+  }
+  function openPanel(name) {
+    if ($('msg').disabled) return;
+    $('panel').hidden = false;
+    $('btn-emoji').classList.toggle('on', name === 'emoji');
+    $('btn-gif').classList.toggle('on', name === 'gif');
+    $('btn-emoji').setAttribute('aria-expanded', String(name === 'emoji'));
+    $('btn-gif').setAttribute('aria-expanded', String(name === 'gif'));
+    $('msg').blur();
+    selectTab(name);
+    var log = $('log');
+    setTimeout(function () { log.scrollTop = log.scrollHeight; }, 30);
+  }
+  function closePanel() {
+    $('panel').hidden = true;
+    $('btn-emoji').classList.remove('on');
+    $('btn-gif').classList.remove('on');
+    $('btn-emoji').setAttribute('aria-expanded', 'false');
+    $('btn-gif').setAttribute('aria-expanded', 'false');
+  }
+  function togglePanel(name) {
+    if (!$('panel').hidden && panelTab === name) closePanel(); else openPanel(name);
+  }
+
+  /* ---------- Feuilles ---------- */
+  function closeSheets() { $('sheet-safety').hidden = true; $('sheet-leave').hidden = true; }
 
   function renderSafety(o) {
     var ul = $('safety-list');
     ul.textContent = '';
+    $('safety-none').hidden = o.length > 0;
     o.forEach(function (p) {
-      var li = document.createElement('li');
-      var name = document.createElement('span');
-      name.textContent = clean(p.nick, 20);
-      var btns = document.createElement('div');
-      btns.className = 'btns';
-      var rep = document.createElement('button');
+      var li = el('li');
+      li.appendChild(el('span', null, clean(p.nick, 20)));
+      var btns = el('div', 'btns');
+      var rep = el('button', 'ghost', 'Signaler');
       rep.type = 'button';
-      rep.className = 'ghost';
-      rep.textContent = 'Signaler';
       rep.addEventListener('click', function () {
         send({ t: 'report', pid: p.pid, reason: 'Signalé depuis la conversation' });
+        closeSheets();
       });
-      var blk = document.createElement('button');
+      var blk = el('button', 'ghost danger', 'Bloquer et quitter');
       blk.type = 'button';
-      blk.className = 'ghost danger';
-      blk.textContent = 'Bloquer et quitter';
       blk.addEventListener('click', function () {
         if (blocked.indexOf(p.pid) === -1) blocked.push(p.pid);
         blocked = blocked.slice(-200);
         store('tablee.blocked', JSON.stringify(blocked));
         send({ t: 'block', pid: p.pid });
         send({ t: 'leave' });
+        closeSheets();
         toast('Personne bloquée. Tu ne verras plus ses invitations.');
       });
       btns.appendChild(rep);
       btns.appendChild(blk);
-      li.appendChild(name);
       li.appendChild(btns);
       ul.appendChild(li);
     });
-  }
-
-  function addLine(cls, text, who, isAi) {
-    var log = $('log');
-    var nearBottom = log.scrollHeight - log.scrollTop - log.clientHeight < 80;
-    var wasTyping = typingOn;
-    removeTyping();
-    var el = document.createElement('div');
-    el.className = cls;
-    if (cls.indexOf('msg') === 0) {
-      var w = document.createElement('div');
-      w.className = 'who';
-      w.appendChild(document.createTextNode(who));
-      if (isAi) {
-        var badge = document.createElement('span');
-        badge.className = 'badge';
-        badge.textContent = 'IA';
-        w.appendChild(badge);
-      }
-      var b = document.createElement('div');
-      b.className = 'bubble';
-      b.textContent = text;
-      el.appendChild(w);
-      el.appendChild(b);
-    } else {
-      el.textContent = text;
-    }
-    log.appendChild(el);
-    if (wasTyping) showTyping();
-    if (nearBottom || cls.indexOf('mine') !== -1) log.scrollTop = log.scrollHeight;
-  }
-  function addChat(m) {
-    var text = clean(m.text, 500);
-    if (!text) return;
-    if (m.ai) { typingOn = false; removeTyping(); addLine('msg ai', text, 'Mika', true); }
-    else if (m.pid === myPid) addLine('msg mine', text, nick);
-    else addLine('msg', text, clean(m.nick, 20) || 'Quelqu’un');
-  }
-
-  function removeTyping() {
-    var t = document.getElementById('typing');
-    if (t && t.parentNode) t.parentNode.removeChild(t);
-  }
-  function showTyping() {
-    removeTyping();
-    var log = $('log');
-    var el = document.createElement('div');
-    el.className = 'msg ai typing';
-    el.id = 'typing';
-    var w = document.createElement('div');
-    w.className = 'who';
-    w.appendChild(document.createTextNode('Mika'));
-    var badge = document.createElement('span');
-    badge.className = 'badge';
-    badge.textContent = 'IA';
-    w.appendChild(badge);
-    var b = document.createElement('div');
-    b.className = 'bubble';
-    b.innerHTML = '<i></i><i></i><i></i>';
-    el.appendChild(w);
-    el.appendChild(b);
-    log.appendChild(el);
-    log.scrollTop = log.scrollHeight;
-  }
-  function setTyping(on) {
-    typingOn = on;
-    if (on) showTyping(); else removeTyping();
   }
 
   /* ---------- Installation et notifications ---------- */
@@ -467,19 +769,36 @@
     if (send({ t: 'invite', theme: theme, max: checked ? parseInt(checked.value, 10) : 2 })) $('theme').value = '';
     else toast('Connexion en cours, réessaie dans un instant.');
   });
-  $('msg-form').addEventListener('submit', function (e) {
-    e.preventDefault();
-    var text = clean($('msg').value, 500);
-    if (!text) return;
-    if (send({ t: 'chat', text: text })) $('msg').value = '';
-    else toast('Le message n’a pas pu partir. Réessaie.');
+  $('msg-form').addEventListener('submit', function (e) { e.preventDefault(); sendText(); });
+  $('msg').addEventListener('input', updateSend);
+  $('msg').addEventListener('click', updateMention);
+  $('msg').addEventListener('keyup', function (e) { if (e.key !== 'Enter') updateMention(); });
+  $('mention-pick').addEventListener('mousedown', function (e) { e.preventDefault(); });
+  $('mention-pick').addEventListener('click', pickMention);
+  $('tip-go').addEventListener('click', function () { pickMention(); });
+  $('tip-x').addEventListener('click', function () { store('talkie.tipMika', '1'); updateTip(); });
+  $('msg').addEventListener('focus', function () { closePanel(); setTimeout(function () { $('log').scrollTop = $('log').scrollHeight; }, 250); });
+  $('btn-emoji').addEventListener('click', function () { togglePanel('emoji'); });
+  $('btn-gif').addEventListener('click', function () { togglePanel('gif'); });
+  $('tab-emoji').addEventListener('click', function () { selectTab('emoji'); });
+  $('tab-gif').addEventListener('click', function () { selectTab('gif'); });
+  $('gq').addEventListener('input', function () {
+    clearTimeout(gifTimer);
+    gifTimer = setTimeout(function () { loadGifs(clean($('gq').value, 50)); }, 400);
   });
-  $('btn-leave').addEventListener('click', function () { send({ t: 'leave' }); });
-  $('btn-safety').addEventListener('click', function () {
-    var panel = $('safety');
-    panel.hidden = !panel.hidden;
-    $('btn-safety').setAttribute('aria-expanded', String(!panel.hidden));
+
+  $('btn-back').addEventListener('click', function () { closePanel(); $('sheet-leave').hidden = false; });
+  $('btn-leave-no').addEventListener('click', closeSheets);
+  $('btn-leave-yes').addEventListener('click', function () { closeSheets(); send({ t: 'leave' }); });
+  $('btn-safety').addEventListener('click', function () { closePanel(); $('sheet-safety').hidden = false; });
+  $('btn-safety-close').addEventListener('click', closeSheets);
+  ['sheet-safety', 'sheet-leave'].forEach(function (id) {
+    $(id).addEventListener('click', function (ev) { if (ev.target === $(id)) closeSheets(); });
   });
+  document.addEventListener('keydown', function (ev) {
+    if (ev.key === 'Escape') { closeSheets(); closePanel(); }
+  });
+
   $('filter').addEventListener('input', renderLobby);
   $('btn-reconnect').addEventListener('click', function () { replaced = false; retry = 0; connect(); });
 
@@ -506,7 +825,8 @@
   if ('serviceWorker' in navigator) {
     window.addEventListener('load', function () { navigator.serviceWorker.register('/sw.js').catch(function () {}); });
   }
-  renderThemes();
+  renderChips();
+  renderTrends();
   loadThemes();
   setInterval(loadThemes, 30 * 60 * 1000);
   setInterval(function () { if (!room) renderLobby(); }, 30000);
