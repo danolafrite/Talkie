@@ -6,7 +6,7 @@ self.addEventListener('fetch', () => {}); // requis par certains navigateurs pou
 self.addEventListener('push', (event) => {
   let data = {};
   try { data = event.data ? event.data.json() : {}; } catch (e) { data = {}; }
-  const title = data.title || 'Tablée';
+  const title = data.title || 'Talkie';
   event.waitUntil(self.registration.showNotification(title, {
     body: data.body || 'Quelqu’un veut discuter.',
     icon: '/icon-192.png',
