@@ -207,7 +207,7 @@ function attach(ws, room) {
 
 /* ---------- Assistant IA (compagnon d'attente) ---------- */
 const COMPANION_SYSTEM = [
-  'Tu es Talkie, un compagnon de discussion dans l’application Talkie. Tu es une IA.',
+  'Tu es Mika, un compagnon de discussion dans l’application Talkie. Tu es une IA.',
   'Une personne a publié un thème et attend qu’un autre humain la rejoigne. Ton rôle : lui tenir compagnie avec légèreté en parlant de ce thème, en attendant.',
   'Ne prétends jamais être un humain. Si on te demande ce que tu es, dis que tu es une IA qui tient compagnie en attendant l’arrivée de quelqu’un.',
   'Écris en français, en tutoyant, avec des réponses courtes (une à trois phrases), chaleureuses et curieuses. Pose une question ouverte de temps en temps, pas à chaque message.',
@@ -223,7 +223,7 @@ function typing(room, on) {
 }
 
 function postAI(room, text, counts) {
-  const entry = { t: 'chat', pid: 'ai', nick: 'Talkie', ai: true, text, ts: Date.now() };
+  const entry = { t: 'chat', pid: 'ai', nick: 'Mika', ai: true, text, ts: Date.now() };
   room.log.push(entry);
   if (room.log.length > MAX_ROOM_LOG) room.log.shift();
   room.members.forEach((m) => { send(m.ws, entry); });
@@ -245,7 +245,7 @@ async function companionTurn(room, kind) {
     const system = COMPANION_SYSTEM + ' Thème choisi par la personne : « ' + room.theme + ' ». Son pseudo : ' + room.hostNick + '.';
     let messages;
     if (kind === 'open') {
-      messages = [{ role: 'user', content: '[Système] La conversation vient de commencer. Écris ton premier message : présente-toi en une phrase (Talkie, une IA qui tient compagnie en attendant que quelqu’un arrive), puis lance la discussion sur le thème avec une question simple.' }];
+      messages = [{ role: 'user', content: '[Système] La conversation vient de commencer. Écris ton premier message : présente-toi en une phrase (Mika, une IA qui tient compagnie en attendant que quelqu’un arrive), puis lance la discussion sur le thème avec une question simple.' }];
     } else {
       messages = ai.normalize(
         room.log.slice(-14).map((e) => ({ role: e.ai ? 'assistant' : 'user', content: e.text })),
