@@ -1,0 +1,273 @@
+<!doctype html>
+<html lang="fr">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>Tablée</title>
+<meta name="description" content="Parle de ce que tu veux, avec quelqu’un qui est là maintenant.">
+<meta name="theme-color" content="#FFC93C">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-title" content="Tablée">
+<meta name="apple-mobile-web-app-status-bar-style" content="default">
+<link rel="manifest" href="/manifest.webmanifest">
+<link rel="icon" type="image/png" href="/favicon.png">
+<link rel="apple-touch-icon" href="/apple-touch-icon.png">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Bricolage+Grotesque:opsz,wght@12..96,500;12..96,700&family=Figtree:wght@400;500;600&display=swap">
+<style>
+/* Layout: une colonne. Le salon liste les invitations ouvertes, la conversation prend tout le cadre. */
+:root {
+  --bg: #FFF6CC;
+  --surface: #FFFFFF;
+  --surface-2: #FFEC99;
+  --fg: #14213D;
+  --muted: #4C5B7A;
+  --line: #E3D27A;
+  --blue: #2F6BFF;
+  --green: #19B96B;
+  --yellow: #FFC93C;
+  --accent-text: #2459E0;
+  --tint-y: #FFE27A;
+  --tint-g: #BDF0D3;
+  --tint-b: #CFE0FF;
+  --on-tint: #14213D;
+  --btn-bg: #2F6BFF;
+  --btn-fg: #FFFFFF;
+  --lamp: #19B96B;
+  --lamp-glow: rgba(25, 185, 107, 0.5);
+  --mine-bg: #2F6BFF;
+  --mine-fg: #FFFFFF;
+  --danger: #C62828;
+  --font-display: 'Bricolage Grotesque', system-ui, -apple-system, 'Segoe UI', sans-serif;
+  --font-body: 'Figtree', system-ui, -apple-system, 'Segoe UI', sans-serif;
+  color-scheme: light;
+}
+@media (prefers-color-scheme: dark) {
+  :root {
+    --bg: #0F1B3D;
+    --surface: #172A5C;
+    --surface-2: #1F3775;
+    --fg: #F4F7FF;
+    --muted: #A9B8E0;
+    --line: #2D478F;
+    --blue: #6C9BFF;
+    --green: #3DDC97;
+    --yellow: #FFD54A;
+    --accent-text: #8FB2FF;
+    --tint-y: #5A4A0E;
+    --tint-g: #0F4A3A;
+    --tint-b: #1F3E86;
+    --on-tint: #F4F7FF;
+    --btn-bg: #FFD54A;
+    --btn-fg: #1B1500;
+    --lamp: #3DDC97;
+    --lamp-glow: rgba(61, 220, 151, 0.5);
+    --mine-bg: #3A66E0;
+    --mine-fg: #FFFFFF;
+    --danger: #FF8A80;
+    color-scheme: dark;
+  }
+}
+
+html, body { height: 100%; margin: 0; }
+body {
+  box-sizing: border-box;
+  background: var(--bg);
+  color: var(--fg);
+  font-family: var(--font-body);
+  font-size: 16px;
+  line-height: 1.5;
+  padding-left: max(16px, env(safe-area-inset-left, 0px));
+  padding-right: max(16px, env(safe-area-inset-right, 0px));
+  padding-top: max(20px, env(safe-area-inset-top, 0px));
+  padding-bottom: max(20px, env(safe-area-inset-bottom, 0px));
+  -webkit-text-size-adjust: 100%;
+}
+*, *::before, *::after { box-sizing: border-box; }
+h1, h2, p, ul { margin: 0; }
+ul { padding: 0; list-style: none; }
+button, input { font: inherit; color: inherit; }
+[hidden] { display: none !important; }
+:focus-visible { outline: 2px solid var(--fg); outline-offset: 2px; }
+
+#app { max-width: 720px; margin: 0 auto; min-height: 100%; display: flex; flex-direction: column; }
+#app.chatting { height: 100%; min-height: 0; }
+#lobby { display: flex; flex-direction: column; gap: 26px; }
+
+.top { display: flex; flex-direction: column; gap: 10px; }
+.brand { display: flex; align-items: center; gap: 12px; flex-wrap: wrap; }
+.brand h1 { font-family: var(--font-display); font-weight: 700; font-size: 40px; letter-spacing: -0.02em; line-height: 1.1; color: var(--accent-text); }
+.tag { font-size: 11px; text-transform: uppercase; letter-spacing: 0.1em; color: var(--muted); border: 1px solid var(--line); border-radius: 4px; padding: 2px 6px; }
+.lede { font-size: 18px; max-width: 34rem; text-wrap: balance; }
+.presence { display: flex; align-items: center; gap: 12px; flex-wrap: wrap; min-height: 28px; }
+.dots { display: flex; flex-wrap: wrap; gap: 7px; }
+.dot { width: 10px; height: 10px; border-radius: 50%; background: var(--lamp); box-shadow: 0 0 10px 2px var(--lamp-glow); animation: glow 3.4s ease-in-out infinite; }
+@keyframes glow { 50% { opacity: 0.55; } }
+.count { color: var(--muted); font-variant-numeric: tabular-nums; }
+
+.notice { background: var(--tint-b); color: var(--on-tint); border-radius: 16px; padding: 14px 16px; display: flex; flex-direction: column; gap: 10px; }
+.notice p { font-size: 15px; }
+.notice strong { font-weight: 600; }
+.notice .actions { display: flex; flex-wrap: wrap; gap: 8px; }
+
+.compose { background: var(--surface); border: 2px solid var(--yellow); border-radius: 18px; padding: 18px; }
+#invite-form { display: flex; flex-direction: column; gap: 14px; }
+label, legend { font-weight: 600; font-size: 14px; }
+input[type="text"] { width: 100%; background: var(--bg); border: 1px solid var(--line); border-radius: 10px; padding: 11px 12px; min-width: 0; font-size: 16px; }
+input[type="text"]::placeholder { color: var(--muted); }
+.field { display: flex; flex-direction: column; gap: 6px; }
+.chips { display: flex; flex-wrap: wrap; gap: 8px; }
+.chip { border: 1px solid transparent; border-radius: 999px; padding: 5px 12px; font-size: 13px; color: var(--on-tint); cursor: pointer; background: var(--tint-y); }
+.chip:nth-child(3n+2) { background: var(--tint-g); }
+.chip:nth-child(3n) { background: var(--tint-b); }
+.chip:hover { filter: brightness(0.96); }
+fieldset { border: 0; padding: 0; margin: 0; min-width: 0; display: flex; flex-direction: column; gap: 8px; }
+.sizes { display: flex; flex-wrap: wrap; gap: 8px; }
+.pill { position: relative; }
+.pill input { position: absolute; opacity: 0; inset: 0; margin: 0; cursor: pointer; }
+.pill span { display: inline-block; border: 1px solid var(--line); border-radius: 10px; padding: 7px 14px; font-weight: 500; }
+.pill input:checked + span { background: var(--btn-bg); color: var(--btn-fg); border-color: var(--btn-bg); }
+.pill input:focus-visible + span { outline: 2px solid var(--fg); outline-offset: 2px; }
+.row { display: flex; flex-wrap: wrap; gap: 14px; align-items: flex-end; }
+.row .field { flex: 1 1 180px; }
+.primary { background: var(--btn-bg); color: var(--btn-fg); border: 0; border-radius: 999px; padding: 11px 20px; font-weight: 600; cursor: pointer; }
+.primary:hover:not(:disabled) { filter: brightness(1.08); }
+.primary:disabled { opacity: 0.4; cursor: not-allowed; }
+.ghost { background: transparent; border: 1px solid var(--line); border-radius: 10px; padding: 8px 12px; font-weight: 500; cursor: pointer; }
+.notice .ghost { border-color: currentColor; }
+.ghost:hover { border-color: var(--muted); }
+.danger { color: var(--danger); border-color: var(--danger); }
+
+.sec-head { display: flex; align-items: center; justify-content: space-between; gap: 12px; flex-wrap: wrap; margin-bottom: 10px; }
+.sec-head h2 { font-family: var(--font-display); font-size: 22px; font-weight: 700; letter-spacing: -0.01em; }
+#filter { max-width: 220px; padding: 7px 10px; font-size: 16px; }
+.invite { display: flex; align-items: center; justify-content: space-between; gap: 14px; flex-wrap: wrap; padding: 14px 16px; margin-bottom: 10px; border-radius: 16px; color: var(--on-tint); background: var(--tint-y); }
+.invite:nth-child(3n+2) { background: var(--tint-g); }
+.invite:nth-child(3n) { background: var(--tint-b); }
+.invite-main { min-width: 0; flex: 1 1 200px; }
+.invite-theme { font-family: var(--font-display); font-size: 20px; font-weight: 500; overflow-wrap: anywhere; }
+.invite-meta { font-size: 13px; opacity: 0.75; }
+.empty { color: var(--muted); max-width: 34rem; }
+.foot { color: var(--muted); font-size: 13px; max-width: 38rem; }
+
+#conv { flex: 1; min-height: 0; display: flex; flex-direction: column; gap: 12px; }
+.conv-head { display: flex; align-items: flex-start; justify-content: space-between; gap: 12px; flex-wrap: wrap; }
+.conv-title { min-width: 0; flex: 1 1 200px; }
+.conv-title h2 { font-family: var(--font-display); font-size: 26px; font-weight: 700; letter-spacing: -0.01em; line-height: 1.2; overflow-wrap: anywhere; text-wrap: balance; }
+.conv-title p { color: var(--muted); font-size: 14px; overflow-wrap: anywhere; }
+.conv-actions { display: flex; gap: 8px; }
+.safety { background: var(--surface); border: 1px solid var(--line); border-radius: 14px; padding: 14px; display: flex; flex-direction: column; gap: 10px; font-size: 14px; }
+.safety li { display: flex; align-items: center; justify-content: space-between; gap: 10px; flex-wrap: wrap; }
+.safety .btns { display: flex; gap: 8px; flex-wrap: wrap; }
+.safety .note { color: var(--muted); }
+.wait { background: var(--surface-2); border-radius: 12px; padding: 10px 14px; font-size: 14px; }
+#log { flex: 1; min-height: 0; overflow-y: auto; background: var(--surface); border: 1px solid var(--line); border-radius: 16px; padding: 14px; display: flex; flex-direction: column; gap: 10px; }
+.msg { max-width: min(82%, 34rem); display: flex; flex-direction: column; gap: 2px; }
+.msg.mine { align-self: flex-end; align-items: flex-end; }
+.who { font-size: 12px; color: var(--muted); }
+.bubble { padding: 8px 12px; border-radius: 16px; background: var(--surface-2); overflow-wrap: anywhere; }
+.mine .bubble { background: var(--mine-bg); color: var(--mine-fg); }
+.sys { align-self: center; font-size: 13px; color: var(--muted); text-align: center; }
+#msg-form { display: flex; gap: 8px; }
+#msg-form input { flex: 1; }
+
+#toast { position: fixed; left: 50%; transform: translateX(-50%); bottom: calc(16px + env(safe-area-inset-bottom, 0px)); width: max-content; max-width: calc(100% - 32px); background: var(--fg); color: var(--bg); padding: 10px 16px; border-radius: 12px; font-size: 14px; z-index: 20; }
+
+@media (prefers-reduced-motion: reduce) { .dot { animation: none; } }
+</style>
+</head>
+<body>
+<div id="app">
+  <div id="lobby">
+    <header class="top">
+      <div class="brand"><h1>Tablée</h1><span class="tag">bêta</span></div>
+      <p class="lede">Parle de ce que tu veux, avec quelqu’un qui est là maintenant.</p>
+      <div class="presence">
+        <div id="dots" class="dots" aria-hidden="true"></div>
+        <p id="count" class="count">Connexion au salon…</p>
+        <button type="button" class="ghost" id="btn-reconnect" hidden>Reprendre ici</button>
+      </div>
+    </header>
+
+    <section id="install-ios" class="notice" hidden aria-label="Installer sur iPhone">
+      <p><strong>Installe Tablée sur ton iPhone</strong> pour recevoir les notifications.</p>
+      <p>Touche le bouton Partager de Safari (le carré avec une flèche), puis « Sur l’écran d’accueil ». Ouvre ensuite Tablée depuis son icône.</p>
+    </section>
+
+    <section id="install-android" class="notice" hidden aria-label="Installer l’app">
+      <p><strong>Ajoute Tablée à ton écran d’accueil</strong> pour l’ouvrir comme une vraie app.</p>
+      <div class="actions"><button type="button" class="primary" id="btn-install">Installer</button></div>
+    </section>
+
+    <section id="notif" class="notice" hidden aria-label="Notifications">
+      <p id="notif-text"><strong>Sois prévenu·e</strong> quand quelqu’un publie un thème, pour vous retrouver au même moment.</p>
+      <div class="actions"><button type="button" class="primary" id="btn-notif">Activer les notifications</button></div>
+    </section>
+
+    <section class="compose" aria-label="Créer une invitation">
+      <form id="invite-form">
+        <div class="field">
+          <label for="theme">De quoi as-tu envie de parler ?</label>
+          <input type="text" id="theme" maxlength="60" autocomplete="off" placeholder="Les frites, une série, ma journée…">
+          <div id="chips" class="chips"></div>
+        </div>
+        <fieldset>
+          <legend>Combien de personnes ?</legend>
+          <div class="sizes">
+            <label class="pill"><input type="radio" name="size" value="2" checked><span>À deux</span></label>
+            <label class="pill"><input type="radio" name="size" value="3"><span>Jusqu’à 3</span></label>
+            <label class="pill"><input type="radio" name="size" value="4"><span>Jusqu’à 4</span></label>
+          </div>
+        </fieldset>
+        <div class="row">
+          <div class="field">
+            <label for="nick">Ton pseudo</label>
+            <input type="text" id="nick" maxlength="20" autocomplete="off">
+          </div>
+          <button type="submit" class="primary" id="btn-publish" disabled>Publier mon invitation</button>
+        </div>
+      </form>
+    </section>
+
+    <section aria-labelledby="inv-h">
+      <div class="sec-head">
+        <h2 id="inv-h">Invitations ouvertes</h2>
+        <input type="text" id="filter" maxlength="60" placeholder="Filtrer les thèmes" aria-label="Filtrer les thèmes" hidden>
+      </div>
+      <ul id="invites"></ul>
+      <p id="empty" class="empty">Personne n’attend pour le moment. Lance un thème : dès que quelqu’un l’ouvre, il apparaît ici et vous pouvez discuter.</p>
+    </section>
+
+    <p class="foot">Tablée est un espace pour discuter, pas un service d’aide. Si ça ne va vraiment pas, le 3114 répond jour et nuit, gratuitement (France).</p>
+  </div>
+
+  <section id="conv" hidden>
+    <header class="conv-head">
+      <div class="conv-title">
+        <h2 id="conv-theme"></h2>
+        <p id="conv-sub"></p>
+      </div>
+      <div class="conv-actions">
+        <button type="button" class="ghost" id="btn-safety" aria-expanded="false" aria-controls="safety">Sécurité</button>
+        <button type="button" class="ghost" id="btn-leave">Quitter</button>
+      </div>
+    </header>
+    <div id="safety" class="safety" hidden>
+      <p>Tu peux quitter à tout moment, sans explication. Bloquer masque la personne et ses invitations, et elle ne verra plus les tiennes.</p>
+      <ul id="safety-list"></ul>
+      <p class="note">Un signalement est enregistré avec les derniers messages pour être examiné.</p>
+    </div>
+    <p id="wait" class="wait" hidden></p>
+    <div id="log" role="log" aria-live="polite" aria-label="Messages"></div>
+    <form id="msg-form">
+      <input type="text" id="msg" maxlength="500" autocomplete="off" aria-label="Ton message" placeholder="Écris un message…" disabled>
+      <button type="submit" class="primary" id="btn-send" disabled>Envoyer</button>
+    </form>
+  </section>
+</div>
+<div id="toast" role="status" aria-live="polite" hidden></div>
+<script src="/app.js"></script>
+</body>
+</html>

@@ -1,0 +1,17 @@
+{
+  "name": "Tablée",
+  "short_name": "Tablée",
+  "description": "Parle de ce que tu veux, avec quelqu'un qui est là maintenant.",
+  "lang": "fr",
+  "start_url": "/",
+  "scope": "/",
+  "display": "standalone",
+  "orientation": "portrait",
+  "background_color": "#FFF6CC",
+  "theme_color": "#FFC93C",
+  "icons": [
+    { "src": "/icon-192.png", "sizes": "192x192", "type": "image/png", "purpose": "any" },
+    { "src": "/icon-512.png", "sizes": "512x512", "type": "image/png", "purpose": "any" },
+    { "src": "/icon-512.png", "sizes": "512x512", "type": "image/png", "purpose": "maskable" }
+  ]
+}
