@@ -1,6 +1,6 @@
 'use strict';
 /*
- * Tablée : serveur temps réel.
+ * Talkie : serveur temps réel.
  * - Fichiers statiques (public/)
  * - WebSocket : salon, invitations, conversations de 2 à 4 personnes
  * - Web Push : notification quand quelqu'un publie un thème
@@ -120,7 +120,7 @@ function broadcastLobby() {
 /* ---------- Notifications ---------- */
 function notifyInvite(room, hostPid) {
   const payload = JSON.stringify({
-    title: 'Tablée',
+    title: 'Talkie',
     body: room.hostNick + ' veut parler de : ' + room.theme,
     url: '/'
   });
