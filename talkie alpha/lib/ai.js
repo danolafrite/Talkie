@@ -3,7 +3,7 @@
 const BASE = (process.env.ANTHROPIC_BASE_URL || 'https://api.anthropic.com').replace(/\/$/, '');
 const KEY = process.env.ANTHROPIC_API_KEY || '';
 const MODEL = process.env.AI_MODEL || 'claude-haiku-5-5';
-const DAILY_CAP = parseInt(process.env.AI_DAILY_CAP, 10) || 300;
+const DAILY_CAP = parseInt(process.env.AI_DAILY_CAP, 10) || 1000;
 
 let day = '';
 let used = 0;
@@ -13,6 +13,7 @@ function budgetLeft() {
   return used < DAILY_CAP;
 }
 function enabled() { return !!KEY && budgetLeft(); }
+function configured() { return !!KEY; }
 function usedToday() { budgetLeft(); return used; }
 
 // L'API accepte des rôles qui alternent : on fusionne les messages consécutifs et on commence par "user".
@@ -46,4 +47,4 @@ async function complete({ system, messages, maxTokens, timeoutMs }) {
   } finally { clearTimeout(timer); }
 }
 
-module.exports = { enabled, usedToday, complete, normalize, MODEL, DAILY_CAP };
+module.exports = { enabled, configured, usedToday, complete, normalize, MODEL, DAILY_CAP };

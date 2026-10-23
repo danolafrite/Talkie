@@ -66,7 +66,13 @@
   function tint(str) {
     var n = 0, s = String(str || '');
     for (var i = 0; i < s.length; i++) n += s.charCodeAt(i);
-    return ['b', 'g', 'y'][n % 3];
+    return ['b', 'g', 'y', 'p', '', 'b', 'g'][n % 7];
+  }
+  var ANIMALS = ['🦊', '🐼', '🐸', '🐙', '🦄', '🐧', '🐱', '🐰', '🐻', '🦋', '🐨', '🐯'];
+  function animal(str) {
+    var n = 0, s = String(str || '');
+    for (var i = 0; i < s.length; i++) n += s.charCodeAt(i) * (i + 1);
+    return ANIMALS[n % ANIMALS.length];
   }
   function initial(s) {
     var m = String(s || '').match(/[A-Za-z0-9À-ɏ]/);
@@ -196,27 +202,46 @@
   }
 
   function applyFlags() {
-    $('mika-hero').hidden = !aiOn;
     $('hint-ai').hidden = !aiOn;
     $('foot-ai').hidden = !aiOn;
     $('foot-gif').hidden = !gifOn;
     $('btn-gif').hidden = !gifOn;
     $('tab-gif').hidden = !gifOn;
-    if (typeof updateTip === 'function') updateTip();
+    updateTip();
   }
 
-  /* ---------- Salon ---------- */
+  /* ---------- Mika (dessin) ---------- */
+  function mikaSvg() {
+    return '<svg viewBox="0 0 64 64" aria-hidden="true">' +
+      '<line x1="32" y1="14" x2="32" y2="8" stroke="#2A1B5E" stroke-width="2.4" stroke-linecap="round"/>' +
+      '<circle cx="32" cy="6.5" r="3.6" fill="#FFCF3F"/>' +
+      '<ellipse cx="32" cy="37" rx="24" ry="22" fill="#5DE3B4"/>' +
+      '<ellipse cx="24" cy="27" rx="9" ry="5" fill="#fff" opacity=".35"/>' +
+      '<g class="arm"><ellipse cx="7" cy="40" rx="5.5" ry="3.6" fill="#44CFA0" transform="rotate(-35 7 40)"/></g>' +
+      '<ellipse cx="57" cy="42" rx="5.5" ry="3.6" fill="#44CFA0" transform="rotate(35 57 42)"/>' +
+      '<ellipse class="eye" cx="24" cy="35" rx="3.4" ry="4.6" fill="#2A1B5E"/><ellipse class="eye" cx="40" cy="35" rx="3.4" ry="4.6" fill="#2A1B5E"/>' +
+      '<circle cx="25.2" cy="33.2" r="1.2" fill="#fff"/><circle cx="41.2" cy="33.2" r="1.2" fill="#fff"/>' +
+      '<ellipse cx="16.5" cy="43" rx="4.6" ry="3" fill="#FF8FC0" opacity=".75"/><ellipse cx="47.5" cy="43" rx="4.6" ry="3" fill="#FF8FC0" opacity=".75"/>' +
+      '<path d="M27 44 Q32 50 37 44" stroke="#2A1B5E" stroke-width="2.6" fill="none" stroke-linecap="round"/></svg>';
+  }
+  function fillMika() {
+    Array.prototype.forEach.call(document.querySelectorAll('#mika-av, #fab-orb, [data-mika]'), function (n) { n.innerHTML = mikaSvg(); });
+  }
+
+  /* ---------- Salon : thèmes ---------- */
   function renderChips() {
     var box = $('chips');
     box.textContent = '';
     CHIPS.forEach(function (t) {
       var b = el('button', 'chip', t);
       b.type = 'button';
-      b.addEventListener('click', function () { $('theme').value = t; $('theme').focus(); });
+      b.addEventListener('click', function () { pickTheme(t); });
       box.appendChild(b);
     });
   }
 
+  var CATS_ORDER = ['Actu', 'Culture', 'Sport', 'Food', 'Jeux', 'Voyage', 'Société', 'Soutien'];
+  var CAT_EMOJI = { 'Tendance': '🔥', 'Actu': '🗞️', 'Culture': '🎬', 'Sport': '⚽', 'Food': '🍟', 'Jeux': '🎮', 'Voyage': '✈️', 'Société': '💬', 'Soutien': '🫶' };
   var CATALOG = {
     'Actu': ['Un événement dont tout le monde parle', 'La mode du moment', 'Une info qui m’a surpris', 'Ce qui change dans nos villes'],
     'Culture': ['La série du moment', 'Un film à voir ce week-end', 'Une chanson en boucle', 'Un livre qui m’a marqué·e'],
@@ -227,39 +252,41 @@
     'Société': ['Un sujet dont on parle partout', 'Ce que je pense de l’IA', 'Les manifestations, vous y allez ?', 'Ce qui nous rapproche'],
     'Soutien': ['Une journée difficile', 'Je veux juste discuter', 'Je n’arrive pas à dormir', 'Un petit bonheur du jour']
   };
+  var AI_ITEMS = [];
   var catSel = null;
-  var ICONS = {
-    'Tendance': '<path d="M12 3c1 3.2 4.5 5 4.5 9.3A4.5 4.5 0 0 1 12 17a4.5 4.5 0 0 1-4.5-4.7c0-1.7.8-2.8 1.7-3.8.2 1.2.8 2 1.6 2.3C10.6 8.2 11 5.6 12 3z"/><path d="M12 21c-2.6 0-4.5-1.4-4.5-3.5"/>',
-    'Actu': '<path d="M4 5h13a1 1 0 0 1 1 1v13H6a2 2 0 0 1-2-2V5z"/><path d="M18 9h2v8a2 2 0 0 1-2 2"/><path d="M8 9h6M8 13h6"/>',
-    'Culture': '<rect x="3" y="5" width="18" height="14" rx="3"/><path d="M10.5 9.2v5.6l4.5-2.8-4.5-2.8z"/>',
-    'Sport': '<circle cx="12" cy="12" r="9"/><path d="M3.5 9.5c3 .5 5.500 2.500 8.500 2.500s5.500-2 8.500-2.500M12 3v18M6 5.500c1.500 2 2 4.500 2 6.500s-.5 4.500-2 6.500M18 5.500c-1.500 2-2 4.500-2 6.500s.5 4.500 2 6.500"/>',
-    'Food': '<path d="M7 3v8M4.500 3v5a2.500 2.500 0 0 0 5 0V3M7 11v10"/><path d="M17 21V3c-2.500 2-3.500 5-3.500 8H17"/>',
-    'Jeux': '<rect x="2.500" y="7" width="19" height="11" rx="5.500"/><path d="M8 10.500v4M6 12.500h4"/><circle cx="15.500" cy="11.500" r="0.900" fill="currentColor"/><circle cx="18" cy="13.800" r="0.900" fill="currentColor"/>',
-    'Voyage': '<path d="M21 3 3 10.500l6.500 2.500L12 20l2.500-6.500L21 3z"/><path d="M9.500 13 21 3"/>',
-    'Société': '<circle cx="9" cy="8.500" r="3.200"/><path d="M3 20c.5-3.300 3-5 6-5s5.500 1.700 6 5"/><circle cx="17" cy="9.500" r="2.500"/><path d="M17.500 14.500c2.200.2 3.600 1.700 4 4.500"/>',
-    'Soutien': '<path d="M12 20s-7.500-4.500-7.500-10A4.300 4.300 0 0 1 12 7.300 4.300 4.300 0 0 1 19.500 10c0 5.500-7.500 10-7.500 10z"/>'
-  };
-  function icon(name, cls) {
-    var wrap = document.createElement('span');
-    wrap.innerHTML = '<svg class="i ' + (cls || '') + '" viewBox="0 0 24 24" aria-hidden="true">' + (ICONS[name] || ICONS['Actu']) + '</svg>';
-    return wrap.firstChild;
+
+  function emojiOf(x) { return x.emoji || CAT_EMOJI[x.cat] || '💬'; }
+
+  function exploreData() {
+    var out = [];
+    var trend = AI_ITEMS.filter(function (i) { return i.cat === 'Tendance'; });
+    if (trend.length) out.push({ name: 'Tendance', list: trend });
+    CATS_ORDER.forEach(function (k) {
+      var seen = {}, list = [];
+      function add(x) { var key = x.text.toLowerCase(); if (!seen[key]) { seen[key] = 1; list.push(x); } }
+      AI_ITEMS.filter(function (i) { return i.cat === k; }).forEach(add);
+      (CATALOG[k] || []).forEach(function (t) { if (list.length < 6) add({ cat: k, text: t, emoji: '' }); });
+      out.push({ name: k, list: list });
+    });
+    return out;
   }
-  var ARROW = '<svg class="i" viewBox="0 0 24 24" aria-hidden="true"><path d="M5 12h14M13 6l6 6-6 6"/></svg>';
+  function allThemes() {
+    var all = [];
+    exploreData().forEach(function (d) { d.list.forEach(function (x) { all.push(x); }); });
+    return all;
+  }
+  function todayThemes() {
+    var t = AI_ITEMS.filter(function (i) { return i.cat === 'Tendance'; });
+    if (!t.length) t = AI_ITEMS.slice();
+    if (!t.length) t = [{ cat: 'Culture', text: 'La série du moment', emoji: '📺' }, { cat: 'Food', text: 'Les frites', emoji: '🍟' }, { cat: 'Soutien', text: 'Un petit bonheur du jour', emoji: '🌈' }];
+    return t;
+  }
 
   function pickTheme(t) {
     $('theme').value = t;
     window.scrollTo({ top: 0, behavior: 'smooth' });
-    setTimeout(function () { $('btn-publish').focus({ preventScroll: true }); }, 350);
-    toast('Thème prêt. Appuie sur Publier.');
-  }
-
-  function exploreData() {
-    var out = [];
-    if (TREND_ITEMS.length) out.push({ name: 'Tendance', list: TREND_ITEMS });
-    Object.keys(CATALOG).forEach(function (k) {
-      out.push({ name: k, list: CATALOG[k].map(function (t) { return { cat: k, text: t }; }) });
-    });
-    return out;
+    $('btn-publish').disabled = !open || replaced || !!room;
+    loadBranches(t, []);
   }
 
   function renderTrends() {
@@ -270,7 +297,7 @@
     data.forEach(function (d) {
       var b = el('button');
       b.type = 'button';
-      b.appendChild(icon(d.name));
+      b.appendChild(el('span', 'e', CAT_EMOJI[d.name] || '💬'));
       b.appendChild(document.createTextNode(d.name));
       b.setAttribute('role', 'tab');
       b.setAttribute('aria-selected', String(d.name === catSel));
@@ -283,64 +310,167 @@
     cur.list.forEach(function (x) {
       var b = el('button', 'tcard');
       b.type = 'button';
-      var cat = cur.name === 'Tendance' ? x.cat : cur.name;
-      b.setAttribute('data-c', ICONS[cat] ? cat : 'Actu');
-      var ico = el('span', 'ico');
-      ico.appendChild(icon(ICONS[cat] ? cat : 'Actu'));
-      b.appendChild(ico);
+      b.appendChild(el('span', 'em', emojiOf(x)));
       b.appendChild(el('span', 'txt', x.text));
-      var go = el('span', 'go', 'Lancer ce thème');
+      var go = el('span', 'go', 'Choisir');
       go.insertAdjacentHTML('beforeend', ARROW);
       b.appendChild(go);
       b.addEventListener('click', function () { pickTheme(x.text); });
       box.appendChild(b);
     });
-    $('themes-sub').textContent = TREND_ITEMS.length ? new Date().toLocaleDateString('fr-FR', { weekday: 'long', day: 'numeric', month: 'long' }) : '';
+    $('themes-sub').textContent = AI_ITEMS.length ? new Date().toLocaleDateString('fr-FR', { weekday: 'long', day: 'numeric', month: 'long' }) : '';
   }
+  var ARROW = '<svg class="i" viewBox="0 0 24 24" aria-hidden="true"><path d="M5 12h14M13 6l6 6-6 6"/></svg>';
 
   function loadThemes() {
     fetch('/api/themes').then(function (r) { return r.json(); }).then(function (d) {
-      TREND_ITEMS = [];
-      if (d && d.source === 'trends') {
-        var src = Array.isArray(d.items) && d.items.length ? d.items
-          : (Array.isArray(d.themes) ? d.themes.map(function (t) { return { cat: 'Actu', text: t }; }) : []);
-        TREND_ITEMS = src.map(function (x) { return { cat: clean(x.cat, 20) || 'Actu', text: clean(x.text, 60) }; })
-          .filter(function (x) { return x.text; }).slice(0, 10);
-        if (TREND_ITEMS.length) catSel = 'Tendance';
+      AI_ITEMS = [];
+      if (d && (d.source === 'trends' || d.source === 'ai') && Array.isArray(d.items)) {
+        AI_ITEMS = d.items.map(function (x) {
+          var em = String(x.emoji || '');
+          return { cat: clean(x.cat, 20) || 'Actu', text: clean(x.text, 64), emoji: em.length <= 12 && /\p{Extended_Pictographic}/u.test(em) ? em : '' };
+        }).filter(function (x) { return x.text; }).slice(0, 40);
+        if (AI_ITEMS.some(function (i) { return i.cat === 'Tendance'; })) catSel = 'Tendance';
       }
       renderTrends();
     }).catch(function () {});
   }
 
+  /* ---------- Arbre de pistes (Mika propose d'aller plus loin) ---------- */
+  var brTopic = '', brPath = [], brSeq = 0, brTimer = null;
+  function hideBranches() { brSeq++; brTopic = ''; brPath = []; $('branches').hidden = true; }
+  function loadBranches(topic, path) {
+    topic = clean(topic, 70);
+    clearTimeout(brTimer);
+    if (topic.length < 3) { hideBranches(); return; }
+    brTopic = topic;
+    brPath = path || [];
+    var box = $('branches');
+    box.hidden = false;
+    box.textContent = '';
+    var h = el('div', 'br-head');
+    h.appendChild(el('strong', null, 'Mika réfléchit à des pistes…'));
+    box.appendChild(h);
+    for (var i = 0; i < 3; i++) box.appendChild(el('div', 'br-skel'));
+    var seq = ++brSeq;
+    fetch('/api/branches?topic=' + encodeURIComponent(topic) + '&path=' + encodeURIComponent(brPath.join('|')))
+      .then(function (r) { if (!r.ok) throw new Error('x'); return r.json(); })
+      .then(function (d) { if (seq === brSeq) renderBranches(d); })
+      .catch(function () { if (seq === brSeq) box.hidden = true; });
+  }
+  function renderBranches(d) {
+    var items = d && Array.isArray(d.items) ? d.items : [];
+    var box = $('branches');
+    if (!items.length) { box.hidden = true; return; }
+    box.textContent = '';
+    var head = el('div', 'br-head');
+    head.appendChild(el('strong', null, d.ai ? 'Mika te propose d’aller plus loin ✨' : 'Quelques pistes pour lancer la discussion'));
+    if (brPath.length) {
+      var back = el('button', 'br-back');
+      back.type = 'button';
+      back.insertAdjacentHTML('beforeend', '<svg class="i" viewBox="0 0 24 24" aria-hidden="true"><path d="M15 5l-7 7 7 7"/></svg>');
+      back.appendChild(document.createTextNode('Retour'));
+      back.addEventListener('click', function () {
+        var prev = brPath[brPath.length - 1];
+        $('theme').value = prev;
+        loadBranches(prev, brPath.slice(0, -1));
+      });
+      head.appendChild(back);
+    }
+    box.appendChild(head);
+    if (brPath.length) box.appendChild(el('div', 'br-path', brPath.concat([brTopic]).join('  ›  ')));
+    var parent = brTopic, parentPath = brPath;
+    items.slice(0, 5).forEach(function (it, idx) {
+      var b = el('button', 'br-item');
+      b.type = 'button';
+      b.style.animationDelay = (idx * 60) + 'ms';
+      b.appendChild(el('span', 'em', it.e || '💬'));
+      b.appendChild(el('span', 'tx', clean(it.t, 90)));
+      b.insertAdjacentHTML('beforeend', ARROW);
+      b.addEventListener('click', function () {
+        $('theme').value = clean(it.t, 60);
+        $('btn-publish').disabled = !open || replaced || !!room;
+        loadBranches(it.t, parentPath.concat([parent]).slice(-3));
+      });
+      box.appendChild(b);
+    });
+    box.appendChild(el('div', 'br-foot', 'Touche une piste pour la préciser, ou publie ton thème tel quel.'));
+  }
+
   /* ---------- Mika sur la première page ---------- */
-  function renderMika() {
+  function mikaSay(text) {
+    var bub = $('mika-say');
+    bub.classList.remove('thinking', 'say');
+    bub.textContent = text;
+    void bub.offsetWidth;
+    bub.classList.add('say');
+  }
+  function setQr(opts) {
     var qr = $('mika-qr');
     qr.textContent = '';
-    var bub = $('mika-say');
-    var greet = 'Salut ! De quoi as-tu envie de parler ce soir ?';
-    if (bub && bub.classList.contains('thinking')) {
-      var reduce = window.matchMedia && matchMedia('(prefers-reduced-motion: reduce)').matches;
-      setTimeout(function () {
-        bub.classList.remove('thinking');
-        bub.classList.add('say');
-        bub.textContent = greet;
-      }, reduce ? 0 : 1100);
-    }
-    var opts = [
-      ['Je m’ennuie 😅', function () { pickTheme('Je m’ennuie, on discute ?'); }],
-      ['Un thème du moment', function () { var t = TREND_ITEMS.length ? 'Tendance' : 'Culture'; catSel = t; renderTrends(); $('explore').scrollIntoView({ behavior: 'smooth', block: 'start' }); }],
-      ['Quelqu’un à qui parler', function () { pickTheme('Je veux juste discuter'); }]
-    ];
     opts.forEach(function (o) {
       var b = el('button', null, o[0]);
       b.type = 'button';
-      b.addEventListener('click', function () {
-        var say = $('mika-say');
-        say.classList.remove('thinking'); say.classList.add('say'); say.textContent = 'Avec plaisir ! Je te prépare ça.';
-        o[1]();
-      });
+      b.addEventListener('click', o[1]);
       qr.appendChild(b);
     });
+  }
+  function surprise() {
+    var all = allThemes();
+    var x = all[Math.floor(Math.random() * all.length)];
+    mikaSay('Et si on parlait de ça ? ' + emojiOf(x));
+    pickTheme(x.text);
+  }
+  function mainQr() {
+    setQr([
+      ['🎲 Surprends-moi', surprise],
+      ['🔥 Les thèmes du jour', showToday],
+      ['💛 Juste discuter', function () { mikaSay('Avec plaisir, je te prépare ça !'); pickTheme('Je veux juste discuter'); }]
+    ]);
+  }
+  function showToday() {
+    mikaSay('Aujourd’hui, ça parle de ça :');
+    var opts = todayThemes().slice(0, 3).map(function (x) {
+      return [emojiOf(x) + ' ' + x.text, function () { mikaSay('Bon choix !'); pickTheme(x.text); }];
+    });
+    opts.push(['↩ Retour', function () { mikaSay('Qu’est-ce qui te ferait plaisir ?'); mainQr(); }]);
+    setQr(opts);
+  }
+  function renderMika() {
+    fillMika();
+    var bub = $('mika-say');
+    var reduce = window.matchMedia && matchMedia('(prefers-reduced-motion: reduce)').matches;
+    if (bub.classList.contains('thinking')) {
+      setTimeout(function () { mikaSay('Salut ! De quoi as-tu envie de parler ce soir ?'); }, reduce ? 0 : 1000);
+    }
+    mainQr();
+  }
+
+  /* Mika flottant : toujours à portée quand l'accueil défile */
+  var heroOut = false;
+  function updateFab() { $('mika-fab').hidden = !(heroOut && !$('lobby').hidden); }
+  function openMikaSheet() {
+    var list = $('mika-sheet-list');
+    list.textContent = '';
+    todayThemes().slice(0, 4).forEach(function (x) {
+      var b = el('button', 'br-item');
+      b.type = 'button';
+      b.appendChild(el('span', 'em', emojiOf(x)));
+      b.appendChild(el('span', 'tx', x.text));
+      b.insertAdjacentHTML('beforeend', ARROW);
+      b.addEventListener('click', function () { closeSheets(); pickTheme(x.text); });
+      list.appendChild(b);
+    });
+    $('sheet-mika').hidden = false;
+    $('mika-fab').classList.add('seen');
+    $('fab-lab').hidden = true;
+  }
+  function watchHero() {
+    if (!('IntersectionObserver' in window)) return;
+    new IntersectionObserver(function (es) {
+      heroOut = !es[0].isIntersecting;
+      updateFab();
+    }, { threshold: 0 }).observe(document.querySelector('.hero'));
   }
 
   function renderLobby() {
@@ -362,6 +492,7 @@
     $('empty').hidden = shown.length > 0;
     var em = $('empty');
     em.textContent = '';
+    em.appendChild(el('span', 'big', (f && invites.length > 0) ? '🔍' : '🌙'));
     em.appendChild(el('strong', null, (f && invites.length > 0) ? 'Aucun thème ne correspond' : 'Personne n’attend pour le moment'));
     em.appendChild(document.createTextNode((f && invites.length > 0) ? 'Efface le filtre ou lance le tien.' : 'Lance un thème : dès que quelqu’un l’ouvre, il apparaît ici.'));
     var cp = $('inv-count');
@@ -369,7 +500,7 @@
     cp.textContent = String(invites.length);
     shown.forEach(function (inv) {
       var li = el('li', 'invite');
-      li.appendChild(el('div', 'avatar ' + tint(inv.nick), initial(inv.nick)));
+      li.appendChild(el('div', 'avatar ' + tint(inv.nick), animal(inv.nick)));
       var main = el('div', 'invite-main');
       main.appendChild(el('div', 'invite-theme', inv.theme));
       var meta = el('div', 'invite-meta');
@@ -393,6 +524,7 @@
     closeSheets();
     $('conv').hidden = true;
     $('lobby').hidden = false;
+    updateFab();
     document.documentElement.style.overflow = '';
     renderLobby();
   }
@@ -414,6 +546,7 @@
   function showConv() {
     $('lobby').hidden = true;
     $('conv').hidden = false;
+    updateFab();
     document.documentElement.style.overflow = 'hidden';
     $('log').textContent = '';
     grp = { key: null, ts: 0 };
@@ -424,7 +557,7 @@
     $('conv-theme').textContent = room.theme;
     var av = $('conv-av');
     av.className = 'avatar ' + tint(room.theme);
-    av.textContent = initial(room.theme);
+    av.textContent = '💬';
     fit();
     renderConvState();
   }
@@ -496,6 +629,7 @@
   function tipDismissed() { return store('talkie.tipMika') === '1'; }
   function updateTip() {
     var show = aiOn && !!room && !room.ai && !tipDismissed() && !$('conv').hidden;
+    if (show) fillMika();
     $('mika-tip').hidden = !show;
   }
   function mentionQuery() {
@@ -642,7 +776,7 @@
     var showName = first && !mine && (ai || (room && room.members.length > 2));
     if (showName) {
       var who = el('div', 'who', ai ? 'Mika' : (clean(m.nick, 20) || 'Quelqu’un'));
-      if (ai) who.appendChild(el('span', 'badge', 'IA'));
+      if (ai) { var mini = el('span', 'mini'); mini.innerHTML = mikaSvg(); who.insertBefore(mini, who.firstChild); who.appendChild(el('span', 'badge', 'IA')); }
       row.appendChild(who);
     }
     var b = el('div', 'bubble');
@@ -692,12 +826,20 @@
   }
 
   /* ---------- Envoi ---------- */
+  // Garde le clavier ouvert après un envoi : on remet le focus dans le champ (sauf si le panneau emoji/GIF est ouvert).
+  function keepKeyboard() {
+    var m = $('msg');
+    if (m.disabled || !$('panel').hidden) return;
+    try { m.focus({ preventScroll: true }); } catch (e) { m.focus(); }
+  }
   function sendText() {
     var text = chatClean($('msg').value, 500);
     if (!text) return;
     if (send({ t: 'chat', text: text })) {
+      if (/@mika/i.test(text)) store('talkie.tipMika', '1');
       $('msg').value = '';
       updateSend();
+      keepKeyboard();
     } else toast('Le message n’a pas pu partir. Réessaie.');
   }
   function sendGif(g) {
@@ -842,7 +984,7 @@
   }
 
   /* ---------- Feuilles ---------- */
-  function closeSheets() { $('sheet-safety').hidden = true; $('sheet-leave').hidden = true; }
+  function closeSheets() { $('sheet-safety').hidden = true; $('sheet-leave').hidden = true; $('sheet-mika').hidden = true; }
 
   function renderSafety(o) {
     var ul = $('safety-list');
@@ -962,10 +1104,24 @@
     var theme = clean($('theme').value, 60);
     if (!theme) { $('theme').focus(); return; }
     var checked = document.querySelector('input[name="size"]:checked');
-    if (send({ t: 'invite', theme: theme, max: checked ? parseInt(checked.value, 10) : 2 })) $('theme').value = '';
+    if (send({ t: 'invite', theme: theme, max: checked ? parseInt(checked.value, 10) : 2 })) { $('theme').value = ''; hideBranches(); }
     else toast('Connexion en cours, réessaie dans un instant.');
   });
   $('msg-form').addEventListener('submit', function (e) { e.preventDefault(); sendText(); });
+  // Toucher « Envoyer » ne doit pas faire perdre le focus au champ (sinon le clavier se ferme).
+  $('btn-send').addEventListener('pointerdown', function (e) { if (document.activeElement === $('msg')) e.preventDefault(); });
+  $('btn-send').addEventListener('mousedown', function (e) { if (document.activeElement === $('msg')) e.preventDefault(); });
+  $('theme').addEventListener('input', function () {
+    var v = clean($('theme').value, 60);
+    $('btn-publish').disabled = !open || replaced || !!room;
+    clearTimeout(brTimer);
+    if (v.length < 4) { if (!v.length) hideBranches(); return; }
+    if (v === brTopic) return;
+    brTimer = setTimeout(function () { loadBranches(v, []); }, 900);
+  });
+  $('mika-fab').addEventListener('click', openMikaSheet);
+  $('btn-mika-close').addEventListener('click', closeSheets);
+  $('btn-surprise').addEventListener('click', function () { closeSheets(); surprise(); });
   $('msg').addEventListener('input', updateSend);
   $('msg').addEventListener('click', updateMention);
   $('msg').addEventListener('keyup', function (e) { if (e.key !== 'Enter') updateMention(); });
@@ -1030,7 +1186,7 @@
   if ('serviceWorker' in navigator) {
     window.addEventListener('load', function () { navigator.serviceWorker.register('/sw.js').catch(function () {}); });
   }
-  renderChips(); renderMika(); renderTrends(); renderLook();
+  renderChips(); renderMika(); renderTrends(); renderLook(); watchHero(); fillMika();
   renderTrends();
   loadThemes();
   setInterval(loadThemes, 30 * 60 * 1000);

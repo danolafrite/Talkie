@@ -27,6 +27,7 @@ try { fs.mkdirSync(DATA_DIR, { recursive: true }); } catch (e) { /* lecture seul
 const ai = require('./lib/ai');
 const mod = require('./lib/moderation');
 const trends = require('./lib/trends');
+const branches = require('./lib/branches');
 const stats = require('./lib/stats').create(DATA_DIR);
 const ADMIN_KEY = process.env.ADMIN_KEY || '';
 const MAX_AI_REPLIES = 12; // réponses de l'assistant par conversation
@@ -341,6 +342,7 @@ function modLog(kind, c, extra) {
 const CARE_TEXT = 'Je lis que ça pèse en ce moment, et je suis là pour t’écouter. Si tu penses à te faire du mal, parle à quelqu’un de confiance ou appelle le 3114, gratuit, 24 h sur 24 (France). Tu n’es pas seul·e.';
 
 /* ---------- Mika appelé avec @Mika dans une conversation ---------- */
+const branchHits = new Map();
 const MENTION_RE = /(^|[^\p{L}\p{N}_])@mika(?![\p{L}\p{N}_])/iu;
 const MENTION_CAP = 20;          // appels à Mika par conversation
 const MENTION_GAP_MS = 8000;     // délai minimum entre deux appels d'une même personne
@@ -402,7 +404,7 @@ function handle(ws, msg) {
     c.adult = msg.adult === true;
     byCid.set(cid, ws);
     stats.visit(c.pid);
-    send(ws, { t: 'welcome', pid: c.pid, push: subs.has(c.pid), ai: ai.enabled(), gif: !!GIPHY_KEY, verified: isVerified(cid) });
+    send(ws, { t: 'welcome', pid: c.pid, push: subs.has(c.pid), ai: ai.configured(), gif: !!GIPHY_KEY, verified: isVerified(cid) });
     // Reprise d'une conversation après une coupure
     let resumed = false;
     rooms.forEach((r) => { if (!resumed && r.members.has(cid)) resumed = attach(ws, r); });
@@ -646,6 +648,20 @@ const server = http.createServer(async (req, res) => {
   if (url.pathname === '/api/themes' && req.method === 'GET') {
     const t = trends.get();
     json(res, 200, { themes: t.themes, items: t.items || [], source: t.source, updatedAt: t.updatedAt });
+    return;
+  }
+  if (url.pathname === '/api/branches' && req.method === 'GET') {
+    const ip = req.socket.remoteAddress || '?';
+    const now = Date.now();
+    const hits = (branchHits.get(ip) || []).filter((t) => now - t < 60000);
+    if (hits.length >= 20) { json(res, 429, { error: 'trop de demandes' }); return; }
+    hits.push(now); branchHits.set(ip, hits);
+    if (branchHits.size > 5000) branchHits.clear();
+    const topic = clean(url.searchParams.get('topic'), 70);
+    const path = clean(url.searchParams.get('path'), 240).split('|').filter(Boolean);
+    if (topic.length < 2) { json(res, 400, { error: 'sujet' }); return; }
+    const r = await branches.get(topic, path);
+    json(res, 200, { items: r.items, ai: r.ai });
     return;
   }
   if ((url.pathname === '/admin' || url.pathname === '/api/stats') && req.method === 'GET') {
