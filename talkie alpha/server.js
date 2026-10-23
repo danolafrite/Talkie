@@ -25,6 +25,7 @@ const MAX_ROOM_LOG = 30;
 try { fs.mkdirSync(DATA_DIR, { recursive: true }); } catch (e) { /* lecture seule : on continue sans disque */ }
 
 const ai = require('./lib/ai');
+const mod = require('./lib/moderation');
 const trends = require('./lib/trends');
 const stats = require('./lib/stats').create(DATA_DIR);
 const ADMIN_KEY = process.env.ADMIN_KEY || '';
@@ -314,6 +315,31 @@ async function companionTurn(room, kind) {
   }
 }
 
+/* ---------- Anti-bots (Cloudflare Turnstile) et majorité ---------- */
+const TURNSTILE_SITE = process.env.TURNSTILE_SITE_KEY || '';
+const TURNSTILE_SECRET = process.env.TURNSTILE_SECRET_KEY || '';
+const TURNSTILE_VERIFY_URL = process.env.TURNSTILE_VERIFY_URL || 'https://challenges.cloudflare.com/turnstile/v0/siteverify';
+const verified = new Map(); // cid -> expiration
+const VERIFY_TTL_MS = 12 * 60 * 60 * 1000;
+function isVerified(cid) {
+  if (!TURNSTILE_SITE || !TURNSTILE_SECRET) return true;
+  const e = verified.get(cid);
+  return !!e && e > Date.now();
+}
+async function verifyTurnstile(token, ip) {
+  const body = new URLSearchParams({ secret: TURNSTILE_SECRET, response: String(token || '').slice(0, 2048) });
+  if (ip) body.set('remoteip', ip);
+  const r = await fetch(TURNSTILE_VERIFY_URL, { method: 'POST', body });
+  const j = await r.json();
+  return !!(j && j.success);
+}
+function modLog(kind, c, extra) {
+  const line = Object.assign({ at: new Date().toISOString(), kind, pid: c.pid }, extra || {});
+  console.log('[talkie] MODÉRATION', JSON.stringify(line));
+  fs.appendFile(path.join(DATA_DIR, 'moderation.jsonl'), JSON.stringify(line) + '\n', () => {});
+}
+const CARE_TEXT = 'Je lis que ça pèse en ce moment, et je suis là pour t’écouter. Si tu penses à te faire du mal, parle à quelqu’un de confiance ou appelle le 3114, gratuit, 24 h sur 24 (France). Tu n’es pas seul·e.';
+
 /* ---------- Mika appelé avec @Mika dans une conversation ---------- */
 const MENTION_RE = /(^|[^\p{L}\p{N}_])@mika(?![\p{L}\p{N}_])/iu;
 const MENTION_CAP = 20;          // appels à Mika par conversation
@@ -373,9 +399,10 @@ function handle(ws, msg) {
     c.blocked = new Set((Array.isArray(msg.blocked) ? msg.blocked : []).slice(0, 200).map((x) => clean(x, 12)).filter(Boolean));
     blocksOf.set(c.pid, c.blocked);
     c.visible = msg.visible !== false;
+    c.adult = msg.adult === true;
     byCid.set(cid, ws);
     stats.visit(c.pid);
-    send(ws, { t: 'welcome', pid: c.pid, push: subs.has(c.pid), ai: ai.enabled(), gif: !!GIPHY_KEY });
+    send(ws, { t: 'welcome', pid: c.pid, push: subs.has(c.pid), ai: ai.enabled(), gif: !!GIPHY_KEY, verified: isVerified(cid) });
     // Reprise d'une conversation après une coupure
     let resumed = false;
     rooms.forEach((r) => { if (!resumed && r.members.has(cid)) resumed = attach(ws, r); });
@@ -400,6 +427,9 @@ function handle(ws, msg) {
     case 'vis':
       c.visible = !!msg.v;
       return;
+    case 'adult':
+      c.adult = msg.v === true;
+      return;
     case 'block': {
       const pid = clean(msg.pid, 12);
       if (!pid || pid === c.pid) return;
@@ -409,6 +439,8 @@ function handle(ws, msg) {
     }
     case 'invite': {
       if (c.roomId) return;
+      if (!c.adult) { send(ws, { t: 'error', code: 'adult', text: 'Talkie est réservé aux personnes majeures (18 ans et plus).' }); return; }
+      if (!isVerified(c.cid)) { send(ws, { t: 'needverify' }); send(ws, { t: 'error', text: 'Vérification en cours, réessaie dans un instant.' }); return; }
       const now = Date.now();
       if (c.lastInvite && now - c.lastInvite < INVITE_COOLDOWN_MS) { send(ws, { t: 'error', text: 'Attends quelques secondes avant de publier un autre thème.' }); return; }
       const theme = clean(msg.theme, 60);
@@ -434,6 +466,8 @@ function handle(ws, msg) {
     }
     case 'join': {
       if (c.roomId) return;
+      if (!c.adult) { send(ws, { t: 'error', code: 'adult', text: 'Talkie est réservé aux personnes majeures (18 ans et plus).' }); return; }
+      if (!isVerified(c.cid)) { send(ws, { t: 'needverify' }); send(ws, { t: 'error', text: 'Vérification en cours, réessaie dans un instant.' }); return; }
       const room = rooms.get(clean(msg.id, 20));
       if (!room || room.members.size === 0) { send(ws, { t: 'error', text: 'Cette invitation n’est plus disponible.' }); scheduleLobby(); return; }
       if (room.members.size >= room.max) { send(ws, { t: 'error', text: 'Cette conversation est déjà complète.' }); scheduleLobby(); return; }
@@ -464,25 +498,56 @@ function handle(ws, msg) {
       const text = gif ? '[GIF] ' + gif.title : cleanChat(msg.text, 500);
       if (!text) return;
       const now = Date.now();
+      const left = mod.mutedFor(c.cid);
+      if (left) { send(ws, { t: 'error', text: 'Tes messages sont en pause pour ' + Math.ceil(left / 60000) + ' min, suite à des avertissements.' }); return; }
       c.lastMsg = (c.lastMsg || []).filter((t) => now - t < 10000);
       if (c.lastMsg.length >= 15) { send(ws, { t: 'error', text: 'Doucement, tu écris trop vite.' }); return; }
       c.lastMsg.push(now);
-      const entry = { t: 'chat', pid: c.pid, nick: c.nick, text, ts: now };
-      if (gif) entry.gif = gif;
-      room.log.push(entry);
-      if (room.log.length > MAX_ROOM_LOG) room.log.shift();
-      room.members.forEach((m) => {
-        if (!m.ws) return;
-        if (m.pid !== c.pid && blockedEitherWay(m.pid, c.pid)) return;
-        send(m.ws, entry);
-      });
-      stats.message();
-      if (aiActive(room)) {
-        if (room.companion.busy) room.companion.pending = true;
-        else companionTurn(room, 'reply');
-      } else if (!gif && MENTION_RE.test(text)) {
-        mentionTurn(room, c, ws);
+      const refuse = (why, text) => {
+        const st = mod.addStrike(c.cid);
+        modLog('refus', c, { why, strikes: st.n, texte: text.slice(0, 120) });
+        send(ws, { t: 'error', text: (why === 'coordonnées' ? 'Pour ta sécurité, les liens et coordonnées (e-mail, téléphone) ne sont pas autorisés ici.' : 'Ce message ne respecte pas les règles de respect de Talkie.') + (st.n >= 2 ? ' Avertissement ' + st.n + '.' : '') });
+      };
+      const deliver = () => {
+        const entry = { t: 'chat', pid: c.pid, nick: c.nick, text, ts: Date.now() };
+        if (gif) entry.gif = gif;
+        room.log.push(entry);
+        if (room.log.length > MAX_ROOM_LOG) room.log.shift();
+        room.members.forEach((m) => {
+          if (!m.ws) return;
+          if (m.pid !== c.pid && blockedEitherWay(m.pid, c.pid)) return;
+          send(m.ws, entry);
+        });
+        stats.message();
+        if (aiActive(room)) {
+          if (room.companion.busy) room.companion.pending = true;
+          else companionTurn(room, 'reply');
+        } else if (!gif && MENTION_RE.test(text)) {
+          mentionTurn(room, c, ws);
+        }
+      };
+      if (gif) { deliver(); return; }
+      if (mod.botLike(c.cid, text)) { refuse('répétition', text); return; }
+      const a = mod.analyse(text);
+      if (a.level === 'block') { refuse(a.reason, text); return; }
+      if (a.level === 'care') {
+        deliver();
+        if (!room.careAt || now - room.careAt > 30 * 60 * 1000) {
+          room.careAt = now;
+          modLog('soutien', c, {});
+          setTimeout(() => { if (rooms.get(room.id) === room) postAI(room, CARE_TEXT, false); }, 1200);
+        }
+        return;
       }
+      if (a.level === 'suspect') {
+        const ctx = room.log.slice(-4).map((e) => '[' + clean(e.nick, 20) + '] ' + e.text);
+        mod.verdict(ctx, text).then((v) => {
+          if (v === 'BLOCK' || (v === null && a.hard)) refuse(a.reason, text);
+          else deliver();
+        });
+        return;
+      }
+      deliver();
       return;
     }
     case 'report': {
@@ -580,7 +645,7 @@ const server = http.createServer(async (req, res) => {
   if (url.pathname === '/api/vapid' && req.method === 'GET') { json(res, 200, { key: VAPID.publicKey }); return; }
   if (url.pathname === '/api/themes' && req.method === 'GET') {
     const t = trends.get();
-    json(res, 200, { themes: t.themes, source: t.source, updatedAt: t.updatedAt });
+    json(res, 200, { themes: t.themes, items: t.items || [], source: t.source, updatedAt: t.updatedAt });
     return;
   }
   if ((url.pathname === '/admin' || url.pathname === '/api/stats') && req.method === 'GET') {
@@ -617,6 +682,26 @@ const server = http.createServer(async (req, res) => {
       console.warn('[talkie] GIF indisponibles :', e.message);
       json(res, 502, { enabled: true, gifs: [], error: 'indisponible' });
     }
+    return;
+  }
+
+  if (url.pathname === '/api/config' && req.method === 'GET') {
+    json(res, 200, { turnstile: TURNSTILE_SITE && TURNSTILE_SECRET ? TURNSTILE_SITE : null });
+    return;
+  }
+  if (url.pathname === '/api/verify' && req.method === 'POST') {
+    try {
+      const body = JSON.parse(await readBody(req, 4096));
+      const cid = clean(body.cid, 64);
+      if (!/^[A-Za-z0-9-]{16,64}$/.test(cid)) { json(res, 400, { error: 'cid' }); return; }
+      const ok = await verifyTurnstile(body.token, req.socket.remoteAddress);
+      if (ok) {
+        verified.set(cid, Date.now() + VERIFY_TTL_MS);
+        const ws = byCid.get(cid);
+        if (ws) send(ws, { t: 'verified' });
+      }
+      json(res, ok ? 200 : 403, { ok });
+    } catch (e) { json(res, 400, { error: 'bad request' }); }
     return;
   }
 

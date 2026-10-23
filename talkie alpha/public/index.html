@@ -322,6 +322,46 @@ fieldset { border: 0; padding: 0; margin: 0; min-width: 0; display: flex; flex-d
 .mpop small { color: var(--muted); }
 .mention { font-weight: 700; color: inherit; background: rgba(255, 255, 255, 0.22); border-radius: 6px; padding: 0 3px; }
 .msg:not(.mine) .mention { background: rgba(47, 107, 255, 0.14); color: var(--bubble-out); }
+
+.mika { display: flex; gap: 12px; align-items: flex-start; }
+.mika-av { flex: none; width: 56px; height: 56px; border-radius: 50%; background: linear-gradient(135deg, #19B96B, #2F6BFF); display: grid; place-items: center; box-shadow: var(--shadow); animation: mfloat 3.6s ease-in-out infinite; }
+.mika-face { display: flex; gap: 9px; }
+.mika-face i { width: 8px; height: 12px; border-radius: 6px; background: #fff; animation: mblink 4.2s infinite; transform-origin: center; }
+.mika-body { min-width: 0; flex: 1; }
+.mika-name { font-weight: 800; font-size: 14px; display: flex; gap: 6px; align-items: center; flex-wrap: wrap; }
+.mika-name small { color: var(--muted); font-weight: 500; }
+.mika-bubble { margin-top: 6px; background: var(--surface); border: 1px solid var(--line); border-radius: 4px 18px 18px 18px; padding: 10px 13px; font-size: 16px; line-height: 1.35; box-shadow: var(--shadow); animation: mpop 0.45s cubic-bezier(.2,.9,.3,1.3) both; }
+.mika-qr { display: flex; flex-wrap: wrap; gap: 8px; margin-top: 10px; }
+.mika-qr button { border: 1.5px solid var(--bubble-out); background: transparent; color: var(--bubble-out); border-radius: 999px; padding: 7px 13px; font: inherit; font-size: 14px; font-weight: 600; cursor: pointer; }
+.mika-qr button:active { transform: scale(0.96); }
+@keyframes mfloat { 0%, 100% { transform: translateY(0); } 50% { transform: translateY(-4px); } }
+@keyframes mblink { 0%, 92%, 100% { transform: scaleY(1); } 95% { transform: scaleY(0.1); } }
+@keyframes mpop { from { opacity: 0; transform: translateY(6px) scale(0.96); } to { opacity: 1; transform: none; } }
+.cats { display: flex; gap: 8px; overflow-x: auto; padding: 2px 0 10px; scrollbar-width: none; }
+.cats::-webkit-scrollbar { display: none; }
+.cats button { flex: none; border: 1px solid var(--line); background: var(--surface); color: inherit; border-radius: 999px; padding: 7px 14px; font: inherit; font-size: 14px; font-weight: 600; cursor: pointer; }
+.cats button[aria-selected="true"] { background: var(--bubble-out); color: var(--bubble-out-fg); border-color: transparent; }
+.themes { flex-wrap: wrap; overflow: visible; }
+.tcard { flex: 1 1 calc(50% - 10px); min-height: 96px; }
+@media (prefers-reduced-motion: reduce) { .mika-av, .mika-face i, .mika-bubble { animation: none; } }
+
+#log[data-bg="aurore"] { background-image: linear-gradient(160deg, rgba(120,230,190,.35), rgba(120,160,255,.30) 55%, rgba(210,150,255,.28)); background-size: auto; }
+#log[data-bg="ocean"] { background-image: linear-gradient(180deg, rgba(90,190,255,.30), rgba(40,110,220,.28)); background-size: auto; }
+#log[data-bg="foret"] { background-image: radial-gradient(rgba(25,185,107,.10) 2px, transparent 2.2px), linear-gradient(180deg, rgba(130,220,150,.26), rgba(40,150,100,.24)); background-size: 26px 26px, auto; }
+#log[data-bg="soleil"] { background-image: linear-gradient(180deg, rgba(255,214,102,.38), rgba(255,140,120,.28)); background-size: auto; }
+#log[data-bg="nuit"] { background-image: radial-gradient(rgba(255,255,255,.55) 1px, transparent 1.2px), radial-gradient(rgba(255,255,255,.30) 1px, transparent 1.2px), linear-gradient(180deg, #0f1b3d, #1b2a5e); background-size: 53px 47px, 31px 29px, auto; background-position: 0 0, 14px 9px, 0 0; }
+.swatches { display: flex; gap: 10px; flex-wrap: wrap; }
+.swatches button { width: 54px; border: 2px solid transparent; background: none; padding: 0; cursor: pointer; font: inherit; font-size: 11px; color: var(--muted); display: flex; flex-direction: column; align-items: center; gap: 4px; }
+.swatches button i { width: 48px; height: 48px; border-radius: 14px; border: 1px solid var(--line); display: block; }
+.swatches button[aria-pressed="true"] i { outline: 3px solid var(--bubble-out); outline-offset: 1px; }
+.swatches [data-bg=""] i { background: var(--bg); }
+.swatches [data-bg="aurore"] i { background: linear-gradient(160deg, #8ee8c4, #86a6ff, #d6a0ff); }
+.swatches [data-bg="ocean"] i { background: linear-gradient(180deg, #7cc9ff, #3a78e0); }
+.swatches [data-bg="foret"] i { background: linear-gradient(180deg, #a6e6b4, #3aa070); }
+.swatches [data-bg="soleil"] i { background: linear-gradient(180deg, #ffd96e, #ff8f7a); }
+.swatches [data-bg="nuit"] i { background: linear-gradient(180deg, #0f1b3d, #1b2a5e); }
+.optrow { display: flex; align-items: center; justify-content: space-between; gap: 12px; font-size: 15px; font-weight: 600; }
+.optrow button { border: 1px solid var(--line); background: var(--surface-2, var(--bg)); color: inherit; border-radius: 999px; padding: 7px 14px; font: inherit; font-size: 14px; font-weight: 600; cursor: pointer; }
 </style>
 </head>
 <body>
@@ -346,8 +386,17 @@ fieldset { border: 0; padding: 0; margin: 0; min-width: 0; display: flex; flex-d
     <main class="wrap page">
       <section class="hero">
         <h2>Parle de ce que tu veux, <span>là, maintenant.</span></h2>
-        <p>Choisis un thème, quelqu’un te rejoint.<span id="hero-ai" hidden> En attendant, Mika, une IA, te tient compagnie.</span></p>
+        <p>Choisis un thème, quelqu’un te rejoint.</p>
         <button type="button" class="ghost reconnect" id="btn-reconnect" hidden>Reprendre ici</button>
+      </section>
+
+      <section id="mika-hero" class="mika" aria-label="Mika, assistant Talkie" hidden>
+        <div class="mika-av" aria-hidden="true"><span class="mika-face"><i></i><i></i></span></div>
+        <div class="mika-body">
+          <div class="mika-name">Mika <span class="badge">IA</span> <small>ton assistant Talkie</small></div>
+          <div class="mika-bubble" id="mika-say">Salut ! De quoi as-tu envie de parler ce soir ?</div>
+          <div class="mika-qr" id="mika-qr"></div>
+        </div>
       </section>
 
       <section id="install-ios" class="notice" hidden aria-label="Installer sur iPhone">
@@ -365,11 +414,12 @@ fieldset { border: 0; padding: 0; margin: 0; min-width: 0; display: flex; flex-d
         <div class="actions"><button type="button" class="primary" id="btn-notif">Activer les notifications</button></div>
       </section>
 
-      <section id="trends" aria-labelledby="themes-h" hidden>
+      <section id="explore" aria-labelledby="themes-h">
         <div class="sec-head">
-          <h2 id="themes-h">Dans l’air du temps</h2>
+          <h2 id="themes-h">Explorer les thèmes</h2>
           <small id="themes-sub"></small>
         </div>
+        <div id="cats" class="cats" role="tablist" aria-label="Catégories"></div>
         <div id="themes" class="themes"></div>
       </section>
 
@@ -395,7 +445,7 @@ fieldset { border: 0; padding: 0; margin: 0; min-width: 0; display: flex; flex-d
             </div>
             <button type="submit" class="primary" id="btn-publish" disabled>Publier mon invitation</button>
           </div>
-          <p class="hint" id="hint-ai" hidden>Si personne n’arrive tout de suite, Mika (une IA) lance la discussion avec toi.</p>
+          <p class="hint" id="hint-ai" hidden>Si personne n’arrive tout de suite, Mika, ton assistant, lance la discussion avec toi.</p>
         </form>
       </section>
 
@@ -475,6 +525,9 @@ fieldset { border: 0; padding: 0; margin: 0; min-width: 0; display: flex; flex-d
   <div id="sheet-safety" class="scrim" hidden>
     <div class="sheet" role="dialog" aria-modal="true" aria-labelledby="sheet-safety-h">
       <div class="grab"></div>
+      <h3 id="sheet-look-h">Ambiance</h3>
+      <div class="swatches" id="swatches" role="group" aria-label="Fond d’écran du tchat"></div>
+      <div class="optrow"><span>Sons</span><button type="button" id="btn-sound" aria-pressed="true">Activés</button></div>
       <h3 id="sheet-safety-h">Sécurité</h3>
       <p>Tu peux quitter à tout moment, sans explication. Bloquer masque la personne et ses invitations, et elle ne verra plus les tiennes. Un signalement est enregistré avec les derniers messages pour être examiné.</p>
       <ul id="safety-list"></ul>
@@ -482,6 +535,20 @@ fieldset { border: 0; padding: 0; margin: 0; min-width: 0; display: flex; flex-d
       <div class="stack"><button type="button" class="ghost" id="btn-safety-close">Fermer</button></div>
     </div>
   </div>
+
+  <div id="sheet-age" class="scrim" hidden>
+    <div class="sheet" role="dialog" aria-modal="true" aria-labelledby="sheet-age-h">
+      <div class="grab"></div>
+      <h3 id="sheet-age-h">Bienvenue sur Talkie</h3>
+      <p>Talkie met en relation des inconnus : il est réservé aux personnes de <strong>18 ans et plus</strong>. En continuant, tu acceptes que la modération automatique de Mika lit les messages pour protéger tout le monde. Les messages ne sont pas conservés.</p>
+      <p id="age-no" class="hint" hidden>Désolé, Talkie n’est pas accessible aux mineurs. Reviens à tes 18 ans !</p>
+      <div class="stack">
+        <button type="button" class="primary" id="btn-age-yes">J’ai 18 ans ou plus</button>
+        <button type="button" class="ghost" id="btn-age-no">J’ai moins de 18 ans</button>
+      </div>
+    </div>
+  </div>
+  <div id="ts-box" style="position:fixed;bottom:8px;left:8px;z-index:20"></div>
 
   <div id="sheet-leave" class="scrim" hidden>
     <div class="sheet" role="dialog" aria-modal="true" aria-labelledby="sheet-leave-h">

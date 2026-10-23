@@ -31,7 +31,7 @@
   var NAMES = ['Hirondelle', 'Noisetier', 'Luciole', 'Marée', 'Brume', 'Cormoran', 'Sureau', 'Galet', 'Pervenche', 'Renard'];
   // Thèmes proposés en permanence (d'origine)
   var CHIPS = ['Les frites', 'Une journée difficile', 'La série du moment', 'Ce que je cuisine ce soir', 'Je veux juste discuter', 'Musique'];
-  var TREND_THEMES = [];
+  var TREND_ITEMS = [];
   var GIF_URL_RE = /^https:\/\/(?:media\d*|i)\.giphy\.com\/[A-Za-z0-9_\/.\-]{1,160}(?:\?[A-Za-z0-9_=&.\-%]{0,200})?$/;
 
   var cid = store('tablee.cid');
@@ -89,7 +89,7 @@
     ws.onopen = function () {
       if (ws !== mine) return;
       open = true; retry = 0;
-      send({ t: 'hello', cid: cid, nick: nick, blocked: blocked, visible: document.visibilityState !== 'hidden' });
+      send({ t: 'hello', cid: cid, nick: nick, blocked: blocked, visible: document.visibilityState !== 'hidden', adult: store('talkie.adult') === '1' });
       renderLobby();
       if (room) renderConvState();
     };
@@ -132,21 +132,28 @@
         room = m.room;
         typingOn = false;
         showConv();
+        replaying = true;
         (m.log || []).forEach(function (e) { addChat(e); });
+        replaying = false;
         break;
       case 'room':
         if (room && m.room && m.room.id === room.id) { room = m.room; renderConvState(); }
         break;
       case 'chat': addChat(m); break;
       case 'typing': setTyping(!!m.on); break;
-      case 'sys': addSys(m.text); break;
+      case 'sys': addSys(m.text); sfx.join(); break;
       case 'left':
         room = null;
         typingOn = false;
         showLobby();
         if (m.reason) toast(m.reason);
         break;
-      case 'error': toast(m.text || 'Une erreur est survenue.'); break;
+      case 'needverify': startVerify(); break;
+      case 'verified': break;
+      case 'error':
+        if (m.code === 'adult') { showAge(); break; }
+        toast(m.text || 'Une erreur est survenue.');
+        break;
       case 'reported': toast('Merci, le signalement est enregistré.'); break;
       case 'replaced':
         replaced = true;
@@ -155,8 +162,41 @@
     }
   }
 
+  /* ---------- Majorité (18+) et vérification anti-bot ---------- */
+  function showAge() { if ($('sheet-age')) $('sheet-age').hidden = false; }
+  var tsKey = null, tsWidget = null, tsLoading = false;
+  function startVerify() {
+    if (!tsKey || tsWidget !== null || tsLoading) return;
+    tsLoading = true;
+    var go = function () {
+      try {
+        tsWidget = window.turnstile.render('#ts-box', {
+          sitekey: tsKey,
+          callback: function (token) {
+            fetch('/api/verify', { method: 'POST', headers: { 'content-type': 'application/json' }, body: JSON.stringify({ cid: cid, token: token }) })
+              .then(function () { $('ts-box').textContent = ''; tsWidget = null; tsLoading = false; })
+              .catch(function () { tsWidget = null; tsLoading = false; });
+          }
+        });
+      } catch (e) { tsWidget = null; }
+      tsLoading = false;
+    };
+    if (window.turnstile) { go(); return; }
+    var sc = document.createElement('script');
+    sc.src = 'https://challenges.cloudflare.com/turnstile/v0/api.js?render=explicit';
+    sc.async = true;
+    sc.onload = go;
+    sc.onerror = function () { tsLoading = false; };
+    document.head.appendChild(sc);
+  }
+  function loadConfig() {
+    fetch('/api/config').then(function (r) { return r.json(); }).then(function (j) {
+      if (j && j.turnstile) { tsKey = j.turnstile; startVerify(); }
+    }).catch(function () { /* ignore */ });
+  }
+
   function applyFlags() {
-    $('hero-ai').hidden = !aiOn;
+    $('mika-hero').hidden = !aiOn;
     $('hint-ai').hidden = !aiOn;
     $('foot-ai').hidden = !aiOn;
     $('foot-gif').hidden = !gifOn;
@@ -177,37 +217,96 @@
     });
   }
 
+  var CATALOG = {
+    'Actu': ['Un événement dont tout le monde parle', 'La mode du moment', 'Une info qui m’a surpris', 'Ce qui change dans nos villes'],
+    'Culture': ['La série du moment', 'Un film à voir ce week-end', 'Une chanson en boucle', 'Un livre qui m’a marqué·e'],
+    'Sport': ['Le match de ce soir', 'Me remettre au sport', 'Un souvenir de stade', 'Courir, nager, marcher…'],
+    'Food': ['Les frites', 'Ce que je cuisine ce soir', 'Le meilleur snack à 22 h', 'Ma recette de réconfort'],
+    'Jeux': ['Un jeu vidéo du moment', 'Un jeu de société à tester', 'Mon plus gros rage quit', 'Jeux rétro'],
+    'Voyage': ['Ma prochaine destination', 'Un endroit qui m’a changé·e', 'Voyager seul·e', 'Les bons plans week-end'],
+    'Soutien': ['Une journée difficile', 'Je veux juste discuter', 'Je n’arrive pas à dormir', 'Un petit bonheur du jour']
+  };
+  var catSel = null;
+
+  function pickTheme(t) {
+    $('theme').value = t;
+    $('compose').scrollIntoView({ behavior: 'smooth', block: 'center' });
+    setTimeout(function () { $('btn-publish').focus({ preventScroll: true }); }, 350);
+    toast('Thème choisi. Règle le nombre de personnes puis publie.');
+  }
+
+  function exploreData() {
+    var out = [];
+    if (TREND_ITEMS.length) out.push({ name: 'Tendance', list: TREND_ITEMS });
+    Object.keys(CATALOG).forEach(function (k) {
+      out.push({ name: k, list: CATALOG[k].map(function (t) { return { cat: k, text: t }; }) });
+    });
+    return out;
+  }
+
   function renderTrends() {
-    var sec = $('trends');
+    var data = exploreData();
+    if (!catSel || !data.some(function (d) { return d.name === catSel; })) catSel = data[0].name;
+    var tabs = $('cats');
+    tabs.textContent = '';
+    data.forEach(function (d) {
+      var b = el('button', null, (d.name === 'Tendance' ? '🔥 ' : '') + d.name);
+      b.type = 'button';
+      b.setAttribute('role', 'tab');
+      b.setAttribute('aria-selected', String(d.name === catSel));
+      b.addEventListener('click', function () { catSel = d.name; renderTrends(); });
+      tabs.appendChild(b);
+    });
     var box = $('themes');
     box.textContent = '';
-    if (!TREND_THEMES.length) { sec.hidden = true; return; }
-    sec.hidden = false;
-    TREND_THEMES.forEach(function (t) {
+    var cur = data.filter(function (d) { return d.name === catSel; })[0];
+    cur.list.forEach(function (x) {
       var b = el('button', 'tcard');
       b.type = 'button';
       var top = el('span');
-      top.appendChild(el('span', 'lab', 'Tendance'));
-      top.appendChild(el('span', 'txt', t));
+      top.appendChild(el('span', 'lab', cur.name === 'Tendance' ? x.cat : cur.name));
+      top.appendChild(el('span', 'txt', x.text));
       b.appendChild(top);
       b.appendChild(el('span', 'go', 'En parler →'));
-      b.addEventListener('click', function () {
-        $('theme').value = t;
-        $('compose').scrollIntoView({ behavior: 'smooth', block: 'center' });
-        setTimeout(function () { $('btn-publish').focus({ preventScroll: true }); }, 350);
-        toast('Thème choisi. Règle le nombre de personnes puis publie.');
-      });
+      b.addEventListener('click', function () { pickTheme(x.text); });
       box.appendChild(b);
     });
-    $('themes-sub').textContent = new Date().toLocaleDateString('fr-FR', { weekday: 'long', day: 'numeric', month: 'long' });
+    $('themes-sub').textContent = TREND_ITEMS.length ? new Date().toLocaleDateString('fr-FR', { weekday: 'long', day: 'numeric', month: 'long' }) : '';
   }
 
   function loadThemes() {
     fetch('/api/themes').then(function (r) { return r.json(); }).then(function (d) {
-      TREND_THEMES = (d && d.source === 'trends' && Array.isArray(d.themes))
-        ? d.themes.map(function (t) { return clean(t, 60); }).filter(Boolean).slice(0, 10) : [];
+      TREND_ITEMS = [];
+      if (d && d.source === 'trends') {
+        var src = Array.isArray(d.items) && d.items.length ? d.items
+          : (Array.isArray(d.themes) ? d.themes.map(function (t) { return { cat: 'Actu', text: t }; }) : []);
+        TREND_ITEMS = src.map(function (x) { return { cat: clean(x.cat, 20) || 'Actu', text: clean(x.text, 60) }; })
+          .filter(function (x) { return x.text; }).slice(0, 10);
+        if (TREND_ITEMS.length) catSel = 'Tendance';
+      }
       renderTrends();
     }).catch(function () {});
+  }
+
+  /* ---------- Mika sur la première page ---------- */
+  function renderMika() {
+    var qr = $('mika-qr');
+    qr.textContent = '';
+    var opts = [
+      ['Je m’ennuie 😅', function () { pickTheme('Je m’ennuie, on discute ?'); }],
+      ['Un thème du moment', function () { var t = TREND_ITEMS.length ? 'Tendance' : 'Culture'; catSel = t; renderTrends(); $('explore').scrollIntoView({ behavior: 'smooth', block: 'start' }); }],
+      ['Quelqu’un à qui parler', function () { pickTheme('Je veux juste discuter'); }]
+    ];
+    opts.forEach(function (o) {
+      var b = el('button', null, o[0]);
+      b.type = 'button';
+      b.addEventListener('click', function () {
+        var say = $('mika-say');
+        say.textContent = 'Avec plaisir ! Je te prépare ça.';
+        o[1]();
+      });
+      qr.appendChild(b);
+    });
   }
 
   function renderLobby() {
@@ -317,7 +416,7 @@
       w.hidden = false;
       if (room.ai) {
         w.className = 'wait';
-        w.textContent = 'Ton invitation est visible dans le salon. En attendant, Mika, une IA, te tient compagnie. Elle s’efface dès que quelqu’un arrive.';
+        w.textContent = 'Ton invitation est visible dans le salon. En attendant, Mika, ton assistant, te tient compagnie. Il s’efface dès que quelqu’un arrive.';
       } else {
         w.className = 'wait plain';
         w.textContent = isHost
@@ -423,6 +522,64 @@
     return text.replace(/\s/g, '').length <= 8;
   }
 
+  /* ---------- Ambiance et sons ---------- */
+  var BGS = [['', 'Classique'], ['aurore', 'Aurore'], ['ocean', 'Océan'], ['foret', 'Forêt'], ['soleil', 'Soleil'], ['nuit', 'Nuit']];
+  var bgSel = store('talkie.bg') || '';
+  if (!BGS.some(function (b) { return b[0] === bgSel; })) bgSel = '';
+  var soundOn = store('talkie.sound') === '1';
+  var audioCtx = null, replaying = false;
+
+  function applyBg() {
+    if (bgSel) $('log').setAttribute('data-bg', bgSel); else $('log').removeAttribute('data-bg');
+    Array.prototype.forEach.call($('swatches').children, function (b) { b.setAttribute('aria-pressed', String(b.getAttribute('data-bg') === bgSel)); });
+  }
+  function renderLook() {
+    var box = $('swatches');
+    box.textContent = '';
+    BGS.forEach(function (b) {
+      var btn = el('button');
+      btn.type = 'button';
+      btn.setAttribute('data-bg', b[0]);
+      btn.appendChild(el('i'));
+      btn.appendChild(document.createTextNode(b[1]));
+      btn.addEventListener('click', function () { bgSel = b[0]; store('talkie.bg', bgSel); applyBg(); });
+      box.appendChild(btn);
+    });
+    applyBg();
+    var sb = $('btn-sound');
+    sb.textContent = soundOn ? 'Activés' : 'Coupés';
+    sb.setAttribute('aria-pressed', String(soundOn));
+  }
+  function unlockAudio() {
+    try {
+      if (!audioCtx) { var C = window.AudioContext || window.webkitAudioContext; if (C) audioCtx = new C(); }
+      if (audioCtx && audioCtx.state === 'suspended') audioCtx.resume();
+    } catch (e) { /* ignore */ }
+  }
+  function tone(freqs, dur, vol) {
+    if (!soundOn || replaying || !audioCtx || audioCtx.state !== 'running') return;
+    try {
+      var t0 = audioCtx.currentTime;
+      freqs.forEach(function (f, i) {
+        var o = audioCtx.createOscillator(), g = audioCtx.createGain();
+        o.type = 'sine'; o.frequency.value = f;
+        var st = t0 + i * 0.09;
+        g.gain.setValueAtTime(0.0001, st);
+        g.gain.exponentialRampToValueAtTime(vol, st + 0.015);
+        g.gain.exponentialRampToValueAtTime(0.0001, st + dur);
+        o.connect(g); g.connect(audioCtx.destination);
+        o.start(st); o.stop(st + dur + 0.02);
+      });
+    } catch (e) { /* ignore */ }
+  }
+  var sfx = {
+    recv: function () { tone([660, 880], 0.16, 0.10); },
+    sent: function () { tone([520], 0.08, 0.05); },
+    join: function () { tone([523, 659, 784], 0.2, 0.09); }
+  };
+  document.addEventListener('pointerdown', unlockAudio, { passive: true });
+  document.addEventListener('keydown', unlockAudio);
+
   function addChat(m) {
     var gif = null;
     if (m.gif && typeof m.gif === 'object' && typeof m.gif.url === 'string' && GIF_URL_RE.test(m.gif.url)) {
@@ -471,6 +628,7 @@
     log.appendChild(row);
     if (typingOn) showTypingNode();
     scrollLog(mine, near);
+    if (mine) sfx.sent(); else sfx.recv();
   }
 
   function removeTypingNode() {
@@ -792,6 +950,15 @@
   $('btn-leave-yes').addEventListener('click', function () { closeSheets(); send({ t: 'leave' }); });
   $('btn-safety').addEventListener('click', function () { closePanel(); $('sheet-safety').hidden = false; });
   $('btn-safety-close').addEventListener('click', closeSheets);
+  $('btn-age-yes').addEventListener('click', function () {
+    store('talkie.adult', '1');
+    $('sheet-age').hidden = true;
+    send({ t: 'adult', v: true });
+  });
+  $('btn-age-no').addEventListener('click', function () { $('age-no').hidden = false; });
+  if (store('talkie.adult') !== '1') showAge();
+  loadConfig();
+  $('btn-sound').addEventListener('click', function () { soundOn = !soundOn; store('talkie.sound', soundOn ? '1' : '0'); renderLook(); if (soundOn) { unlockAudio(); setTimeout(sfx.recv, 60); } });
   ['sheet-safety', 'sheet-leave'].forEach(function (id) {
     $(id).addEventListener('click', function (ev) { if (ev.target === $(id)) closeSheets(); });
   });
@@ -825,7 +992,7 @@
   if ('serviceWorker' in navigator) {
     window.addEventListener('load', function () { navigator.serviceWorker.register('/sw.js').catch(function () {}); });
   }
-  renderChips();
+  renderChips(); renderMika(); renderTrends(); renderLook();
   renderTrends();
   loadThemes();
   setInterval(loadThemes, 30 * 60 * 1000);
