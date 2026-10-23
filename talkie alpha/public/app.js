@@ -66,7 +66,7 @@
   function tint(str) {
     var n = 0, s = String(str || '');
     for (var i = 0; i < s.length; i++) n += s.charCodeAt(i);
-    return ['', 'g', 'b'][n % 3];
+    return ['b', 'g', 'y'][n % 3];
   }
   function initial(s) {
     var m = String(s || '').match(/[A-Za-z0-9À-ɏ]/);
@@ -224,15 +224,33 @@
     'Food': ['Les frites', 'Ce que je cuisine ce soir', 'Le meilleur snack à 22 h', 'Ma recette de réconfort'],
     'Jeux': ['Un jeu vidéo du moment', 'Un jeu de société à tester', 'Mon plus gros rage quit', 'Jeux rétro'],
     'Voyage': ['Ma prochaine destination', 'Un endroit qui m’a changé·e', 'Voyager seul·e', 'Les bons plans week-end'],
+    'Société': ['Un sujet dont on parle partout', 'Ce que je pense de l’IA', 'Les manifestations, vous y allez ?', 'Ce qui nous rapproche'],
     'Soutien': ['Une journée difficile', 'Je veux juste discuter', 'Je n’arrive pas à dormir', 'Un petit bonheur du jour']
   };
   var catSel = null;
+  var ICONS = {
+    'Tendance': '<path d="M12 3c1 3.2 4.5 5 4.5 9.3A4.5 4.5 0 0 1 12 17a4.5 4.5 0 0 1-4.5-4.7c0-1.7.8-2.8 1.7-3.8.2 1.2.8 2 1.6 2.3C10.6 8.2 11 5.6 12 3z"/><path d="M12 21c-2.6 0-4.5-1.4-4.5-3.5"/>',
+    'Actu': '<path d="M4 5h13a1 1 0 0 1 1 1v13H6a2 2 0 0 1-2-2V5z"/><path d="M18 9h2v8a2 2 0 0 1-2 2"/><path d="M8 9h6M8 13h6"/>',
+    'Culture': '<rect x="3" y="5" width="18" height="14" rx="3"/><path d="M10.5 9.2v5.6l4.5-2.8-4.5-2.8z"/>',
+    'Sport': '<circle cx="12" cy="12" r="9"/><path d="M3.5 9.5c3 .5 5.500 2.500 8.500 2.500s5.500-2 8.500-2.500M12 3v18M6 5.500c1.500 2 2 4.500 2 6.500s-.5 4.500-2 6.500M18 5.500c-1.500 2-2 4.500-2 6.500s.5 4.500 2 6.500"/>',
+    'Food': '<path d="M7 3v8M4.500 3v5a2.500 2.500 0 0 0 5 0V3M7 11v10"/><path d="M17 21V3c-2.500 2-3.500 5-3.500 8H17"/>',
+    'Jeux': '<rect x="2.500" y="7" width="19" height="11" rx="5.500"/><path d="M8 10.500v4M6 12.500h4"/><circle cx="15.500" cy="11.500" r="0.900" fill="currentColor"/><circle cx="18" cy="13.800" r="0.900" fill="currentColor"/>',
+    'Voyage': '<path d="M21 3 3 10.500l6.500 2.500L12 20l2.500-6.500L21 3z"/><path d="M9.500 13 21 3"/>',
+    'Société': '<circle cx="9" cy="8.500" r="3.200"/><path d="M3 20c.5-3.300 3-5 6-5s5.500 1.700 6 5"/><circle cx="17" cy="9.500" r="2.500"/><path d="M17.500 14.500c2.200.2 3.600 1.700 4 4.500"/>',
+    'Soutien': '<path d="M12 20s-7.500-4.500-7.500-10A4.300 4.300 0 0 1 12 7.300 4.300 4.300 0 0 1 19.500 10c0 5.500-7.500 10-7.500 10z"/>'
+  };
+  function icon(name, cls) {
+    var wrap = document.createElement('span');
+    wrap.innerHTML = '<svg class="i ' + (cls || '') + '" viewBox="0 0 24 24" aria-hidden="true">' + (ICONS[name] || ICONS['Actu']) + '</svg>';
+    return wrap.firstChild;
+  }
+  var ARROW = '<svg class="i" viewBox="0 0 24 24" aria-hidden="true"><path d="M5 12h14M13 6l6 6-6 6"/></svg>';
 
   function pickTheme(t) {
     $('theme').value = t;
-    $('compose').scrollIntoView({ behavior: 'smooth', block: 'center' });
+    window.scrollTo({ top: 0, behavior: 'smooth' });
     setTimeout(function () { $('btn-publish').focus({ preventScroll: true }); }, 350);
-    toast('Thème choisi. Règle le nombre de personnes puis publie.');
+    toast('Thème prêt. Appuie sur Publier.');
   }
 
   function exploreData() {
@@ -250,8 +268,10 @@
     var tabs = $('cats');
     tabs.textContent = '';
     data.forEach(function (d) {
-      var b = el('button', null, (d.name === 'Tendance' ? '🔥 ' : '') + d.name);
+      var b = el('button');
       b.type = 'button';
+      b.appendChild(icon(d.name));
+      b.appendChild(document.createTextNode(d.name));
       b.setAttribute('role', 'tab');
       b.setAttribute('aria-selected', String(d.name === catSel));
       b.addEventListener('click', function () { catSel = d.name; renderTrends(); });
@@ -263,11 +283,15 @@
     cur.list.forEach(function (x) {
       var b = el('button', 'tcard');
       b.type = 'button';
-      var top = el('span');
-      top.appendChild(el('span', 'lab', cur.name === 'Tendance' ? x.cat : cur.name));
-      top.appendChild(el('span', 'txt', x.text));
-      b.appendChild(top);
-      b.appendChild(el('span', 'go', 'En parler →'));
+      var cat = cur.name === 'Tendance' ? x.cat : cur.name;
+      b.setAttribute('data-c', ICONS[cat] ? cat : 'Actu');
+      var ico = el('span', 'ico');
+      ico.appendChild(icon(ICONS[cat] ? cat : 'Actu'));
+      b.appendChild(ico);
+      b.appendChild(el('span', 'txt', x.text));
+      var go = el('span', 'go', 'Lancer ce thème');
+      go.insertAdjacentHTML('beforeend', ARROW);
+      b.appendChild(go);
       b.addEventListener('click', function () { pickTheme(x.text); });
       box.appendChild(b);
     });
@@ -292,6 +316,16 @@
   function renderMika() {
     var qr = $('mika-qr');
     qr.textContent = '';
+    var bub = $('mika-say');
+    var greet = 'Salut ! De quoi as-tu envie de parler ce soir ?';
+    if (bub && bub.classList.contains('thinking')) {
+      var reduce = window.matchMedia && matchMedia('(prefers-reduced-motion: reduce)').matches;
+      setTimeout(function () {
+        bub.classList.remove('thinking');
+        bub.classList.add('say');
+        bub.textContent = greet;
+      }, reduce ? 0 : 1100);
+    }
     var opts = [
       ['Je m’ennuie 😅', function () { pickTheme('Je m’ennuie, on discute ?'); }],
       ['Un thème du moment', function () { var t = TREND_ITEMS.length ? 'Tendance' : 'Culture'; catSel = t; renderTrends(); $('explore').scrollIntoView({ behavior: 'smooth', block: 'start' }); }],
@@ -302,7 +336,7 @@
       b.type = 'button';
       b.addEventListener('click', function () {
         var say = $('mika-say');
-        say.textContent = 'Avec plaisir ! Je te prépare ça.';
+        say.classList.remove('thinking'); say.classList.add('say'); say.textContent = 'Avec plaisir ! Je te prépare ça.';
         o[1]();
       });
       qr.appendChild(b);
@@ -326,9 +360,13 @@
     var shown = invites.filter(function (i) { return !f || String(i.theme).toLowerCase().indexOf(f) !== -1; });
     $('filter').hidden = invites.length === 0;
     $('empty').hidden = shown.length > 0;
-    $('empty').textContent = (f && invites.length > 0)
-      ? 'Aucun thème ne correspond. Efface le filtre ou lance le tien.'
-      : 'Personne n’attend pour le moment. Lance un thème : dès que quelqu’un l’ouvre, il apparaît ici et vous pouvez discuter.';
+    var em = $('empty');
+    em.textContent = '';
+    em.appendChild(el('strong', null, (f && invites.length > 0) ? 'Aucun thème ne correspond' : 'Personne n’attend pour le moment'));
+    em.appendChild(document.createTextNode((f && invites.length > 0) ? 'Efface le filtre ou lance le tien.' : 'Lance un thème : dès que quelqu’un l’ouvre, il apparaît ici.'));
+    var cp = $('inv-count');
+    cp.hidden = invites.length === 0;
+    cp.textContent = String(invites.length);
     shown.forEach(function (inv) {
       var li = el('li', 'invite');
       li.appendChild(el('div', 'avatar ' + tint(inv.nick), initial(inv.nick)));
