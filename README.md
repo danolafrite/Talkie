@@ -28,3 +28,11 @@ Puis ouvre http://localhost:3000. Les notifications demandent une adresse en htt
 - Pas de base de données : invitations, conversations et statistiques vivent en mémoire et disparaissent au redémarrage.
 - Les signalements sont écrits dans les journaux du serveur. Personne ne les examine automatiquement.
 - Pas de comptes, pas de vérification d'âge. À prévoir avant d'ouvrir au public.
+
+## Anti-bots (optionnel)
+| Variable | Rôle |
+|---|---|
+| `TURNSTILE_SITE_KEY` | Clé publique Cloudflare Turnstile (gratuit) |
+| `TURNSTILE_SECRET_KEY` | Clé secrète Turnstile (à ne jamais publier) |
+
+Sans ces deux clés, la vérification anti-bot est désactivée. La confirmation « 18 ans et plus » reste obligatoire.
