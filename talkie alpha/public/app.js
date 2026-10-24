@@ -30,7 +30,7 @@
 
   var NAMES = ['Hirondelle', 'Noisetier', 'Luciole', 'Marée', 'Brume', 'Cormoran', 'Sureau', 'Galet', 'Pervenche', 'Renard'];
   // Thèmes proposés en permanence (d'origine)
-  var CHIPS = ['Les frites', 'Une journée difficile', 'Une série qui m’a marqué·e', 'Ce que je cuisine ce soir', 'Je veux juste discuter', 'Musique'];
+  var CHIPS = ['Les frites', 'Une journée difficile', 'Une série qui m’a marqué·e', 'Mon plat réconfort', 'Je veux juste discuter', 'Musique'];
   var TREND_ITEMS = [];
   var GIF_URL_RE = /^https:\/\/(?:media\d*|i)\.giphy\.com\/[A-Za-z0-9_\/.\-]{1,160}(?:\?[A-Za-z0-9_=&.\-%]{0,200})?$/;
 
@@ -211,19 +211,30 @@
     renderVoice();
   }
 
-  /* ---------- Mika (dessin) ---------- */
+  /* ---------- Mika (dessin kawaii) ---------- */
   function mikaSvg() {
-    return '<svg viewBox="0 0 64 64" aria-hidden="true">' +
-      '<line x1="32" y1="14" x2="32" y2="8" stroke="#2A1B5E" stroke-width="2.4" stroke-linecap="round"/>' +
-      '<circle cx="32" cy="6.5" r="3.6" fill="#FFCF3F"/>' +
-      '<ellipse cx="32" cy="37" rx="24" ry="22" fill="#5DE3B4"/>' +
-      '<ellipse cx="24" cy="27" rx="9" ry="5" fill="#fff" opacity=".35"/>' +
-      '<g class="arm"><ellipse cx="7" cy="40" rx="5.5" ry="3.6" fill="#44CFA0" transform="rotate(-35 7 40)"/></g>' +
-      '<ellipse cx="57" cy="42" rx="5.5" ry="3.6" fill="#44CFA0" transform="rotate(35 57 42)"/>' +
-      '<ellipse class="eye" cx="24" cy="35" rx="3.4" ry="4.6" fill="#2A1B5E"/><ellipse class="eye" cx="40" cy="35" rx="3.4" ry="4.6" fill="#2A1B5E"/>' +
-      '<circle cx="25.2" cy="33.2" r="1.2" fill="#fff"/><circle cx="41.2" cy="33.2" r="1.2" fill="#fff"/>' +
-      '<ellipse cx="16.5" cy="43" rx="4.6" ry="3" fill="#FF8FC0" opacity=".75"/><ellipse cx="47.5" cy="43" rx="4.6" ry="3" fill="#FF8FC0" opacity=".75"/>' +
-      '<path class="mouth" d="M27 44 Q32 50 37 44" stroke="#2A1B5E" stroke-width="2.6" fill="none" stroke-linecap="round"/></svg>';
+    var eye = function (cx) {
+      return '<g><ellipse cx="' + cx + '" cy="46" rx="5" ry="6.4" fill="#2A1B5E"/><g class="pupil"><circle cx="' + (cx + 1.7) + '" cy="43.6" r="2.3" fill="#fff"/><circle cx="' + (cx - 1.6) + '" cy="48.6" r="1.1" fill="#fff"/></g></g>';
+    };
+    return '<svg class="mk" viewBox="0 0 80 80" aria-hidden="true">' +
+      '<g class="leaf leaf-l"><path d="M40 24 C33 9 22 9 18 14 C22 23 31 26 40 24Z" fill="#7BE08B"/></g>' +
+      '<g class="leaf leaf-r"><path d="M40 24 C47 8 60 8 63 13 C59 22 48 26 40 24Z" fill="#FFCF3F"/></g>' +
+      '<ellipse cx="29" cy="73" rx="7.5" ry="4" fill="#3FC79A"/><ellipse cx="51" cy="73" rx="7.5" ry="4" fill="#3FC79A"/>' +
+      '<g class="body"><path d="M9 52 C9 31 23 20 40 20 C57 20 71 31 71 52 C71 66 58 74 40 74 C22 74 9 66 9 52Z" fill="#5DE3B4"/>' +
+      '<ellipse cx="40" cy="62" rx="15" ry="9" fill="#9CF5D4" opacity=".55"/>' +
+      '<ellipse cx="25" cy="33" rx="9" ry="4.5" fill="#fff" opacity=".4" transform="rotate(-25 25 33)"/></g>' +
+      '<g class="mk-arm-l"><ellipse cx="9.5" cy="54" rx="6" ry="3.8" fill="#44CFA0" transform="rotate(-35 9.5 54)"/></g>' +
+      '<ellipse cx="70.5" cy="55" rx="6" ry="3.8" fill="#44CFA0" transform="rotate(35 70.5 55)"/>' +
+      '<ellipse cx="20" cy="55" rx="5.4" ry="3.4" fill="#FF8FC0" opacity=".8"/><ellipse cx="60" cy="55" rx="5.4" ry="3.4" fill="#FF8FC0" opacity=".8"/>' +
+      '<g class="eo">' + eye(28) + eye(52) + '</g>' +
+      '<g class="eh" fill="none" stroke="#2A1B5E" stroke-width="3" stroke-linecap="round"><path d="M22.5 48.5 Q28 40.5 33.5 48.5"/><path d="M46.5 48.5 Q52 40.5 57.5 48.5"/></g>' +
+      '<g class="ec" fill="none" stroke="#2A1B5E" stroke-width="3" stroke-linecap="round"><path d="M22.5 46 Q28 51.5 33.5 46"/><path d="M46.5 46 Q52 51.5 57.5 46"/></g>' +
+      '<g class="ht" fill="#FF4F9A"><path d="M28 51 C21 46 23 40 28 43.5 C33 40 35 46 28 51Z"/><path d="M52 51 C45 46 47 40 52 43.5 C57 40 59 46 52 51Z"/></g>' +
+      '<path class="ms" d="M35.5 56 Q37.8 59.6 40 56 Q42.2 59.6 44.5 56" stroke="#2A1B5E" stroke-width="2.4" fill="none" stroke-linecap="round" stroke-linejoin="round"/>' +
+      '<g class="mw"><path d="M33.5 54 Q40 67 46.5 54Z" fill="#7A2252"/><ellipse cx="40" cy="60.6" rx="3.4" ry="2" fill="#FF8FA3"/></g>' +
+      '<ellipse class="mo" cx="40" cy="58.5" rx="3" ry="3.7" fill="#7A2252"/>' +
+      '<ellipse class="mt" cx="40" cy="58" rx="4.2" ry="3" fill="#7A2252"/>' +
+      '<g class="zz" fill="#7C5CFF" font-family="sans-serif" font-weight="900"><text x="60" y="26" font-size="11">z</text><text x="67" y="16" font-size="8">z</text></g></svg>';
   }
   function fillMika() {
     Array.prototype.forEach.call(document.querySelectorAll('#mika-av, #fab-orb, [data-mika]'), function (n) { n.innerHTML = mikaSvg(); });
@@ -246,12 +257,12 @@
   var CATALOG = {
     'Actu': ['Une info qui m’a surpris', 'Ce qui change dans nos villes', 'Un sujet qui m’agace', 'Un truc qui m’a fait sourire'],
     'Culture': ['Une série dont je suis fan', 'Un film à voir ce week-end', 'Une chanson en boucle', 'Un livre qui m’a marqué·e'],
-    'Sport': ['Le match de ce soir', 'Me remettre au sport', 'Un souvenir de stade', 'Courir, nager, marcher…'],
-    'Food': ['Les frites', 'Ce que je cuisine ce soir', 'Le meilleur snack à 22 h', 'Ma recette de réconfort'],
+    'Sport': ['Mon sport préféré à regarder', 'Me remettre au sport', 'Un souvenir de stade', 'Courir, nager, marcher…'],
+    'Food': ['Les frites', 'Mon plat réconfort', 'Le meilleur snack à 22 h', 'Ma recette de réconfort'],
     'Jeux': ['Mon jeu vidéo préféré', 'Un jeu de société à tester', 'Mon plus gros rage quit', 'Jeux rétro'],
     'Voyage': ['Ma prochaine destination', 'Un endroit qui m’a changé·e', 'Voyager seul·e', 'Les bons plans week-end'],
     'Société': ['Ce que je pense de l’IA', 'Ce qui nous rapproche', 'Habiter en ville ou ailleurs ?', 'Un truc qui a changé ma vie'],
-    'Soutien': ['Une journée difficile', 'Je veux juste discuter', 'Je n’arrive pas à dormir', 'Un petit bonheur du jour']
+    'Soutien': ['Une journée difficile', 'Je veux juste discuter', 'Je n’arrive pas à dormir', 'Un petit bonheur']
   };
   var AI_ITEMS = [];
   var themesState = 'loading'; // loading | ready | none
@@ -280,7 +291,7 @@
   function todayThemes() {
     var t = AI_ITEMS.filter(function (i) { return i.cat === 'Tendance'; });
     if (!t.length) t = AI_ITEMS.slice();
-    if (!t.length && themesState === 'none') t = [{ cat: 'Culture', text: 'Une série dont je suis fan', emoji: '📺' }, { cat: 'Food', text: 'Les frites', emoji: '🍟' }, { cat: 'Soutien', text: 'Un petit bonheur du jour', emoji: '🌈' }, { cat: 'Société', text: 'Je veux juste discuter', emoji: '💬' }];
+    if (!t.length && themesState === 'none') t = [{ cat: 'Culture', text: 'Une série dont je suis fan', emoji: '📺' }, { cat: 'Food', text: 'Les frites', emoji: '🍟' }, { cat: 'Soutien', text: 'Un petit bonheur', emoji: '🌈' }, { cat: 'Société', text: 'Je veux juste discuter', emoji: '💬' }];
     return t;
   }
 
@@ -328,6 +339,7 @@
     box2.textContent = '';
     data.filter(function (d) { return d.name === catSel; })[0].list.slice(0, 4).forEach(function (x) { box2.appendChild(themeCard(x)); });
     $('place-txt').textContent = '📍 ' + placeLabel();
+    if (typeof dir !== 'undefined' && dir && dir.waiting && todayThemes().length) propose(0);
   }
   var ARROW = '<svg class="i" viewBox="0 0 24 24" aria-hidden="true"><path d="M5 12h14M13 6l6 6-6 6"/></svg>';
 
@@ -434,61 +446,213 @@
     });
   }
 
-  /* ---------- Mika sur la première page ---------- */
+  /* ---------- Mika sur la première page : il parle, bouge et propose ---------- */
+  var reduceMotion = !!(window.matchMedia && matchMedia('(prefers-reduced-motion: reduce)').matches);
+  function pick(a) { return a[Math.floor(Math.random() * a.length)]; }
+  var talkFlags = { t: false, v: false };
+  function applyTalk() {
+    var on = talkFlags.t || talkFlags.v;
+    Array.prototype.forEach.call(document.querySelectorAll('#mika-av, #fab-orb'), function (n) { n.classList.toggle('talking', on); });
+  }
+  var moodT = null;
+  function mood(name, ms) {
+    var a = $('mika-av');
+    ['st-happy', 'st-wow', 'st-sleep', 'st-love'].forEach(function (c) { a.classList.remove(c); });
+    clearTimeout(moodT);
+    if (name) { a.classList.add('st-' + name); if (ms) moodT = setTimeout(function () { mood(null); }, ms); }
+  }
+  function anim(cls) {
+    var a = $('mika-av');
+    a.classList.remove(cls); void a.offsetWidth; a.classList.add(cls);
+    setTimeout(function () { a.classList.remove(cls); }, 900);
+  }
+  function burst(list) {
+    var fx = $('mika-fx');
+    if (!fx || reduceMotion) return;
+    for (var i = 0; i < 7; i++) {
+      var sp = el('span', null, pick(list));
+      sp.style.setProperty('--dx', Math.round(Math.random() * 110 - 55) + 'px');
+      sp.style.setProperty('--rot', Math.round(Math.random() * 60 - 30) + 'deg');
+      sp.style.animationDelay = (i * 70) + 'ms';
+      fx.appendChild(sp);
+      setTimeout(function (n) { if (n.parentNode) n.parentNode.removeChild(n); }.bind(null, sp), 1700);
+    }
+  }
+  function look(dx, dy) {
+    var sv = $('mika-av').querySelector('.mk');
+    if (!sv) return;
+    sv.style.setProperty('--lx', dx.toFixed(1) + 'px');
+    sv.style.setProperty('--ly', dy.toFixed(1) + 'px');
+  }
+  var lastPtr = 0;
+  document.addEventListener('pointermove', function (e) {
+    if (room || e.pointerType === 'touch') return;
+    var r = $('mika-av').getBoundingClientRect();
+    if (!r.width) return;
+    var cx = r.left + r.width / 2, cy = r.top + r.height / 2;
+    lastPtr = Date.now();
+    look(Math.max(-1, Math.min(1, (e.clientX - cx) / 160)) * 2.4, Math.max(-1, Math.min(1, (e.clientY - cy) / 160)) * 1.8);
+  }, { passive: true });
+  setInterval(function () { if (!room && Date.now() - lastPtr > 3500) look(Math.random() * 4.4 - 2.2, Math.random() * 2.4 - 1); }, 2600);
+
   function greeting() {
     var h = new Date().getHours();
-    if (h >= 5 && h < 11) return 'Coucou ! Un café et un thème ? ☕';
-    if (h >= 11 && h < 18) return 'Hello ! De quoi tu as envie de parler ? 😄';
-    if (h >= 18 && h < 23) return 'Salut toi ! On papote de quoi ce soir ? ✨';
-    return 'Les couche-tard, c’est par ici 🌙 Un thème ?';
+    if (h >= 5 && h < 11) return pick(['Coucou toi ! 🌸 Bien dormi ? Prêt·e pour une petite dose de papote ?', 'Bonjouuur ! ☕ Moi c’est Mika, ton petit pote vert.']);
+    if (h >= 11 && h < 18) return pick(['Hellooo ! 💚 Moi c’est Mika. Je te trouve quelqu’un avec qui papoter ?', 'Coucou ! ✨ Mika à ton service, version mochi.']);
+    if (h >= 18 && h < 23) return pick(['Coucou ! 🌙 Soirée papote ? Je m’occupe de tout.', 'Hey toi ! ✨ On se fait une petite discussion ce soir ?']);
+    return pick(['Oh, une âme de nuit… 🌙 Moi non plus je ne dors jamais !', 'Les couche-tard, c’est par ici 🌙 Je suis là, viens !']);
   }
-  function mikaSay(text, silent) {
+  var sayTimer = null;
+  function mikaSay(text, silent, state) {
     var bub = $('mika-say');
+    clearInterval(sayTimer);
     bub.classList.remove('thinking', 'say');
-    bub.textContent = text;
     void bub.offsetWidth;
     bub.classList.add('say');
+    bub.setAttribute('aria-label', text);
+    if (state !== false) mood(state || 'happy', 2600);
+    if (reduceMotion || String(text).length < 3) {
+      bub.textContent = text;
+    } else {
+      var node = document.createTextNode('');
+      var cur = el('span', 'cursor');
+      cur.setAttribute('aria-hidden', 'true');
+      bub.textContent = '';
+      bub.appendChild(node);
+      bub.appendChild(cur);
+      var i = 0;
+      talkFlags.t = true; applyTalk();
+      sayTimer = setInterval(function () {
+        i += 2;
+        node.nodeValue = String(text).slice(0, i);
+        if (i >= text.length) {
+          clearInterval(sayTimer);
+          if (cur.parentNode) cur.parentNode.removeChild(cur);
+          talkFlags.t = false; applyTalk();
+        }
+      }, 26);
+    }
     if (!silent) speak(text);
   }
   function setQr(opts) {
     var qr = $('mika-qr');
     qr.textContent = '';
     opts.forEach(function (o) {
-      var b = el('button', null, o[0]);
+      var b = el('button', o[2] || null, o[0]);
       b.type = 'button';
-      b.addEventListener('click', o[1]);
+      b.addEventListener('click', function () { dir.engaged = true; bumpIdle(); o[1](); });
       qr.appendChild(b);
     });
   }
+
+  var dir = { i: 0, waiting: false, typed: false, engaged: false };
+  var idleT = null, sleepT = null;
+  function asleep() { return $('mika-av').classList.contains('st-sleep'); }
+  function bumpIdle() {
+    clearTimeout(idleT); clearTimeout(sleepT);
+    idleT = setTimeout(nudge, 22000);
+    sleepT = setTimeout(function () {
+      if (room || document.hidden) return;
+      mood('sleep'); $('mika-say').classList.remove('thinking');
+      $('mika-say').textContent = 'Zzz… 💤 (touche-moi pour me réveiller)';
+      stopSpeaking();
+    }, 70000);
+  }
+  function nudge() {
+    if (room || document.hidden || asleep()) return;
+    var items = todayThemes();
+    var x = items.length ? items[dir.i % items.length] : null;
+    mikaSay(pick(['Hihi, tu réfléchis ? Je peux choisir pour toi 🎲', 'Pssst… je suis toujours là, hein 🌸', x ? 'Je repense à « ' + x.text + ' »… ça te dit ? 👀' : 'Un petit thème et je m’occupe du reste ✨']), false, 'wow');
+    anim('shy');
+    mainOffer();
+  }
+  function publishNow() {
+    var b = $('btn-publish');
+    if (b && !b.disabled) b.click(); else mikaSay('Une seconde, je finis de me connecter… 🍃');
+  }
+  var OPENERS = ['Psst… chez toi, ça parle beaucoup de « %T ». Tu en dis quoi ? 👀', 'Gros sujet du jour : « %T ». On en discute ? 🌸', 'Là, tout le monde parle de « %T » ! Ça te tente ? ✨', 'Ooh, « %T »… ça ferait un super débat 🍿'];
+  var YES = ['Kyaa ! Excellent choix, je suis trop contente 💖', 'Daebak ! On lance ça ✨', 'Hwaiting ! Tu vas faire de belles rencontres 🌸', 'Ouiii ! J’adore ton énergie 💚'];
+  function voiceChip() { return (canSpeak && !voiceOn) ? [['🔊 Active ma voix', enableVoice, 'voice']] : []; }
+  function propose(i) {
+    var items = todayThemes();
+    if (!items.length) { dir.waiting = true; setQr([]); mikaSay('Une seconde, je regarde ce qui buzz chez toi… 👀', true, 'wow'); return; }
+    dir.waiting = false;
+    dir.i = ((i % items.length) + items.length) % items.length;
+    var x = items[dir.i];
+    mikaSay(pick(OPENERS).replace('%T', x.text), false, 'happy');
+    mainOffer();
+  }
+  function mainOffer() {
+    var items = todayThemes();
+    if (!items.length) return;
+    var x = items[dir.i % items.length];
+    setQr(voiceChip().concat([
+      ['✨ Oui, on y va !', function () { accept(x); }, 'yes'],
+      ['🔄 Une autre idée', function () { propose(dir.i + 1); }],
+      ['🎲 Surprends-moi', surprise],
+      ['💛 Juste discuter', calm]
+    ]));
+  }
+  function readyToPublish() {
+    setQr([['🚀 Publier maintenant', publishNow, 'yes'], ['🔄 Changer de thème', function () { propose(dir.i + 1); }]]);
+  }
+  function accept(x) {
+    mood('love', 3500); anim('jump'); burst(['💖', '✨', '🎉', '🌸']);
+    mikaSay(pick(YES) + ' Appuie sur Publier, je croise mes petites feuilles 🍃', false, 'love');
+    pickTheme(x.text);
+    readyToPublish();
+  }
   function surprise() {
     var all = allThemes();
+    if (!all.length) return;
     var x = all[Math.floor(Math.random() * all.length)];
-    mikaSay('Et si on parlait de ça ? ' + emojiOf(x));
+    anim('jump'); burst(['🎲', '✨', '🎉']);
+    mikaSay('Tadaaa ! « ' + x.text + ' » ? Je le sens bien 🎉', false, 'wow');
     pickTheme(x.text);
+    readyToPublish();
   }
-  function mainQr() {
-    setQr([
-      ['🎲 Surprends-moi', surprise],
-      ['🔥 Les thèmes du jour', showToday],
-      ['💛 Juste discuter', function () { mikaSay('Avec plaisir, je te prépare ça !'); pickTheme('Je veux juste discuter'); }]
-    ]);
+  function calm() {
+    mood('love', 3000); burst(['💛', '🌸']);
+    mikaSay('Avec plaisir ! Juste papoter, c’est le meilleur des thèmes 💛', false, 'love');
+    pickTheme('Je veux juste discuter');
+    readyToPublish();
   }
-  function showToday() {
-    mikaSay('Aujourd’hui, ça parle de ça :');
-    var opts = todayThemes().slice(0, 3).map(function (x) {
-      return [emojiOf(x) + ' ' + x.text, function () { mikaSay('Bon choix !'); pickTheme(x.text); }];
-    });
-    opts.push(['↩ Retour', function () { mikaSay('Qu’est-ce qui te ferait plaisir ?'); mainQr(); }]);
-    setQr(opts);
+  function enableVoice() {
+    voiceOn = true;
+    store('talkie.voice', '1');
+    renderVoice();
+    anim('jump'); burst(['🎵', '💚', '✨']);
+    mikaSay('Tadaa ! Tu m’entends ? Je suis encore plus mignon en vrai, non ? 🥹', false, 'happy');
+    setTimeout(function () { if (!room && !dir.typed) mainOffer(); }, 3500);
   }
+  var TAPS = ['Hihi, ça chatouille ! 🌸', 'Kyaa ! Doucement, je suis tout mou 🥹', 'Encore, encore ! …non, je rigole 💚', 'Aww, tu me fais rougir ✨', 'On papote, ou on joue à cache-cache ? 🍃'];
+  $('mika-av').addEventListener('click', function () {
+    dir.engaged = true;
+    bumpIdle();
+    if (asleep()) { mood('wow', 1800); anim('shy'); mikaSay(pick(['Oh ! Je ne dormais pas, je méditais… 😳', 'Mmh ? Ah, tu es là ! Bonjour 🌸']), false, 'wow'); mainOffer(); return; }
+    anim('jump'); burst(['💚', '✨', '🌸']);
+    mikaSay(pick(TAPS), false, 'happy');
+  });
+  $('theme').addEventListener('input', function () {
+    if (!dir.typed && $('theme').value.trim().length >= 4 && !room) {
+      dir.typed = true; dir.engaged = true;
+      mikaSay('Ooh, j’aime déjà ! Appuie sur Publier 🥹', true, 'happy');
+      burst(['✨']);
+      readyToPublish();
+    }
+  });
+  ['pointerdown', 'keydown'].forEach(function (ev) { document.addEventListener(ev, function () { if (!room) bumpIdle(); }, { passive: true }); });
+
   function renderMika() {
     fillMika();
-    var bub = $('mika-say');
-    var reduce = window.matchMedia && matchMedia('(prefers-reduced-motion: reduce)').matches;
-    if (bub.classList.contains('thinking')) {
-      setTimeout(function () { mikaSay(greeting(), true); }, reduce ? 0 : 1000);
-    }
-    mainQr();
+    mood('wow', 1400);
+    setTimeout(function () {
+      if (dir.engaged) return;
+      anim('jump');
+      mikaSay(greeting(), true, 'happy');
+      setTimeout(function () { if (!dir.engaged && !room) propose(0); }, reduceMotion ? 300 : 2800);
+    }, reduceMotion ? 0 : 900);
+    bumpIdle();
   }
 
   /* ---------- Voix de Mika (facultative, coupée par défaut) ---------- */
@@ -499,30 +663,32 @@
     if (!canSpeak) return;
     var vs = speechSynthesis.getVoices().filter(function (v) { return /^fr/i.test(v.lang); });
     if (!vs.length) return;
-    var pref = /(amélie|amelie|audrey|aurélie|aurelie|marie|julie|céline|celine|google fran|female|femme)/i;
+    var pref = /(amélie|amelie|audrey|aurélie|aurelie|marie|julie|céline|celine|denise|eloise|éloïse|hortense|google fran|female|femme)/i;
     frVoice = vs.filter(function (v) { return pref.test(v.name); })[0] || vs.filter(function (v) { return /FR/i.test(v.lang); })[0] || vs[0];
   }
   if (canSpeak) {
     pickVoice();
     if (speechSynthesis.addEventListener) speechSynthesis.addEventListener('voiceschanged', pickVoice);
   }
-  function setTalking(on) {
-    Array.prototype.forEach.call(document.querySelectorAll('#mika-av, #fab-orb'), function (n) { n.classList.toggle('talking', on); });
-  }
+  function setTalking(on) { talkFlags.v = !!on; applyTalk(); }
+  var pendingSpeech = '';
+  document.addEventListener('pointerdown', function () { if (pendingSpeech) { var t = pendingSpeech; pendingSpeech = ''; speak(t); } }, { passive: true });
   function speakable(t) {
-    return String(t || '').replace(/@mika/gi, 'Mika').replace(/[\p{Extended_Pictographic}\uFE0F\u200D]/gu, '').replace(/https?:\/\/\S+/g, '').replace(/\s+/g, ' ').trim().slice(0, 300);
+    return String(t || '').replace(/@mika/gi, 'Mika').replace(/hwaiting/gi, 'oué-tingue').replace(/daebak/gi, 'dè-bak').replace(/kyaa+/gi, 'kiya').replace(/zzz+/gi, '').replace(/[\p{Extended_Pictographic}\uFE0F\u200D]/gu, '').replace(/https?:\/\/\S+/g, '').replace(/\s+/g, ' ').trim().slice(0, 300);
   }
   function speak(text) {
     if (!canSpeak || !voiceOn) return;
     var t = speakable(text);
     if (!t) return;
+    // Les navigateurs interdisent de parler avant le premier toucher : on garde la phrase en attente.
+    if (navigator.userActivation && !navigator.userActivation.hasBeenActive) { pendingSpeech = text; return; }
     try {
       speechSynthesis.cancel();
       var u = new SpeechSynthesisUtterance(t);
       u.lang = 'fr-FR';
       if (frVoice) u.voice = frVoice;
-      u.pitch = 1.3;
-      u.rate = 1.05;
+      u.pitch = 1.65;
+      u.rate = 1.08;
       u.onstart = function () { setTalking(true); };
       u.onend = u.onerror = function () { setTalking(false); };
       speechSynthesis.speak(u);

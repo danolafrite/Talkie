@@ -142,7 +142,7 @@ svg.i { width: 20px; height: 20px; fill: none; stroke: currentColor; stroke-widt
 @keyframes mblink { 0%, 92%, 100% { transform: scaleY(1); } 95% { transform: scaleY(0.1); } }
 @keyframes wave { 0%, 60%, 100% { transform: rotate(0); } 70% { transform: rotate(-22deg); } 80% { transform: rotate(8deg); } 90% { transform: rotate(-16deg); } }
 .mika-body { min-width: 0; flex: 1; }
-.mika-name { font-family: var(--font-display); font-weight: 500; font-size: 15px; display: flex; gap: 7px; align-items: center; flex-wrap: wrap; }
+.mika-name { flex-wrap: nowrap !important; font-family: var(--font-display); font-weight: 500; font-size: 15px; display: flex; gap: 7px; align-items: center; flex-wrap: wrap; }
 .mika-name small { font-family: var(--font-body); opacity: 0.7; font-weight: 700; font-size: 13px; }
 .who .mini { width: 22px; height: 22px; display: inline-block; flex: none; }
 .who .mini svg { width: 100%; height: 100%; display: block; }
@@ -472,6 +472,53 @@ fieldset { border: 0; padding: 0; margin: 0; min-width: 0; display: flex; flex-d
   .tcard, .primary, .chip, .send { transition: none; }
 }
 @media (prefers-reduced-motion: reduce) { .deco, .mika-av, .mika-av .eye, .mika-av .arm, .mika-bubble, .mika-bubble.thinking i, .branches, .br-item, .br-skel, #mika-fab .orb, #mika-fab .lab { animation: none; } }
+
+/* Mika kawaii */
+.mika { position: relative; }
+button.mika-av { border: 0; background: none; padding: 0; cursor: pointer; -webkit-tap-highlight-color: transparent; }
+.mika-av.big { width: 104px; height: 104px; margin: -4px 0 -6px -6px; filter: drop-shadow(0 8px 10px rgba(60, 30, 140, 0.22)); }
+.mk { overflow: visible; }
+.mk .eh, .mk .ec, .mk .mo, .mk .mw, .mk .zz, .mk .ht { display: none; }
+.mk .eo { transform-box: fill-box; transform-origin: center; }
+.mika-av .mk .eo { animation: mblink 4.2s infinite; }
+.mk .pupil { transform: translate(var(--lx, 0px), var(--ly, 0px)); transition: transform 0.18s ease-out; }
+.mk .leaf { transform-box: fill-box; transform-origin: 50% 100%; }
+.mika-av .mk .leaf-l { animation: sway 3.2s ease-in-out infinite; }
+.mika-av .mk .leaf-r { animation: sway 3.2s ease-in-out infinite reverse; }
+.mika-av .mk .body { transform-box: fill-box; transform-origin: 50% 100%; animation: squish 3.4s ease-in-out infinite; }
+.mika-av .mk .mk-arm-l { transform-box: fill-box; transform-origin: 90% 30%; animation: wave 3.6s ease-in-out infinite; }
+@keyframes sway { 0%, 100% { transform: rotate(-7deg); } 50% { transform: rotate(8deg); } }
+@keyframes squish { 0%, 100% { transform: scale(1, 1); } 50% { transform: scale(1.03, 0.97); } }
+.mika-av.st-happy .mk .eo, .mika-av.st-sleep .mk .eo { display: none; }
+.mika-av.st-happy .mk .eh { display: inline; }
+.mika-av.st-happy .mk .ms, .mika-av.st-wow .mk .ms, .mika-av.st-sleep .mk .ms { display: none; }
+.mika-av.st-happy .mk .mw { display: inline; }
+.mika-av.st-wow .mk .mo { display: inline; }
+.mika-av.st-sleep .mk .ec, .mika-av.st-sleep .mk .zz { display: inline; }
+.mika-av.st-sleep { animation-duration: 5s; }
+.mika-av.st-sleep .mk .zz { animation: zz 2.4s ease-in-out infinite; }
+.mika-av.st-love .mk .eo { display: none; }
+.mika-av.st-love .mk .ht { display: inline; }
+.mika-av.st-love .mk .ms { display: none; }
+.mika-av.st-love .mk .mw { display: inline; }
+.mika-av.talking .mk .ms, .mika-av.talking .mk .mw, .mika-av.talking .mk .mo { display: none; }
+.mika-av.talking .mk .mt { display: inline; transform-box: fill-box; transform-origin: center; animation: talk 0.26s ease-in-out infinite alternate; }
+.mk .mt { display: none; }
+@keyframes zz { 0%, 100% { opacity: 0.25; transform: translateY(2px); } 50% { opacity: 1; transform: translateY(-3px); } }
+.mika-av.jump { animation: hop 0.7s cubic-bezier(.3, .8, .4, 1) 1; }
+@keyframes hop { 0% { transform: translateY(0) scale(1.1, 0.88); } 30% { transform: translateY(-22px) scale(0.92, 1.1); } 55% { transform: translateY(0) scale(1.12, 0.86); } 75% { transform: translateY(-6px) scale(0.98, 1.03); } 100% { transform: translateY(0) scale(1, 1); } }
+.mika-av.shy { animation: shy 0.6s ease-in-out 1; }
+@keyframes shy { 0%, 100% { transform: rotate(0); } 25% { transform: rotate(-9deg); } 75% { transform: rotate(9deg); } }
+.mika-fx { position: absolute; left: 0; top: 0; width: 104px; height: 90px; pointer-events: none; z-index: 3; }
+.mika-fx span { position: absolute; left: 48px; top: 36px; font-size: 20px; opacity: 0; animation: fxup 1.3s ease-out forwards; }
+@keyframes fxup { 0% { opacity: 0; transform: translate(0, 0) scale(0.4); } 15% { opacity: 1; } 100% { opacity: 0; transform: translate(var(--dx, 0px), -70px) scale(1.1) rotate(var(--rot, 0deg)); } }
+.mika-bubble.say::after { content: ''; }
+.mika-bubble .cursor { display: inline-block; width: 2px; height: 1em; background: var(--violet); margin-left: 2px; vertical-align: -2px; animation: blinkc 0.7s steps(1) infinite; }
+@keyframes blinkc { 50% { opacity: 0; } }
+.mika-qr button.yes { background: var(--sun, #FFCF3F); border-color: transparent; color: #2A1B5E; box-shadow: 0 3px 0 rgba(160, 110, 0, 0.35); }
+.mika-qr button.voice { background: #C9F6E3; border-color: transparent; color: #0A6B4D; }
+.mika-bubble .bq { color: var(--violet); }
+@media (prefers-reduced-motion: reduce) { .mika-av .mk *, .mika-av.jump, .mika-av.shy, .mika-fx span, .mika-bubble .cursor { animation: none !important; } }
 </style>
 </head>
 <body>
@@ -501,13 +548,14 @@ fieldset { border: 0; padding: 0; margin: 0; min-width: 0; display: flex; flex-d
         <button type="button" class="ghost reconnect" id="btn-reconnect" hidden>Reprendre ici</button>
 
         <div id="mika-hero" class="mika" role="group" aria-label="Mika, assistant Talkie">
-          <div class="mika-av" id="mika-av" aria-hidden="true"></div>
+          <button type="button" class="mika-av big" id="mika-av" aria-label="Faire coucou à Mika"></button>
           <div class="mika-body">
             <div class="mika-name">Mika <span class="badge">IA</span> <small>ton assistant</small>
               <button type="button" class="vbtn" id="btn-voice" aria-pressed="false" aria-label="Activer la voix de Mika" hidden><span id="voice-ico">🔇</span></button></div>
             <div class="mika-bubble thinking" id="mika-say" aria-live="polite"><i></i><i></i><i></i></div>
           </div>
           <div class="mika-qr" id="mika-qr"></div>
+          <div class="mika-fx" id="mika-fx" aria-hidden="true"></div>
         </div>
 
         <div class="compose" id="compose">

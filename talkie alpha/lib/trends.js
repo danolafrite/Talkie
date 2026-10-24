@@ -4,7 +4,7 @@
 const ai = require('./ai');
 
 const DEFAULTS = [
-  'Les frites', 'Une série dont je suis fan', 'Ce que je cuisine ce soir', 'Une chanson en boucle',
+  'Les frites', 'Une série dont je suis fan', 'Mon plat réconfort', 'Une chanson en boucle',
   'Un film à voir ce week-end', 'Je veux juste discuter', 'Le meilleur snack à 22 h', 'Mon jeu vidéo préféré'
 ];
 const REFRESH_MS = (parseInt(process.env.TRENDS_REFRESH_MIN, 10) || 60) * 60 * 1000; // actualité rafraîchie toutes les heures
@@ -79,7 +79,7 @@ const SYSTEM = [
   'Tu es l’éditeur des thèmes du jour de Talkie, une application où des adultes de 18 à 30 ans discutent en direct, tout de suite, de ce qui leur plaît.',
   'On te donne la date, le lieu de la personne (pays, ville éventuelle) et ce qui se dit là-bas en ce moment (recherches tendance et titres de presse), peut-être incomplet.',
   'Sois PRÉCIS et LOCAL : si un événement concret est dans l’actualité (manifestation de demain, grève, match, concert, sortie, vote, météo, fête), nomme-le avec son lieu ou sa date, par exemple « Manifestation de demain à Paris : tu y vas ? » ou « OM – PSG ce soir : ton pronostic ? ». Pas de sujet vague.',
-  'INTERDIT : les formules vagues comme « du moment », « du jour », « tendance », « actu », « ce qui buzz », « la mode ». Chaque thème de la catégorie "Tendance" doit nommer UN fait précis tiré des données (un événement, un match, une sortie, une polémique de société, un lieu, une date). Exemple en France : « Manifestations de demain : tu y vas ? » ; aux États-Unis : « Le défilé Victoria’s Secret : tu regardes ? ». Si les données sont maigres, appuie-toi sur ce que tu sais du calendrier (fête, saison, rentrée, sport, sorties).',
+  'INTERDIT, dans toutes les catégories : les formules vagues comme « du moment », « du jour », « de ce soir » sans précision, « tendance », « actu », « ce qui buzz », « la mode », « la série du moment », « le match de ce soir ». Nomme toujours la série, l’équipe, l’artiste ou le fait précis. Chaque thème de la catégorie "Tendance" doit nommer UN fait précis tiré des données (un événement, un match, une sortie, une polémique de société, un lieu, une date). Exemple en France : « Manifestations de demain : tu y vas ? » ; aux États-Unis : « Le défilé Victoria’s Secret : tu regardes ? ». Si les données sont maigres, appuie-toi sur ce que tu sais du calendrier (fête, saison, rentrée, sport, sorties).',
   'Chaque thème est une question ouverte, courte, qui donne envie de répondre. Jamais un titre de presse recopié.',
   'Fournis exactement : ' + TREND_COUNT + ' thèmes de catégorie "Tendance" (les plus précis et les plus brûlants du jour pour ce lieu, d’abord ceux de la ville s’il y en a, puis du pays), puis ' + PER_CAT + ' thèmes pour chacune de ces catégories : ' + CATS.join(', ') + '.',
   'Chaque thème : 55 caractères maximum, français, ton léger et bienveillant, avec un emoji adapté en champ séparé.',
@@ -169,7 +169,7 @@ async function generate(r) {
       const t = clean(raw, 64);
       const cat = catMap[fold(x.c || x.cat || x.categorie)] || null;
       if (!t || !cat || seen.has(t.toLowerCase())) { dropped++; return; }
-      if (cat === 'Tendance' && /\b(du moment|du jour|en ce moment)\b|^tendance/i.test(t)) { dropped++; return; }
+      if (/\b(du moment|du jour|en ce moment)\b|^tendance|^(le |un )?match de ce soir/i.test(t)) { dropped++; return; }
       seen.add(t.toLowerCase());
       items.push({ cat, text: t, emoji: validEmoji(x.e || x.emoji) });
     });
