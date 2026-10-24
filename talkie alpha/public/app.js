@@ -30,7 +30,7 @@
 
   var NAMES = ['Hirondelle', 'Noisetier', 'Luciole', 'Marée', 'Brume', 'Cormoran', 'Sureau', 'Galet', 'Pervenche', 'Renard'];
   // Thèmes proposés en permanence (d'origine)
-  var CHIPS = ['Les frites', 'Une journée difficile', 'La série du moment', 'Ce que je cuisine ce soir', 'Je veux juste discuter', 'Musique'];
+  var CHIPS = ['Les frites', 'Une journée difficile', 'Une série qui m’a marqué·e', 'Ce que je cuisine ce soir', 'Je veux juste discuter', 'Musique'];
   var TREND_ITEMS = [];
   var GIF_URL_RE = /^https:\/\/(?:media\d*|i)\.giphy\.com\/[A-Za-z0-9_\/.\-]{1,160}(?:\?[A-Za-z0-9_=&.\-%]{0,200})?$/;
 
@@ -244,16 +244,17 @@
   var CATS_ORDER = ['Actu', 'Culture', 'Sport', 'Food', 'Jeux', 'Voyage', 'Société', 'Soutien'];
   var CAT_EMOJI = { 'Tendance': '🔥', 'Actu': '🗞️', 'Culture': '🎬', 'Sport': '⚽', 'Food': '🍟', 'Jeux': '🎮', 'Voyage': '✈️', 'Société': '💬', 'Soutien': '🫶' };
   var CATALOG = {
-    'Actu': ['Un événement dont tout le monde parle', 'La mode du moment', 'Une info qui m’a surpris', 'Ce qui change dans nos villes'],
-    'Culture': ['La série du moment', 'Un film à voir ce week-end', 'Une chanson en boucle', 'Un livre qui m’a marqué·e'],
+    'Actu': ['Une info qui m’a surpris', 'Ce qui change dans nos villes', 'Un sujet qui m’agace', 'Un truc qui m’a fait sourire'],
+    'Culture': ['Une série dont je suis fan', 'Un film à voir ce week-end', 'Une chanson en boucle', 'Un livre qui m’a marqué·e'],
     'Sport': ['Le match de ce soir', 'Me remettre au sport', 'Un souvenir de stade', 'Courir, nager, marcher…'],
     'Food': ['Les frites', 'Ce que je cuisine ce soir', 'Le meilleur snack à 22 h', 'Ma recette de réconfort'],
-    'Jeux': ['Un jeu vidéo du moment', 'Un jeu de société à tester', 'Mon plus gros rage quit', 'Jeux rétro'],
+    'Jeux': ['Mon jeu vidéo préféré', 'Un jeu de société à tester', 'Mon plus gros rage quit', 'Jeux rétro'],
     'Voyage': ['Ma prochaine destination', 'Un endroit qui m’a changé·e', 'Voyager seul·e', 'Les bons plans week-end'],
-    'Société': ['Un sujet dont on parle partout', 'Ce que je pense de l’IA', 'Les manifestations, vous y allez ?', 'Ce qui nous rapproche'],
+    'Société': ['Ce que je pense de l’IA', 'Ce qui nous rapproche', 'Habiter en ville ou ailleurs ?', 'Un truc qui a changé ma vie'],
     'Soutien': ['Une journée difficile', 'Je veux juste discuter', 'Je n’arrive pas à dormir', 'Un petit bonheur du jour']
   };
   var AI_ITEMS = [];
+  var themesState = 'loading'; // loading | ready | none
   var catSel = null;
 
   function emojiOf(x) { return x.emoji || CAT_EMOJI[x.cat] || '💬'; }
@@ -266,7 +267,7 @@
       var seen = {}, list = [];
       function add(x) { var key = x.text.toLowerCase(); if (!seen[key]) { seen[key] = 1; list.push(x); } }
       AI_ITEMS.filter(function (i) { return i.cat === k; }).forEach(add);
-      (CATALOG[k] || []).forEach(function (t) { if (list.length < 6) add({ cat: k, text: t, emoji: '' }); });
+      if (!AI_ITEMS.length) (CATALOG[k] || []).forEach(function (t) { if (list.length < 6) add({ cat: k, text: t, emoji: '' }); });
       out.push({ name: k, list: list });
     });
     return out;
@@ -279,7 +280,7 @@
   function todayThemes() {
     var t = AI_ITEMS.filter(function (i) { return i.cat === 'Tendance'; });
     if (!t.length) t = AI_ITEMS.slice();
-    if (!t.length) t = [{ cat: 'Culture', text: 'La série du moment', emoji: '📺' }, { cat: 'Food', text: 'Les frites', emoji: '🍟' }, { cat: 'Soutien', text: 'Un petit bonheur du jour', emoji: '🌈' }];
+    if (!t.length && themesState === 'none') t = [{ cat: 'Culture', text: 'Une série dont je suis fan', emoji: '📺' }, { cat: 'Food', text: 'Les frites', emoji: '🍟' }, { cat: 'Soutien', text: 'Un petit bonheur du jour', emoji: '🌈' }, { cat: 'Société', text: 'Je veux juste discuter', emoji: '💬' }];
     return t;
   }
 
@@ -305,7 +306,9 @@
     // Le haut de page : 4 thèmes précis du jour, et rien d'autre à lire.
     var box = $('themes');
     box.textContent = '';
-    todayThemes().slice(0, 4).forEach(function (x) { box.appendChild(themeCard(x)); });
+    var today = todayThemes();
+    if (!today.length) { for (var k = 0; k < 4; k++) box.appendChild(el('div', 'tcard tskel')); }
+    today.slice(0, 4).forEach(function (x) { box.appendChild(themeCard(x)); });
     // « Plus de thèmes » : par catégorie, replié par défaut.
     var data = exploreData().filter(function (d) { return d.name !== 'Tendance'; });
     if (!catSel || !data.some(function (d) { return d.name === catSel; })) catSel = data[0].name;
@@ -355,6 +358,7 @@
   var themesTry = 0, themesTimer = null;
   function loadThemes() {
     clearTimeout(themesTimer);
+    if (!AI_ITEMS.length) themesState = 'loading';
     fetch('/api/themes?cc=' + encodeURIComponent(place.cc) + '&city=' + encodeURIComponent(place.city)).then(function (r) { return r.json(); }).then(function (d) {
       AI_ITEMS = [];
       if (d && (d.source === 'trends' || d.source === 'ai') && Array.isArray(d.items)) {
@@ -363,10 +367,11 @@
           return { cat: clean(x.cat, 20) || 'Actu', text: clean(x.text, 64), emoji: em.length <= 12 && /\p{Extended_Pictographic}/u.test(em) ? em : '' };
         }).filter(function (x) { return x.text; }).slice(0, 40);
       }
+      themesState = AI_ITEMS.length ? 'ready' : (d && d.pending ? 'loading' : 'none');
       renderTrends();
       // Les thèmes de ce lieu sont en préparation : on repasse dans quelques secondes.
-      if (d && d.pending && themesTry < 5) { themesTry++; themesTimer = setTimeout(loadThemes, 7000); } else themesTry = 0;
-    }).catch(function () {});
+      if (d && d.pending && themesTry < 8) { themesTry++; themesTimer = setTimeout(loadThemes, 6000); } else { if (themesState === 'loading') { themesState = 'none'; renderTrends(); } themesTry = 0; }
+    }).catch(function () { if (themesState === 'loading') { themesState = 'none'; renderTrends(); } });
   }
 
   /* ---------- Arbre de pistes (Mika propose d'aller plus loin) ---------- */

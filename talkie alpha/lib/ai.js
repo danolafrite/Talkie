@@ -28,7 +28,7 @@ function normalize(messages, firstUserText) {
   return out;
 }
 
-async function complete({ system, messages, maxTokens, timeoutMs }) {
+async function complete({ system, messages, maxTokens, timeoutMs, tools }) {
   if (!KEY) throw new Error('clé absente');
   if (!budgetLeft()) throw new Error('plafond quotidien atteint');
   used++;
@@ -39,7 +39,7 @@ async function complete({ system, messages, maxTokens, timeoutMs }) {
       method: 'POST',
       signal: ctrl.signal,
       headers: { 'content-type': 'application/json', 'x-api-key': KEY, 'anthropic-version': '2023-06-01' },
-      body: JSON.stringify({ model: MODEL, max_tokens: maxTokens || 220, system, messages })
+      body: JSON.stringify(Object.assign({ model: MODEL, max_tokens: maxTokens || 220, system, messages }, tools ? { tools } : {}))
     });
     if (!r.ok) throw new Error('API ' + r.status);
     const j = await r.json();
