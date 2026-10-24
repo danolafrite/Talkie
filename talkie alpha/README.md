@@ -46,4 +46,12 @@ Sans réglage, Mika « gazouille » (voix synthétisée dans le navigateur, grat
 | `OPENAI_API_KEY` | active la voix neuronale pour les phrases d'accueil de Mika (jamais pour les messages des gens) |
 | `TTS_VOICE` | voix OpenAI, `coral` par défaut (essaie `nova`, `shimmer`) |
 | `TTS_DAILY_CAP` | nombre maximum de phrases générées par jour, 400 par défaut |
+| `TTS_PITCH` | hauteur de la voix : `1.12` par défaut (plus aigu et pétillant), `1` pour la voix brute, jusqu'à `1.3` |
 | `TTS_STYLE` | consigne de style de la voix (texte libre) |
+
+## Mika dans les conversations, lieux
+
+| Variable | Rôle |
+|---|---|
+| `SPONT_DELAY_MS` / `SPONT_GAP_MS` | délai avant qu'il réagisse spontanément (3,5 s) et écart minimal entre deux interventions (50 s) |
+| `GEOCODE_URL` | service de recherche de villes (Open-Meteo par défaut, gratuit, sans clé) |

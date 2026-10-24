@@ -5,7 +5,8 @@
 <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
 <title>Talkie</title>
 <meta name="description" content="Parle de ce que tu veux, avec quelqu’un qui est là maintenant.">
-<meta name="theme-color" content="#FFF3FA">
+<meta name="theme-color" content="#FFF8EE">
+<script>try{var __s=localStorage.getItem("talkie.scheme")||"light";if(__s==="dark"||(__s==="auto"&&matchMedia("(prefers-color-scheme: dark)").matches))document.documentElement.setAttribute("data-scheme","dark")}catch(e){}</script>
 <meta name="apple-mobile-web-app-capable" content="yes">
 <meta name="mobile-web-app-capable" content="yes">
 <meta name="apple-mobile-web-app-title" content="Talkie">
@@ -62,8 +63,7 @@
   --font-body: 'Nunito', system-ui, -apple-system, 'Segoe UI', sans-serif;
   color-scheme: light;
 }
-@media (prefers-color-scheme: dark) {
-  :root {
+/* sombre */ :root[data-scheme="dark"] {
     --bg: #17103A;
     --bg-glass: rgba(23, 16, 58, 0.85);
     --surface: #251A58;
@@ -86,7 +86,6 @@
     --sheet-scrim: rgba(8, 3, 28, 0.65);
     color-scheme: dark;
   }
-}
 
 html, body { height: 100%; margin: 0; }
 body { background: var(--bg); color: var(--fg); font-family: var(--font-body); font-size: 16px; font-weight: 600; line-height: 1.5; -webkit-text-size-adjust: 100%; -webkit-tap-highlight-color: transparent; }
@@ -104,7 +103,7 @@ svg.i { width: 20px; height: 20px; fill: none; stroke: currentColor; stroke-widt
 #app::before, #app::after { content: ''; position: fixed; z-index: -1; border-radius: 50%; filter: blur(70px); opacity: 0.55; pointer-events: none; }
 #app::before { width: 320px; height: 320px; top: -80px; right: -100px; background: #FFC2E3; }
 #app::after { width: 300px; height: 300px; bottom: 60px; left: -120px; background: #CDBEFF; }
-@media (prefers-color-scheme: dark) { #app::before { background: #6B2D8F; opacity: 0.45; } #app::after { background: #2D3FB0; opacity: 0.4; } }
+/* sombre */ :root[data-scheme="dark"] #app::before { background: #6B2D8F; opacity: 0.45; } :root[data-scheme="dark"] #app::after { background: #2D3FB0; opacity: 0.4; }
 .wrap { max-width: 720px; margin: 0 auto; padding-left: max(18px, env(safe-area-inset-left, 0px)); padding-right: max(18px, env(safe-area-inset-right, 0px)); }
 
 /* ---------- Barre du haut ---------- */
@@ -124,7 +123,7 @@ svg.i { width: 20px; height: 20px; fill: none; stroke: currentColor; stroke-widt
 
 /* ---------- Accueil : un gros sourire avec Mika ---------- */
 .hero { position: relative; overflow: hidden; isolation: isolate; border-radius: 34px; padding: 24px 18px 18px; color: var(--ink); background: linear-gradient(145deg, #D9CCFF 0%, #FFD0EA 55%, #FFE2C9 100%); box-shadow: 0 3px 0 rgba(124, 92, 255, 0.15), 0 22px 40px -22px rgba(124, 92, 255, 0.6); }
-@media (prefers-color-scheme: dark) { .hero { background: linear-gradient(145deg, #4A2FB8 0%, #8A2E92 60%, #B2476F 100%); color: #FFF3FF; } }
+/* sombre */ :root[data-scheme="dark"] .hero { background: linear-gradient(145deg, #4A2FB8 0%, #8A2E92 60%, #B2476F 100%); color: #FFF3FF; }
 .hero h2 { font-family: var(--font-display); font-weight: 600; font-size: clamp(30px, 9vw, 40px); line-height: 1.04; letter-spacing: -0.015em; max-width: 12em; }
 .hero .sub { margin-top: 6px; font-size: 16px; font-weight: 700; opacity: 0.82; max-width: 26rem; }
 .deco { position: absolute; z-index: -1; font-size: 30px; opacity: 0.9; animation: floaty 5s ease-in-out infinite; user-select: none; pointer-events: none; }
@@ -158,7 +157,7 @@ svg.i { width: 20px; height: 20px; fill: none; stroke: currentColor; stroke-widt
 .mika-qr button { flex: none; border: 2px solid rgba(42, 27, 94, 0.14); background: rgba(255, 255, 255, 0.7); color: var(--ink); border-radius: 999px; padding: 7px 14px; font-size: 14.5px; font-weight: 800; cursor: pointer; transition: transform 0.12s ease, background 0.15s ease; }
 .mika-qr button:hover { background: #fff; }
 .mika-qr button:active { transform: scale(0.95); }
-@media (prefers-color-scheme: dark) { .mika-qr button { border-color: rgba(255, 255, 255, 0.25); background: rgba(255, 255, 255, 0.12); color: #FFF3FF; } .mika-qr button:hover { background: rgba(255, 255, 255, 0.2); } }
+/* sombre */ :root[data-scheme="dark"] .mika-qr button { border-color: rgba(255, 255, 255, 0.25); background: rgba(255, 255, 255, 0.12); color: #FFF3FF; } :root[data-scheme="dark"] .mika-qr button:hover { background: rgba(255, 255, 255, 0.2); }
 @keyframes mpop { from { opacity: 0; transform: translateY(6px) scale(0.96); } to { opacity: 1; transform: none; } }
 
 /* Publication, dans le bloc d'accueil */
@@ -175,11 +174,11 @@ svg.i { width: 20px; height: 20px; fill: none; stroke: currentColor; stroke-widt
 .chip { flex: none; border: 0; background: rgba(255, 255, 255, 0.65); color: var(--ink); border-radius: 999px; padding: 7px 14px; font-size: 14.5px; font-weight: 800; cursor: pointer; transition: transform 0.12s ease, background 0.15s ease; }
 .chip:hover { background: #fff; }
 .chip:active { transform: scale(0.95); }
-@media (prefers-color-scheme: dark) { .chip { background: rgba(255, 255, 255, 0.14); color: #FFF3FF; } .chip:hover { background: rgba(255, 255, 255, 0.22); } }
+/* sombre */ :root[data-scheme="dark"] .chip { background: rgba(255, 255, 255, 0.14); color: #FFF3FF; } :root[data-scheme="dark"] .chip:hover { background: rgba(255, 255, 255, 0.22); }
 
 /* Arbre de pistes proposé par Mika */
 .branches { background: rgba(255, 255, 255, 0.82); border-radius: 24px; padding: 14px 12px 12px; display: flex; flex-direction: column; gap: 8px; animation: mpop 0.3s cubic-bezier(.2, .9, .3, 1.2) both; color: var(--ink); }
-@media (prefers-color-scheme: dark) { .branches { background: rgba(23, 16, 58, 0.6); color: #FFF3FF; } }
+/* sombre */ :root[data-scheme="dark"] .branches { background: rgba(23, 16, 58, 0.6); color: #FFF3FF; }
 .br-head { display: flex; align-items: center; gap: 8px; padding: 0 4px 2px; }
 .br-head strong { font-family: var(--font-display); font-weight: 500; font-size: 16px; flex: 1; min-width: 0; }
 .br-back { border: 0; background: rgba(124, 92, 255, 0.14); color: inherit; border-radius: 999px; padding: 4px 12px; font-size: 13px; font-weight: 800; cursor: pointer; display: inline-flex; align-items: center; gap: 4px; }
@@ -190,7 +189,7 @@ svg.i { width: 20px; height: 20px; fill: none; stroke: currentColor; stroke-widt
 .br-item .em { font-size: 24px; line-height: 1; flex: none; }
 .br-item .tx { flex: 1; min-width: 0; }
 .br-item svg { color: var(--violet); }
-@media (prefers-color-scheme: dark) { .br-item { background: #32257A; color: #FFF3FF; } }
+/* sombre */ :root[data-scheme="dark"] .br-item { background: #32257A; color: #FFF3FF; }
 .br-skel { height: 48px; border-radius: 18px; background: linear-gradient(100deg, rgba(255, 255, 255, 0.5) 30%, rgba(255, 255, 255, 0.95) 50%, rgba(255, 255, 255, 0.5) 70%); background-size: 200% 100%; animation: shimmer 1.2s linear infinite; }
 @keyframes shimmer { to { background-position: -200% 0; } }
 .br-foot { font-size: 12.5px; opacity: 0.7; padding: 2px 4px 0; }
@@ -281,9 +280,7 @@ fieldset { border: 0; padding: 0; margin: 0; min-width: 0; display: flex; flex-d
 .themes .tcard:nth-child(6n+4) { --tc: #FFE9A8; --tc-d: #F5CF62; }
 .themes .tcard:nth-child(6n+5) { --tc: #D3EEFF; --tc-d: #A5D9F7; }
 .themes .tcard:nth-child(6n) { --tc: #FFDCC8; --tc-d: #F7B999; }
-@media (prefers-color-scheme: dark) {
-  .tcard { color: #2A1B5E; }
-}
+/* sombre */ :root[data-scheme="dark"] .tcard { color: #2A1B5E; }
 
 .foot { color: var(--muted); font-size: 12.5px; max-width: 38rem; line-height: 1.55; font-weight: 600; }
 
@@ -311,7 +308,7 @@ fieldset { border: 0; padding: 0; margin: 0; min-width: 0; display: flex; flex-d
 .ctitle h2 { font-family: var(--font-display); font-size: 17.5px; font-weight: 500; line-height: 1.2; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
 .ctitle p { font-size: 13px; color: var(--muted); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
 .ctitle p.live-on { color: #0B9A6E; font-weight: 800; }
-@media (prefers-color-scheme: dark) { .ctitle p.live-on { color: var(--mint); } }
+/* sombre */ :root[data-scheme="dark"] .ctitle p.live-on { color: var(--mint); }
 
 .wait { flex: none; background: color-mix(in srgb, var(--mint) 16%, var(--surface)); color: var(--fg); font-size: 13.5px; padding: 9px max(16px, env(safe-area-inset-left, 0px)); text-align: center; border-bottom: 1px solid var(--line); }
 .wait.plain { background: var(--surface); color: var(--muted); }
@@ -406,7 +403,7 @@ fieldset { border: 0; padding: 0; margin: 0; min-width: 0; display: flex; flex-d
 .sheet .stack .ghost, .sheet .stack .primary { width: 100%; }
 
 #toast { position: fixed; left: 50%; transform: translateX(-50%); bottom: calc(16px + env(safe-area-inset-bottom, 0px)); width: max-content; max-width: calc(100% - 32px); background: var(--ink); color: #fff; padding: 11px 16px; border-radius: 14px; font-size: 14px; font-weight: 500; z-index: 50; box-shadow: var(--shadow); }
-@media (prefers-color-scheme: dark) { #toast { background: #FFF3FF; color: #2A1B5E; } }
+/* sombre */ :root[data-scheme="dark"] #toast { background: #FFF3FF; color: #2A1B5E; }
 
 /* Astuce @Mika et suggestion */
 .mpop { max-width: 720px; margin: 0 auto; padding: 8px 12px 0; }
@@ -424,14 +421,14 @@ fieldset { border: 0; padding: 0; margin: 0; min-width: 0; display: flex; flex-d
 .mika-pill:active { transform: translateY(2px); box-shadow: none; }
 .mika-pill .pav { width: 26px; height: 26px; border-radius: 50%; background: #fff; display: grid; place-items: center; }
 .mika-pill .pav svg { width: 22px; height: 22px; }
-@media (prefers-color-scheme: dark) { .mika-pill { background: #13503E; color: #8CF3CC; box-shadow: 0 2px 0 #0B3A2D; } }
+/* sombre */ :root[data-scheme="dark"] .mika-pill { background: #13503E; color: #8CF3CC; box-shadow: 0 2px 0 #0B3A2D; }
 .mpop .tipav { width: 30px; height: 30px; border-radius: 50%; background: #C9F6E3; display: grid; place-items: center; flex: none; }
 .mpop .tipav svg { width: 24px; height: 24px; }
 
 /* Voix */
 .vbtn { margin-left: auto; border: 0; background: rgba(255, 255, 255, 0.7); border-radius: 999px; width: 32px; height: 32px; font-size: 16px; cursor: pointer; display: grid; place-items: center; }
 .vbtn[aria-pressed="true"] { background: var(--mint); }
-@media (prefers-color-scheme: dark) { .vbtn { background: rgba(255, 255, 255, 0.16); } }
+/* sombre */ :root[data-scheme="dark"] .vbtn { background: rgba(255, 255, 255, 0.16); }
 .mika-av.talking { animation-duration: 0.9s; }
 .mika-av .mouth { transform-origin: center; transform-box: fill-box; }
 .mika-av.talking .mouth { animation: talk 0.28s ease-in-out infinite alternate; }
@@ -483,6 +480,10 @@ button.mika-av { border: 0; background: none; padding: 0; cursor: pointer; -webk
 .mika-av .mk .eo { animation: mblink 4.2s infinite; }
 .mk .pupil { transform: translate(var(--lx, 0px), var(--ly, 0px)); transition: transform 0.18s ease-out; }
 .mk .leaf { transform-box: fill-box; transform-origin: 50% 100%; }
+.mika-av .mk .ear { transform-box: fill-box; transform-origin: 50% 100%; }
+.mika-av .mk .ear-l { animation: eartw 5s ease-in-out infinite; }
+.mika-av .mk .ear-r { animation: eartw 5s ease-in-out 1.4s infinite reverse; }
+@keyframes eartw { 0%, 86%, 100% { transform: rotate(0); } 90% { transform: rotate(-9deg); } 94% { transform: rotate(5deg); } }
 .mika-av .mk .leaf-l { animation: sway 3.2s ease-in-out infinite; }
 .mika-av .mk .leaf-r { animation: sway 3.2s ease-in-out infinite reverse; }
 .mika-av .mk .body { transform-box: fill-box; transform-origin: 50% 100%; animation: squish 3.4s ease-in-out infinite; }
@@ -524,12 +525,8 @@ button.mika-av { border: 0; background: none; padding: 0; cursor: pointer; -webk
 .hero { color: var(--hero-fg, var(--ink)); }
 .hero[data-tod="morning"] { background: linear-gradient(160deg, #FFE9B8 0%, #FFCFE0 52%, #DCD0FF 100%); }
 .hero[data-tod="evening"] { background: linear-gradient(165deg, #FFB690 0%, #F274A8 50%, #7550D6 100%); --hero-fg: #2A1050; }
-.hero[data-tod="night"] { background: linear-gradient(165deg, #1C1458 0%, #3D2C94 55%, #8A43A8 100%); --hero-fg: #FFF3FF; }
-@media (prefers-color-scheme: dark) {
-  .hero[data-tod="morning"] { background: linear-gradient(160deg, #6A3A9A 0%, #B04A8C 60%, #D9805F 100%); --hero-fg: #FFF3FF; }
-  .hero[data-tod="day"] { --hero-fg: #FFF3FF; }
-  .hero[data-tod="evening"] { background: linear-gradient(165deg, #B8456A 0%, #7A2E9A 55%, #3A2A94 100%); --hero-fg: #FFF3FF; }
-}
+.hero[data-tod="night"] { background: linear-gradient(165deg, #3B2F9E 0%, #6C4CC6 55%, #B86AC0 100%); --hero-fg: #FFF3FF; }
+/* sombre */ :root[data-scheme="dark"] .hero[data-tod="morning"] { background: linear-gradient(160deg, #6A3A9A 0%, #B04A8C 60%, #D9805F 100%); --hero-fg: #FFF3FF; } :root[data-scheme="dark"] .hero[data-tod="day"] { --hero-fg: #FFF3FF; } :root[data-scheme="dark"] .hero[data-tod="evening"] { background: linear-gradient(165deg, #B8456A 0%, #7A2E9A 55%, #3A2A94 100%); --hero-fg: #FFF3FF; }
 .sky { position: absolute; inset: 0; z-index: -1; overflow: hidden; pointer-events: none; }
 .sky .orb { position: absolute; top: 172px; right: 64px; width: 54px; height: 54px; border-radius: 50%; background: radial-gradient(circle at 35% 35%, #FFF6C9, #FFD25E 70%); box-shadow: 0 0 0 10px rgba(255, 224, 120, 0.25), 0 0 40px 14px rgba(255, 214, 110, 0.45); animation: orbpulse 6s ease-in-out infinite; }
 .hero[data-tod="evening"] .orb { top: 214px; background: radial-gradient(circle at 35% 35%, #FFE1B5, #FF9A5C 75%); box-shadow: 0 0 0 12px rgba(255, 150, 90, 0.28), 0 0 46px 16px rgba(255, 130, 90, 0.5); }
@@ -544,7 +541,7 @@ button.mika-av { border: 0; background: none; padding: 0; cursor: pointer; -webk
 .sky .c3 { top: 38px; left: 38%; transform: scale(0.6); animation-duration: 80s; opacity: 0.6; }
 @keyframes cdrift { to { translate: 120px 0; } }
 .hero[data-tod="night"] .cloud, .hero[data-tod="evening"] .cloud { background: rgba(255, 255, 255, 0.22); }
-@media (prefers-color-scheme: dark) { .sky .cloud { background: rgba(255, 255, 255, 0.2); } }
+/* sombre */ :root[data-scheme="dark"] .sky .cloud { background: rgba(255, 255, 255, 0.2); }
 .sky .star { display: none; position: absolute; width: 5px; height: 5px; border-radius: 50%; background: #fff; box-shadow: 0 0 8px 2px rgba(255, 255, 255, 0.8); animation: twinkle 2.6s ease-in-out infinite; }
 .hero[data-tod="night"] .star { display: block; }
 .sky .t1 { top: 20px; left: 12%; } .sky .t2 { top: 52px; left: 34%; animation-delay: .6s; } .sky .t3 { top: 30px; left: 58%; animation-delay: 1.2s; }
@@ -570,6 +567,37 @@ button.mika-av { border: 0; background: none; padding: 0; cursor: pointer; -webk
 .mika-world .mika-fx { left: 0; top: 0; }
 .mika-world .mika-tag { text-shadow: 0 1px 0 rgba(255, 255, 255, 0.35); }
 @media (prefers-reduced-motion: reduce) { .sky .orb, .sky .cloud, .sky .star, .sky .petal { animation: none !important; } .sky .petal { display: none; } }
+
+/* v12 : plus clair, plus simple */
+.live { white-space: nowrap; font-size: 13px; }
+@media (max-width: 440px) { .brand .tag { display: none; } }
+.barr { display: flex; align-items: center; gap: 8px; }
+.gear { border: 0; width: 38px; height: 38px; border-radius: 50%; background: var(--surface); color: var(--fg); display: grid; place-items: center; cursor: pointer; box-shadow: 0 2px 0 rgba(124, 92, 255, 0.14); }
+.gear svg { width: 20px; height: 20px; fill: none; stroke: currentColor; stroke-width: 2; stroke-linecap: round; }
+.tips { display: flex; flex-wrap: wrap; gap: 8px; margin: 12px 0 0; }
+.tips > span { display: contents; }
+.tips [hidden] { display: none !important; }
+.tip { border: 2px solid var(--line); background: var(--surface); color: var(--fg); border-radius: 999px; padding: 6px 13px; font: inherit; font-size: 13.5px; font-weight: 800; cursor: pointer; min-height: 34px; }
+.tip:active { transform: scale(0.96); }
+.seg { display: inline-flex; background: var(--bg); border: 1px solid var(--line); border-radius: 999px; padding: 3px; gap: 2px; }
+.seg button { border: 0; background: none; color: inherit; font: inherit; font-size: 13.5px; font-weight: 800; padding: 5px 12px; border-radius: 999px; cursor: pointer; }
+.seg button[aria-pressed="true"] { background: var(--mint, #5DE3B4); color: #05382A; }
+.place-results { display: flex; flex-direction: column; gap: 8px; margin: 10px 0; }
+.place-results button { text-align: left; border: 2px solid var(--line); background: var(--surface); color: inherit; border-radius: 16px; padding: 11px 14px; font: inherit; font-weight: 800; cursor: pointer; }
+.countryrow { display: flex; align-items: center; justify-content: space-between; gap: 10px; margin: 10px 0 2px; font-weight: 800; font-size: 14.5px; }
+.countryrow select { font: inherit; font-weight: 700; padding: 7px 10px; border-radius: 12px; border: 1px solid var(--line); background: var(--bg); color: inherit; max-width: 60%; }
+.perch { position: relative; height: 54px; flex: none; overflow: hidden; background: linear-gradient(180deg, rgba(93, 227, 180, 0.16), rgba(93, 227, 180, 0.04)); border-bottom: 1px solid var(--line); }
+.perch-ground { position: absolute; left: 0; right: 0; bottom: 0; height: 9px; background: repeating-linear-gradient(90deg, rgba(93, 227, 180, 0.35) 0 14px, rgba(93, 227, 180, 0.2) 14px 28px); border-radius: 9px 9px 0 0; }
+.perch-mika { position: absolute; left: 0; bottom: 6px; width: 46px; height: 46px; border: 0; padding: 0; background: none; cursor: pointer; will-change: transform; -webkit-tap-highlight-color: transparent; }
+.perch-mika svg { width: 100%; height: 100%; display: block; overflow: visible; }
+.perch-thought { position: absolute; font-size: 17px; pointer-events: none; animation: thoughtpop 3.6s ease-in-out both; }
+@keyframes thoughtpop { 0% { opacity: 0; transform: translateY(6px) scale(0.5); } 12%, 80% { opacity: 1; transform: translateY(0) scale(1); } 100% { opacity: 0; transform: translateY(-6px) scale(0.8); } }
+.mika-actor .thought { position: absolute; right: -6px; top: -10px; font-size: 26px; pointer-events: none; animation: thoughtpop 4.2s ease-in-out both; filter: drop-shadow(0 2px 3px rgba(60, 30, 140, 0.25)); }
+.invite-box { display: flex; gap: 8px; flex-wrap: wrap; margin-top: 10px; }
+.invite-box button { border: 0; border-radius: 999px; background: var(--sun, #FFCF3F); color: #2A1B5E; font: inherit; font-weight: 900; font-size: 14px; padding: 8px 16px; cursor: pointer; box-shadow: 0 3px 0 rgba(160, 110, 0, 0.35); }
+.mika-av.big { filter: drop-shadow(0 8px 10px rgba(60, 30, 140, 0.18)); }
+.mk .acc { display: none; }
+.mk.has-scarf .acc-scarf, .mk.has-bow .acc-bow, .mk.has-crown .acc-crown { display: inline; }
 </style>
 </head>
 <body>
@@ -579,15 +607,16 @@ button.mika-av { border: 0; background: none; padding: 0; cursor: pointer; -webk
       <div class="wrap">
         <div class="brand">
           <svg class="logo" viewBox="0 0 64 64" aria-hidden="true">
-            <rect x="2" y="5" width="38" height="28" rx="13" fill="#7C5CFF"/>
-            <path d="M10 31 L9 44 L22 32 Z" fill="#7C5CFF"/>
-            <rect x="24" y="22" width="38" height="28" rx="13" fill="#FF5CA8"/>
-            <path d="M54 48 L56 60 L42 49 Z" fill="#FF5CA8"/>
-            <circle cx="36" cy="36" r="3.3" fill="#fff"/><circle cx="43" cy="36" r="3.3" fill="#fff"/><circle cx="50" cy="36" r="3.3" fill="#fff"/>
+            <path d="M32 6c-16 0-27 10-27 23 0 8 4 14 10 18l-3 11 13-8c2 .3 5 .5 7 .5 16 0 27-10 27-22C59 16 48 6 32 6z" fill="#5DE3B4"/>
+            <path d="M32 8c3-7 11-8 14-5-2 6-8 9-14 5z" fill="#FFCF3F"/>
+            <ellipse cx="22" cy="31" rx="3.4" ry="4.6" fill="#2A1B5E"/><ellipse cx="42" cy="31" rx="3.4" ry="4.6" fill="#2A1B5E"/>
+            <circle cx="23.2" cy="29.3" r="1.2" fill="#fff"/><circle cx="43.2" cy="29.3" r="1.2" fill="#fff"/>
+            <ellipse cx="14.5" cy="38" rx="4" ry="2.6" fill="#FF8FC0" opacity=".8"/><ellipse cx="49.5" cy="38" rx="4" ry="2.6" fill="#FF8FC0" opacity=".8"/>
+            <path d="M28.5 38 Q32 43 35.5 38" stroke="#2A1B5E" stroke-width="2.6" fill="none" stroke-linecap="round"/>
           </svg>
           <h1>talkie</h1><span class="tag">bêta</span>
         </div>
-        <div id="live" class="live off" aria-live="polite"><span class="dot" aria-hidden="true"></span><span id="count">Connexion…</span></div>
+        <div class="barr"><div id="live" class="live off" aria-live="polite"><span class="dot" aria-hidden="true"></span><span id="count">Connexion…</span></div><button type="button" class="gear" id="btn-settings" aria-label="Réglages"><svg viewBox="0 0 24 24" aria-hidden="true"><circle cx="12" cy="12" r="3.2"/><path d="M12 2.8v2.6M12 18.6v2.6M2.8 12h2.6M18.6 12h2.6M5.5 5.5l1.8 1.8M16.7 16.7l1.8 1.8M5.5 18.5l1.8-1.8M16.7 7.3l1.8-1.8"/></svg></button></div>
       </div>
     </header>
 
@@ -650,19 +679,12 @@ button.mika-av { border: 0; background: none; padding: 0; cursor: pointer; -webk
         </div>
       </section>
 
-      <section id="install-ios" class="notice" hidden aria-label="Installer sur iPhone">
-        <p><strong>Installe Talkie sur ton iPhone</strong>Touche Partager dans Safari, puis « Sur l’écran d’accueil ». Ouvre ensuite Talkie depuis son icône pour recevoir les notifications.</p>
-      </section>
-
-      <section id="install-android" class="notice" hidden aria-label="Installer l’app">
-        <p><strong>Ajoute Talkie à ton écran d’accueil</strong>Pour l’ouvrir comme une vraie app.</p>
-        <div class="actions"><button type="button" class="primary" id="btn-install">Installer</button></div>
-      </section>
-
-      <section id="notif" class="notice" hidden aria-label="Notifications">
-        <p><strong>Retrouvez-vous au même moment 🔔</strong>Reçois une notification quand quelqu’un publie un thème.</p>
-        <div class="actions"><button type="button" class="primary" id="btn-notif">Activer les notifications</button></div>
-      </section>
+      <div id="tips" class="tips" hidden>
+        <span id="share-app"><button type="button" class="tip" id="btn-share-app">💌 Inviter un·e ami·e</button></span>
+        <span id="notif" hidden><button type="button" class="tip" id="btn-notif">🔔 Me prévenir quand quelqu’un arrive</button></span>
+        <span id="install-android" hidden><button type="button" class="tip" id="btn-install">📲 Installer l’app</button></span>
+        <span id="install-ios" hidden><button type="button" class="tip" id="btn-install-ios">📲 Installer l’app</button></span>
+      </div>
 
       <section aria-labelledby="inv-h">
         <div class="sec-head">
@@ -706,11 +728,19 @@ button.mika-av { border: 0; background: none; padding: 0; cursor: pointer; -webk
           <h2 id="conv-theme"></h2>
           <p id="conv-sub"></p>
         </div>
+        <button type="button" class="icon-btn" id="btn-invite" aria-label="Inviter un·e ami·e">
+          <svg viewBox="0 0 24 24" aria-hidden="true"><circle cx="10" cy="8" r="3.4"/><path d="M3.5 19c.6-3.4 3.2-5.2 6.5-5.2 1.3 0 2.5.3 3.4.8"/><path d="M18 11v6M15 14h6"/></svg>
+        </button>
         <button type="button" class="icon-btn" id="btn-safety" aria-label="Sécurité et options">
           <svg viewBox="0 0 24 24" aria-hidden="true"><circle cx="12" cy="5" r="1.2"/><circle cx="12" cy="12" r="1.2"/><circle cx="12" cy="19" r="1.2"/></svg>
         </button>
       </div>
     </header>
+    <div id="perch" class="perch" aria-hidden="false">
+      <div class="perch-ground" aria-hidden="true"></div>
+      <button type="button" class="perch-mika mika-av" id="perch-mika" aria-label="Mika, touche-le pour lui parler"></button>
+      <span class="perch-thought" id="perch-thought" hidden></span>
+    </div>
     <p id="wait" class="wait" hidden></p>
     <div id="log" role="log" aria-live="polite" aria-label="Messages"></div>
     <div id="composer">
@@ -755,8 +785,9 @@ button.mika-av { border: 0; background: none; padding: 0; cursor: pointer; -webk
       <div class="grab"></div>
       <h3 id="sheet-look-h">Ambiance</h3>
       <div class="swatches" id="swatches" role="group" aria-label="Fond d’écran du tchat"></div>
-      <div class="optrow"><span>Sons</span><button type="button" id="btn-sound" aria-pressed="true">Activés</button></div>
-      <div class="optrow" id="row-voice" hidden><span>Voix de Mika</span><button type="button" id="btn-voice2" aria-pressed="false">Coupée</button></div>
+      <div class="optrow"><span>Sons</span><button type="button" class="js-sound" aria-pressed="true">Activés</button></div>
+      <div class="optrow"><span>Apparence</span><span class="seg" role="group" aria-label="Apparence"><button type="button" data-scheme="light">Clair</button><button type="button" data-scheme="dark">Sombre</button><button type="button" data-scheme="auto">Auto</button></span></div>
+      <div class="optrow js-voicerow" hidden><span>Voix de Mika</span><button type="button" class="js-voice" aria-pressed="false">Coupée</button></div>
       <h3 id="sheet-safety-h">Sécurité</h3>
       <p>Tu peux quitter à tout moment, sans explication. Bloquer masque la personne et ses invitations, et elle ne verra plus les tiennes. Un signalement est enregistré avec les derniers messages pour être examiné.</p>
       <ul id="safety-list"></ul>
@@ -792,15 +823,33 @@ button.mika-av { border: 0; background: none; padding: 0; cursor: pointer; -webk
     </div>
   </div>
 
+  <div id="sheet-settings" class="scrim" hidden>
+    <div class="sheet" role="dialog" aria-modal="true" aria-labelledby="sheet-settings-h">
+      <div class="grab"></div>
+      <h3 id="sheet-settings-h">Réglages</h3>
+      <div class="optrow"><span>Apparence</span>
+        <span class="seg" role="group" aria-label="Apparence">
+          <button type="button" data-scheme="light">Clair</button><button type="button" data-scheme="dark">Sombre</button><button type="button" data-scheme="auto">Auto</button>
+        </span>
+      </div>
+      <div class="optrow js-voicerow" hidden><span>Voix de Mika</span><button type="button" class="js-voice" aria-pressed="false">Coupée</button></div>
+      <div class="optrow"><span>Sons</span><button type="button" class="js-sound" aria-pressed="true">Activés</button></div>
+      <div class="optrow"><span>Ma ville</span><button type="button" id="btn-settings-place">Changer</button></div>
+      <div class="stack"><button type="button" class="ghost" id="btn-settings-close">Fermer</button></div>
+    </div>
+  </div>
+
   <div id="sheet-place" class="scrim" hidden>
     <div class="sheet" role="dialog" aria-modal="true" aria-labelledby="sheet-place-h">
       <div class="grab"></div>
       <h3 id="sheet-place-h">Où es-tu ?</h3>
-      <p>Talkie choisit les thèmes de ton pays. Ajoute ta ville pour des thèmes encore plus locaux.</p>
+      <p>Les thèmes suivent ta ville : change-la et l’actualité change avec.</p>
       <form id="place-form" class="place-form" autocomplete="off">
-        <input type="text" id="city" maxlength="40" placeholder="Ta ville (facultatif)" aria-label="Ta ville">
+        <input type="text" id="city" maxlength="40" placeholder="Ta ville, ex. Cologne" aria-label="Ta ville">
         <button type="submit" class="primary">Ok</button>
       </form>
+      <div id="place-results" class="place-results" hidden></div>
+      <label class="countryrow">Pays <select id="country" aria-label="Ton pays"></select></label>
       <div class="stack">
         <button type="button" class="ghost" id="btn-geo">📍 Utiliser ma position</button>
         <button type="button" class="ghost" id="btn-place-close">Fermer</button>
@@ -822,6 +871,6 @@ button.mika-av { border: 0; background: none; padding: 0; cursor: pointer; -webk
   </div>
 </div>
 <div id="toast" role="status" aria-live="polite" hidden></div>
-<script src="/app.js?v=11"></script>
+<script src="/app.js?v=12"></script>
 </body>
 </html>

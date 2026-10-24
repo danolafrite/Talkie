@@ -19,7 +19,7 @@ const LANG = { FR: 'fr', BE: 'fr', CH: 'fr', LU: 'fr', MA: 'fr', DZ: 'fr', TN: '
 const CATS = ['Actu', 'Culture', 'Sport', 'Food', 'Jeux', 'Voyage', 'Société', 'Soutien'];
 
 const regions = new Map(); // "FR|paris" -> { themes, items, updatedAt, source, busy, retryAt }
-const defaultRegion = () => regions.get('FR|') || null;
+const defaultRegion = () => regions.get('FR||fr') || null;
 
 function clean(s, n) {
   return String(s == null ? '' : s)
@@ -46,12 +46,14 @@ function parseFeed(xml) {
   return items;
 }
 
-function validRegion(cc, city) {
+const LANGS = { fr: 'français', en: 'anglais', es: 'espagnol', de: 'allemand', it: 'italien', pt: 'portugais', nl: 'néerlandais' };
+function validRegion(cc, city, lang) {
   const c = /^[A-Z]{2}$/.test(String(cc || '')) ? cc : 'FR';
   const v = clean(city, 40);
-  return { cc: c, city: /^[\p{L}\p{M}' .\-]{2,40}$/u.test(v) ? v : '' };
+  const l = LANGS[String(lang || '').slice(0, 2).toLowerCase()] ? String(lang).slice(0, 2).toLowerCase() : 'fr';
+  return { cc: c, city: /^[\p{L}\p{M}' .\-]{2,40}$/u.test(v) ? v : '', lang: l };
 }
-const keyOf = (r) => r.cc + '|' + r.city.toLowerCase();
+const keyOf = (r) => r.cc + '|' + r.city.toLowerCase() + '|' + r.lang;
 
 function feedsFor(r) {
   if (OVERRIDE) return OVERRIDE;
@@ -68,7 +70,7 @@ function feedsFor(r) {
 function placeName(r) {
   let country = r.cc;
   try { country = new Intl.DisplayNames(['fr'], { type: 'region' }).of(r.cc) || r.cc; } catch (e) { /* ignore */ }
-  return { pays: country, ville: r.city || null };
+  return { pays: country, ville: r.city || null, langue_des_themes: LANGS[r.lang] };
 }
 
 function frenchDate() {
@@ -81,6 +83,7 @@ const SYSTEM = [
   'Sois PRÉCIS et LOCAL : si un événement concret est dans l’actualité (manifestation de demain, grève, match, concert, sortie, vote, météo, fête), nomme-le avec son lieu ou sa date, par exemple « Manifestation de demain à Paris : tu y vas ? » ou « OM – PSG ce soir : ton pronostic ? ». Pas de sujet vague.',
   'INTERDIT, dans toutes les catégories : les formules vagues comme « du moment », « du jour », « de ce soir » sans précision, « tendance », « actu », « ce qui buzz », « la mode », « la série du moment », « le match de ce soir ». Nomme toujours la série, l’équipe, l’artiste ou le fait précis. Chaque thème de la catégorie "Tendance" doit nommer UN fait précis tiré des données (un événement, un match, une sortie, une polémique de société, un lieu, une date). Exemple en France : « Manifestations de demain : tu y vas ? » ; aux États-Unis : « Le défilé Victoria’s Secret : tu regardes ? ». Si les données sont maigres, appuie-toi sur ce que tu sais du calendrier (fête, saison, rentrée, sport, sorties).',
   'Chaque thème est une question ouverte, courte, qui donne envie de répondre. Jamais un titre de presse recopié.',
+  'LIEU : si une ville est indiquée, au moins 3 des thèmes "Tendance" parlent de cette ville ou de sa région (événements, transports, sorties, matchs, fêtes locales), et tu n’utilises JAMAIS l’actualité d’une autre ville ou d’un autre pays. Sans ville, parle du pays. Rédige tous les thèmes dans la langue demandée (champ langue_des_themes).',
   'Fournis exactement : ' + TREND_COUNT + ' thèmes de catégorie "Tendance" (les plus précis et les plus brûlants du jour pour ce lieu, d’abord ceux de la ville s’il y en a, puis du pays), puis ' + PER_CAT + ' thèmes pour chacune de ces catégories : ' + CATS.join(', ') + '.',
   'Chaque thème : 55 caractères maximum, français, ton léger et bienveillant, avec un emoji adapté en champ séparé.',
   'Les sujets d’actualité, de société ou de manifestation sont possibles s’ils se prêtent à un échange respectueux : formule une question ouverte et neutre, sans prendre parti, sans viser une personne ou un camp.',
@@ -192,17 +195,22 @@ async function generate(r) {
 }
 
 /* Renvoie les thèmes de la région demandée ; lance la génération en arrière-plan si besoin. */
-function forRegion(cc, city) {
-  const r = validRegion(cc, city);
+function forRegion(cc, city, lang) {
+  const r = validRegion(cc, city, lang);
   const key = keyOf(r);
   const e = regions.get(key);
   if (!e || (Date.now() - e.updatedAt > REFRESH_MS)) generate(r);
   const cur = regions.get(key);
-  if (cur && cur.items.length) return { themes: cur.themes, items: cur.items, source: cur.source, updatedAt: cur.updatedAt, pending: false, cc: r.cc, city: r.city };
-  // Pas encore prêt : repli sur le niveau national, sinon liste fixe.
-  const nat = r.city ? regions.get(r.cc + '|') : null;
-  if (nat && nat.items.length) return { themes: nat.themes, items: nat.items, source: nat.source, updatedAt: nat.updatedAt, pending: true, cc: r.cc, city: r.city };
-  return { themes: DEFAULTS.slice(), items: [], source: 'default', updatedAt: Date.now(), pending: ai.configured(), cc: r.cc, city: r.city };
+  const out = (x, pending) => ({ themes: x.themes, items: x.items, source: x.source, updatedAt: x.updatedAt, pending, cc: r.cc, city: r.city, lang: r.lang });
+  if (cur && cur.items.length) return out(cur, false);
+  // Pas encore prêt : pour une ville, on prépare aussi le pays, et on n'affiche jamais le thème d'un autre pays.
+  if (r.city) {
+    const nr = { cc: r.cc, city: '', lang: r.lang };
+    const nat = regions.get(keyOf(nr));
+    if (!nat || (Date.now() - nat.updatedAt > REFRESH_MS)) generate(nr);
+    if (nat && nat.items.length) return out(nat, true);
+  }
+  return { themes: DEFAULTS.slice(), items: [], source: 'default', updatedAt: Date.now(), pending: ai.configured(), cc: r.cc, city: r.city, lang: r.lang };
 }
 
 function get() {
@@ -212,10 +220,10 @@ function get() {
 }
 
 function start() {
-  setTimeout(() => generate({ cc: 'FR', city: '' }), 3000).unref();
-  setInterval(() => { regions.forEach((e, k) => { if (Date.now() - e.updatedAt > REFRESH_MS && e.updatedAt) { const [cc, city] = k.split('|'); generate({ cc, city }); } }); }, 10 * 60 * 1000).unref();
+  setTimeout(() => generate({ cc: 'FR', city: '', lang: 'fr' }), 3000).unref();
+  setInterval(() => { regions.forEach((e, k) => { if (Date.now() - e.updatedAt > REFRESH_MS && e.updatedAt) { const [cc, city, lang] = k.split('|'); generate({ cc, city, lang }); } }); }, 10 * 60 * 1000).unref();
 }
 
-async function refresh() { await generate({ cc: 'FR', city: '' }); }
+async function refresh() { await generate({ cc: 'FR', city: '', lang: 'fr' }); }
 
 module.exports = { start, refresh, get, forRegion, parseFeed, CATS };

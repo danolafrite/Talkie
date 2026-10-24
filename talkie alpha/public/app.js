@@ -15,6 +15,28 @@
     } catch (e) { /* stockage indisponible */ }
     return null;
   }
+
+  /* Mika se souvient de toi (sur ce téléphone uniquement) : dernière visite, thème, jours de suite. */
+  var mem = (function () {
+    try {
+      var m = JSON.parse(store('talkie.mem') || '{}');
+      return { visits: Number(m.visits) || 0, last: Number(m.last) || 0, streak: Number(m.streak) || 0, day: String(m.day || ''), theme: String(m.theme || '').slice(0, 60) };
+    } catch (e) { return { visits: 0, last: 0, streak: 0, day: '', theme: '' }; }
+  })();
+  var prevVisit = { visits: mem.visits, last: mem.last, streak: mem.streak, theme: mem.theme };
+  function saveMem() { store('talkie.mem', JSON.stringify(mem)); }
+  (function () {
+    var now = Date.now();
+    var today = new Date(now).toLocaleDateString('sv-SE');
+    if (mem.day !== today) {
+      var y = new Date(now - 86400000).toLocaleDateString('sv-SE');
+      mem.streak = mem.day === y ? mem.streak + 1 : 1;
+      mem.day = today;
+      mem.visits++;
+    }
+    mem.last = now;
+    saveMem();
+  })();
   function uuid() {
     if (window.crypto && crypto.randomUUID) return crypto.randomUUID();
     var a = new Uint8Array(16);
@@ -128,6 +150,7 @@
         pushOn = !!m.push && 'Notification' in window && Notification.permission === 'granted';
         renderNotif();
         resyncPush();
+        tryJoinLink();
         break;
       case 'lobby':
         online = m.online || 0;
@@ -212,32 +235,41 @@
   }
 
   /* ---------- Mika (dessin kawaii) ---------- */
+  function accClasses() {
+    var v = (mem && mem.visits) || 0;
+    return (v >= 3 ? ' has-scarf' : '') + (v >= 6 ? ' has-bow' : '') + (v >= 12 ? ' has-crown' : '');
+  }
   function mikaSvg() {
     var eye = function (cx) {
-      return '<g><ellipse cx="' + cx + '" cy="46" rx="5" ry="6.4" fill="#2A1B5E"/><g class="pupil"><circle cx="' + (cx + 1.7) + '" cy="43.6" r="2.3" fill="#fff"/><circle cx="' + (cx - 1.6) + '" cy="48.6" r="1.1" fill="#fff"/></g></g>';
+      return '<g><ellipse cx="' + cx + '" cy="46" rx="5.2" ry="6.6" fill="#2A1B5E"/><g class="pupil"><circle cx="' + (cx + 1.8) + '" cy="43.4" r="2.5" fill="#fff"/><circle cx="' + (cx - 1.7) + '" cy="48.8" r="1.2" fill="#fff"/></g></g>';
     };
-    return '<svg class="mk" viewBox="0 0 80 80" aria-hidden="true">' +
-      '<g class="leaf leaf-l"><path d="M40 24 C33 9 22 9 18 14 C22 23 31 26 40 24Z" fill="#7BE08B"/></g>' +
-      '<g class="leaf leaf-r"><path d="M40 24 C47 8 60 8 63 13 C59 22 48 26 40 24Z" fill="#FFCF3F"/></g>' +
-      '<ellipse cx="29" cy="73" rx="7.5" ry="4" fill="#3FC79A"/><ellipse cx="51" cy="73" rx="7.5" ry="4" fill="#3FC79A"/>' +
-      '<g class="body"><path d="M9 52 C9 31 23 20 40 20 C57 20 71 31 71 52 C71 66 58 74 40 74 C22 74 9 66 9 52Z" fill="#5DE3B4"/>' +
-      '<ellipse cx="40" cy="62" rx="15" ry="9" fill="#9CF5D4" opacity=".55"/>' +
-      '<ellipse cx="25" cy="33" rx="9" ry="4.5" fill="#fff" opacity=".4" transform="rotate(-25 25 33)"/></g>' +
-      '<g class="mk-arm-l"><ellipse cx="9.5" cy="54" rx="6" ry="3.8" fill="#44CFA0" transform="rotate(-35 9.5 54)"/></g>' +
-      '<ellipse cx="70.5" cy="55" rx="6" ry="3.8" fill="#44CFA0" transform="rotate(35 70.5 55)"/>' +
-      '<ellipse cx="20" cy="55" rx="5.4" ry="3.4" fill="#FF8FC0" opacity=".8"/><ellipse cx="60" cy="55" rx="5.4" ry="3.4" fill="#FF8FC0" opacity=".8"/>' +
+    return '<svg class="mk' + accClasses() + '" viewBox="0 0 80 80" aria-hidden="true">' +
+      '<g class="ear ear-l"><path d="M15 33 C11 19 16 9 24 13 C29 16 31 22 31 26Z" fill="#5DE3B4"/><path d="M18.5 27 C17 20 19.5 16.5 23 18.5 C25.5 20 26.5 23 26.5 25Z" fill="#FFB3D1"/></g>' +
+      '<g class="ear ear-r"><path d="M65 33 C69 19 64 9 56 13 C51 16 49 22 49 26Z" fill="#5DE3B4"/><path d="M61.5 27 C63 20 60.5 16.5 57 18.5 C54.5 20 53.5 23 53.5 25Z" fill="#FFB3D1"/></g>' +
+      '<ellipse cx="29" cy="74" rx="7.5" ry="4" fill="#3FC79A"/><ellipse cx="51" cy="74" rx="7.5" ry="4" fill="#3FC79A"/>' +
+      '<g class="body"><path d="M7 51 C7 30 21 18 40 18 C59 18 73 30 73 51 C73 67 58 76 40 76 C22 76 7 67 7 51Z" fill="#5DE3B4"/>' +
+      '<ellipse cx="40" cy="63" rx="16" ry="9" fill="#9CF5D4" opacity=".55"/>' +
+      '<ellipse cx="25" cy="31" rx="9" ry="4.5" fill="#fff" opacity=".42" transform="rotate(-25 25 31)"/></g>' +
+      '<path d="M40 19 Q40.5 12 42 9" stroke="#3FC79A" stroke-width="2.6" fill="none" stroke-linecap="round"/>' +
+      '<g class="leaf leaf-r"><path d="M42 10 C48 3 57 4 59 8 C55 13 47 14 42 10Z" fill="#FFCF3F"/></g>' +
+      '<g class="mk-arm-l"><ellipse cx="8.5" cy="55" rx="6" ry="3.8" fill="#44CFA0" transform="rotate(-35 8.5 55)"/></g>' +
+      '<ellipse cx="71.5" cy="56" rx="6" ry="3.8" fill="#44CFA0" transform="rotate(35 71.5 56)"/>' +
+      '<ellipse cx="19.5" cy="56" rx="5.6" ry="3.5" fill="#FF8FC0" opacity=".8"/><ellipse cx="60.5" cy="56" rx="5.6" ry="3.5" fill="#FF8FC0" opacity=".8"/>' +
       '<g class="eo">' + eye(28) + eye(52) + '</g>' +
       '<g class="eh" fill="none" stroke="#2A1B5E" stroke-width="3" stroke-linecap="round"><path d="M22.5 48.5 Q28 40.5 33.5 48.5"/><path d="M46.5 48.5 Q52 40.5 57.5 48.5"/></g>' +
       '<g class="ec" fill="none" stroke="#2A1B5E" stroke-width="3" stroke-linecap="round"><path d="M22.5 46 Q28 51.5 33.5 46"/><path d="M46.5 46 Q52 51.5 57.5 46"/></g>' +
       '<g class="ht" fill="#FF4F9A"><path d="M28 51 C21 46 23 40 28 43.5 C33 40 35 46 28 51Z"/><path d="M52 51 C45 46 47 40 52 43.5 C57 40 59 46 52 51Z"/></g>' +
-      '<path class="ms" d="M35.5 56 Q37.8 59.6 40 56 Q42.2 59.6 44.5 56" stroke="#2A1B5E" stroke-width="2.4" fill="none" stroke-linecap="round" stroke-linejoin="round"/>' +
-      '<g class="mw"><path d="M33.5 54 Q40 67 46.5 54Z" fill="#7A2252"/><ellipse cx="40" cy="60.6" rx="3.4" ry="2" fill="#FF8FA3"/></g>' +
-      '<ellipse class="mo" cx="40" cy="58.5" rx="3" ry="3.7" fill="#7A2252"/>' +
-      '<ellipse class="mt" cx="40" cy="58" rx="4.2" ry="3" fill="#7A2252"/>' +
+      '<path class="ms" d="M35.5 57 Q37.8 60.6 40 57 Q42.2 60.6 44.5 57" stroke="#2A1B5E" stroke-width="2.4" fill="none" stroke-linecap="round" stroke-linejoin="round"/>' +
+      '<g class="mw"><path d="M33.5 55 Q40 68 46.5 55Z" fill="#7A2252"/><ellipse cx="40" cy="61.6" rx="3.4" ry="2" fill="#FF8FA3"/></g>' +
+      '<ellipse class="mo" cx="40" cy="59.5" rx="3" ry="3.7" fill="#7A2252"/>' +
+      '<ellipse class="mt" cx="40" cy="59" rx="4.2" ry="3" fill="#7A2252"/>' +
+      '<g class="acc acc-scarf"><path d="M16 66 Q40 78 64 66 L62 72 Q40 84 18 72Z" fill="#FF8FC0"/><path d="M52 74 l3 9 l5 -3 l-3 -8z" fill="#FF6FAE"/></g>' +
+      '<g class="acc acc-bow"><path d="M20 18 l-9 -5 v11z M20 18 l9 -5 v11z" fill="#FF6FAE"/><circle cx="20" cy="18" r="3" fill="#FFB3D1"/></g>' +
+      '<g class="acc acc-crown"><path d="M31 20 l2.5 -9 l5 5 l1.5 -8 l1.5 8 l5 -5 l2.5 9z" fill="#FFCF3F" stroke="#E5A800" stroke-width="1"/></g>' +
       '<g class="zz" fill="#7C5CFF" font-family="sans-serif" font-weight="900"><text x="60" y="26" font-size="11">z</text><text x="67" y="16" font-size="8">z</text></g></svg>';
   }
   function fillMika() {
-    Array.prototype.forEach.call(document.querySelectorAll('#mika-av, #fab-orb, [data-mika]'), function (n) { n.innerHTML = mikaSvg(); });
+    Array.prototype.forEach.call(document.querySelectorAll('#mika-av, #fab-orb, #perch-mika, [data-mika]'), function (n) { n.innerHTML = mikaSvg(); });
   }
 
   /* ---------- Salon : thèmes ---------- */
@@ -361,17 +393,24 @@
     try { return new Intl.DisplayNames(['fr'], { type: 'region' }).of(cc) || cc; } catch (e) { return cc; }
   }
   function placeLabel() { return place.city || countryName(place.cc); }
+  var UILANG = (function () { var l = String(navigator.language || 'fr').slice(0, 2).toLowerCase(); return /^(fr|en|es|de|it|pt|nl)$/.test(l) ? l : 'fr'; })();
   function savePlace(cc, city) {
     place = { cc: cc, city: clean(city, 40) };
     store('talkie.place', JSON.stringify(place));
+    // On efface tout de suite l'ancien lieu : jamais l'actualité d'une autre ville le temps du chargement.
+    AI_ITEMS = []; themesState = 'loading'; themesTry = 0;
+    renderTrends();
     loadThemes();
   }
 
   var themesTry = 0, themesTimer = null;
+  var themesSeq = 0;
   function loadThemes() {
     clearTimeout(themesTimer);
+    var mySeq = ++themesSeq, askedKey = place.cc + '|' + place.city;
     if (!AI_ITEMS.length) themesState = 'loading';
-    fetch('/api/themes?cc=' + encodeURIComponent(place.cc) + '&city=' + encodeURIComponent(place.city)).then(function (r) { return r.json(); }).then(function (d) {
+    fetch('/api/themes?cc=' + encodeURIComponent(place.cc) + '&city=' + encodeURIComponent(place.city) + '&lang=' + UILANG).then(function (r) { return r.json(); }).then(function (d) {
+      if (mySeq !== themesSeq || askedKey !== place.cc + '|' + place.city) return;
       AI_ITEMS = [];
       if (d && (d.source === 'trends' || d.source === 'ai') && Array.isArray(d.items)) {
         AI_ITEMS = d.items.map(function (x) {
@@ -519,10 +558,15 @@
       void bub.offsetWidth;
       bub.classList.add('say');
       var len = String(text).length;
-      var tickMs = audio && audio.duration ? Math.max(24, Math.min(120, audio.duration * 1000 / Math.max(1, len / 2))) : (wantVoice ? 70 : 26);
+      var viaTts = false;
+      var tickMs = audio && audio.duration ? Math.max(24, Math.min(120, audio.duration * 1000 / (audio.playbackRate || 1) / Math.max(1, len / 2))) : (wantVoice ? 70 : 26);
       if (audio) setTalking(true);
-      else if (wantVoice) { var ms = chirpSeq(text, tickMs); if (ms) setTalking(true); }
-      if (reduceMotion || len < 3) { bub.textContent = text; if (!audio) setTimeout(function () { if (tok === sayTok) setTalking(false); }, 600); return; }
+      else if (wantVoice) {
+        viaTts = ttsSpeak(text);
+        if (viaTts) tickMs = Math.max(55, Math.min(115, (len * 62) / Math.max(1, len / 2)));
+        else { var ms = chirpSeq(text, tickMs); if (ms) setTalking(true); }
+      }
+      if (reduceMotion || len < 3) { bub.textContent = text; if (!audio && !viaTts) setTimeout(function () { if (tok === sayTok) setTalking(false); }, 600); return; }
       var node = document.createTextNode('');
       var cur = el('span', 'cursor');
       cur.setAttribute('aria-hidden', 'true');
@@ -538,7 +582,7 @@
           clearInterval(sayTimer);
           if (cur.parentNode) cur.parentNode.removeChild(cur);
           talkFlags.t = false; applyTalk();
-          if (!audio) setTimeout(function () { if (tok === sayTok) setTalking(false); }, 350);
+          if (!audio && !viaTts) setTimeout(function () { if (tok === sayTok) setTalking(false); }, 350);
         }
       }, tickMs);
     }
@@ -665,14 +709,49 @@
   });
   ['pointerdown', 'keydown'].forEach(function (ev) { document.addEventListener(ev, function () { if (!room) bumpIdle(); }, { passive: true }); });
 
+  function visitGreeting() {
+    var p = prevVisit, hrs = p.last ? (Date.now() - p.last) / 3600000 : 0;
+    if (!p.visits) return { text: 'Coucou, enchanté·e ! 🌸 Moi c’est Mika. Je vis ici, et ma mission : te trouver quelqu’un de chouette avec qui papoter.', first: true };
+    if (hrs < 3) return { text: pick(['Oh, te revoilà ! 🥹 J’adore quand tu reviens vite.', 'Re-coucou ! ✨ Tu m’as manqué… enfin, depuis tout à l’heure 😄']), back: true };
+    var days = Math.floor(hrs / 24);
+    var away = pick(['j’ai fait la sieste sur un nuage ☁️', 'j’ai compté les étoiles (il y en a beaucoup) ✨', 'j’ai rêvé de frites… encore 🍟', 'j’ai appris à faire des bulles de savon 🫧', 'j’ai rangé ma collection de pétales 🌸']);
+    var t = days >= 2 ? 'Content de te revoir ! 🥹 Ça fait ' + days + ' jours… ' : 'Content de te revoir ! 🥹 ';
+    return { text: t + 'Comment ça va depuis la dernière fois ?' + (days >= 1 ? ' Moi, ' + away + '.' : ''), checkin: true, streak: mem.streak, lastTheme: p.theme };
+  }
+  function checkin(g) {
+    setQr([
+      ['😄 Ça va super !', function () { mood('love', 3000); anim('jump'); burst(['💚', '✨']); mikaSay(pick(['Yesss, ça me fait trop plaisir ! 💚', 'Trop bien ! Garde cette énergie pour une bonne discussion ✨']), false, 'love'); afterCheckin(g, 2600); }, 'yes'],
+      ['😮‍💨 Pas terrible', function () { mood('happy', 3000); burst(['🫂', '💛']); mikaSay('Oh, mon petit cœur… merci de me le dire 🫂 Une discussion douce peut aider. Je te trouve quelqu’un de sympa ?', false, 'happy'); afterCheckin(g, 3200, true); }],
+      ['💬 Parlons-en', function () { mikaSay('Je suis tout ouïe 🥹 Écris ce qui te passe par la tête dans le champ en dessous, ou choisis un thème.', false, 'happy'); $('theme').focus(); setTimeout(mainOffer, 5000); }]
+    ]);
+  }
+  function afterCheckin(g, wait, soft) {
+    setTimeout(function () {
+      if (room) return;
+      if (g.lastTheme && !soft) {
+        mikaSay('Et ta discussion sur « ' + g.lastTheme + ' », c’était chouette ?', false, 'happy');
+        setQr([
+          ['👍 Oui !', function () { mikaSay('Génial ! On remet ça aujourd’hui ? ✨', false, 'love'); setTimeout(function () { propose(0); }, 2200); }, 'yes'],
+          ['🙈 Bof', function () { mikaSay('Ça arrive ! Cette fois, on tente un autre thème 🍀', false, 'happy'); setTimeout(function () { propose(0); }, 2200); }],
+          ['🔁 Le même thème', function () { $('theme').value = g.lastTheme; $('btn-publish').disabled = !open || replaced || !!room; mikaSay('Allez, je te laisse relancer le même ! 🚀', false, 'happy'); readyToPublish(); }]
+        ]);
+      } else propose(0);
+    }, wait);
+  }
   function renderMika() {
     fillMika();
-    mood('wow', 1400);
+    var g = visitGreeting();
+    mood(g.checkin || g.back ? 'love' : 'wow', 1800);
     setTimeout(function () {
       if (dir.engaged) return;
       anim('jump');
-      mikaSay(greeting(), true, 'happy');
-      setTimeout(function () { if (!dir.engaged && !room) propose(0); }, reduceMotion ? 300 : 2800);
+      if (g.checkin || g.back) burst(['💚', '✨', '🌸']);
+      var extra = (g.checkin && g.streak >= 3) ? ' ' + g.streak + ' jours de suite, tu es adorable ✨' : '';
+      mikaSay(g.text + extra, false, g.checkin || g.back ? 'love' : 'happy');
+      setTimeout(function () {
+        if (dir.engaged || room) return;
+        if (g.checkin) checkin(g); else propose(0);
+      }, reduceMotion ? 300 : 3600);
     }, reduceMotion ? 0 : 900);
     bumpIdle();
   }
@@ -690,7 +769,7 @@
   /* Mika est un petit compagnon qui vit sur tout l'écran : il flotte chez lui, part se balader,
      se cache sur les bords, revient quand on lui parle, et on peut l'attraper pour le promener. */
   var PW = 104;
-  var pet = { mode: 'home', x: 0, y: 0, s: 1, tilt: 0, hx: 0.1, htx: 0.55, nextHome: 0, wp: [], restUntil: 0, last: 0, init: false, drag0: null, drag: null, dropX: 0, dropY: 0, dropUntil: 0, nextTour: performance.now() + 15000, lastSpoke: Date.now(), vis: 1, justDragged: false };
+  var pet = { mode: 'home', x: 0, y: 0, s: 1, tilt: 0, hx: 0.1, htx: 0.55, nextHome: 0, wp: [], restUntil: 0, last: 0, init: false, drag0: null, drag: null, dropX: 0, dropY: 0, dropUntil: 0, nextTour: performance.now() + 15000, nextAct: performance.now() + 9000, lastSpoke: Date.now(), vis: 1, justDragged: false };
   document.body.appendChild($('mika-actor'));
   document.body.appendChild($('mika-shadow'));
   function callHome() { if (pet.mode === 'roam') { pet.mode = 'home'; pet.wp = []; pet.restUntil = 0; } }
@@ -746,6 +825,12 @@
     var vx = (pet.x - px) / Math.max(dt, 0.001);
     var tiltT = pet.mode === 'roam' && pet.restUntil ? (pet.wp[0] && pet.wp[0].side === 'L' ? 16 : -16) : Math.max(-10, Math.min(10, vx / 40));
     pet.tilt += (tiltT - pet.tilt) * Math.min(1, dt * 6);
+    if (!reduceMotion && pet.mode === 'home' && !busy && !sleeping && stageVisible && ts > pet.nextAct) {
+      pet.nextAct = ts + 16000 + Math.random() * 14000;
+      var th = el('span', 'thought', pick(['🍡', '📖', '☁️', '🎧', '🍵', '🫧', '🌙', '🍓', '🎶']));
+      actor.appendChild(th);
+      setTimeout(function () { if (th.parentNode) th.parentNode.removeChild(th); }, 4400);
+    }
     var show = pet.mode !== 'home' || stageVisible;
     pet.vis += ((show ? 1 : 0) - pet.vis) * Math.min(1, dt * 8);
     actor.style.opacity = pet.vis.toFixed(2);
@@ -795,17 +880,120 @@
   })();
   if (reduceMotion) { requestAnimationFrame(petLoop); } else requestAnimationFrame(petLoop);
 
+  /* ---------- Mika dans la conversation : il se balade sur son perchoir et réagit ---------- */
+  var perch = { x: -50, tx: 0.5, next: 0, last: 0, lastAct: Date.now(), asleep: false, nextThought: 0, moodT: null, entered: false };
+  function perchMood(name, ms) {
+    var a = $('perch-mika');
+    ['st-happy', 'st-wow', 'st-sleep', 'st-love'].forEach(function (c) { a.classList.remove(c); });
+    clearTimeout(perch.moodT);
+    if (name) { a.classList.add('st-' + name); if (ms) perch.moodT = setTimeout(function () { if (!perch.asleep) perchMood(null); }, ms); }
+  }
+  function perchAnim(cls) {
+    var a = $('perch-mika');
+    a.classList.remove(cls); void a.offsetWidth; a.classList.add(cls);
+    setTimeout(function () { a.classList.remove(cls); }, 900);
+  }
+  function perchLook(dx, dy) {
+    var sv = $('perch-mika').querySelector('.mk');
+    if (!sv) return;
+    sv.style.setProperty('--lx', dx.toFixed(1) + 'px');
+    sv.style.setProperty('--ly', dy.toFixed(1) + 'px');
+  }
+  function perchThought(emoji) {
+    var t = $('perch-thought');
+    t.textContent = emoji;
+    t.style.left = Math.max(2, perch.x + 30) + 'px';
+    t.style.top = '2px';
+    t.style.animation = 'none'; void t.offsetWidth; t.style.animation = '';
+    t.hidden = false;
+    clearTimeout(perch.thT);
+    perch.thT = setTimeout(function () { t.hidden = true; }, 3700);
+  }
+  function perchWake() {
+    perch.lastAct = Date.now();
+    if (perch.asleep) { perch.asleep = false; perchMood('wow', 1200); perchAnim('shy'); }
+  }
+  function perchReact(kind) {
+    if (replaying) return;
+    perchWake();
+    if (kind === 'ai') { perchAnim('jump'); perchMood('happy', 2000); perch.tx = 0.3 + Math.random() * 0.4; perchThought(pick(['💬', '✨', '💚'])); }
+    else if (kind === 'human') { perchMood('wow', 800); perchLook(Math.random() < 0.5 ? -2.2 : 2.2, 1.4); if (Math.random() < 0.4) perchThought(pick(['👀', '👂', '💭'])); }
+    else { perchLook(0, 1.6); }
+  }
+  function perchEnter() {
+    perch.x = -50; perch.tx = 0.35; perch.next = performance.now() + 4000; perch.lastAct = Date.now(); perch.asleep = false;
+    perchMood('happy', 2200);
+    setTimeout(function () { if (room) perchThought('👋'); }, 900);
+  }
+  function perchLoop(ts) {
+    requestAnimationFrame(perchLoop);
+    if (!room || $('conv').hidden || document.hidden) { perch.last = 0; return; }
+    var box = $('perch'), w = box.clientWidth;
+    if (!w) return;
+    var dt = perch.last ? Math.min(0.05, (ts - perch.last) / 1000) : 0.016;
+    perch.last = ts;
+    var range = Math.max(0, w - 50 - 8);
+    if (!perch.asleep && Date.now() - perch.lastAct > 75000) { perch.asleep = true; perchMood('sleep'); }
+    if (!perch.asleep && !reduceMotion && ts > perch.next) { perch.tx = Math.random(); perch.next = ts + 2600 + Math.random() * 4600; }
+    var target = 4 + perch.tx * range;
+    var before = perch.x;
+    if (!perch.asleep) perch.x += (target - perch.x) * Math.min(1, dt * 0.9);
+    var moving = Math.abs(perch.x - before) / Math.max(dt, 0.001) > 8;
+    var hop = (!perch.asleep && moving && !reduceMotion) ? Math.abs(Math.sin(ts / 105)) * 6 : 0;
+    var tilt = moving ? Math.max(-8, Math.min(8, (perch.x - before) / Math.max(dt, 0.001) / 14)) : 0;
+    $('perch-mika').style.transform = 'translate3d(' + perch.x.toFixed(1) + 'px,' + (-hop).toFixed(1) + 'px,0) rotate(' + tilt.toFixed(1) + 'deg)';
+    if (!perch.asleep && !reduceMotion && ts > perch.nextThought) {
+      perch.nextThought = ts + 15000 + Math.random() * 12000;
+      perchThought(pick(['🍡', '🎶', '☁️', '🫧', '🍓', '💭']));
+    }
+  }
+  requestAnimationFrame(perchLoop);
+  $('perch-mika').addEventListener('click', function () {
+    perchWake(); perchAnim('jump'); perchMood('happy', 1800); perchThought('💬');
+    var m = $('msg');
+    if (!m.disabled) {
+      if (!m.value) { m.value = 'Mika, '; m.dispatchEvent(new Event('input')); }
+      m.focus();
+    }
+  });
+
+  /* ---------- Inviter des ami·e·s dans la conversation ---------- */
+  function shareRoom() {
+    if (!room) return;
+    var full = room.members && room.max && room.members.length >= room.max;
+    if (full) { toast('La conversation est déjà complète (' + room.max + ' personnes).'); return; }
+    var url = location.origin + '/?r=' + encodeURIComponent(room.id);
+    var text = 'Viens papoter de « ' + room.theme + ' » avec moi sur Talkie 💚';
+    if (navigator.share) { navigator.share({ title: 'Talkie', text: text, url: url }).catch(function () {}); return; }
+    var all = text + ' ' + url;
+    if (navigator.clipboard && navigator.clipboard.writeText) navigator.clipboard.writeText(all).then(function () { toast('Lien copié ! Envoie-le à ton ami·e 💌'); }, function () { window.prompt('Copie ce lien :', all); });
+    else window.prompt('Copie ce lien :', all);
+  }
+  $('btn-invite').addEventListener('click', shareRoom);
+  var linkRoom = (function () {
+    try { var r = new URLSearchParams(location.search).get('r'); return r && /^[A-Za-z0-9_-]{3,24}$/.test(r) ? r : null; } catch (e) { return null; }
+  })();
+  if (linkRoom) { try { history.replaceState(null, '', location.pathname); } catch (e) { /* ignore */ } }
+  function tryJoinLink() {
+    if (!linkRoom || room) return;
+    var id = linkRoom;
+    if (store('talkie.adult') !== '1') { showAge(); return; }
+    linkRoom = null;
+    if (send({ t: 'join', id: id })) toast('Je te connecte à l’invitation de ton ami·e… 💚');
+  }
+
   /* ---------- Voix de Mika (facultative, coupée par défaut) ----------
      Deux voix : une vraie voix neuronale mignonne si le serveur en a une (clé OPENAI_API_KEY), sinon
      la voix « gazouillis » de Mika, fabriquée dans le navigateur (WebAudio), toujours douce et jamais robotique. */
   var AC = window.AudioContext || window.webkitAudioContext;
-  var canSpeak = !!AC;
+  var canTTS = 'speechSynthesis' in window && typeof SpeechSynthesisUtterance !== 'undefined';
+  var canSpeak = !!AC || canTTS;
   var voiceOn = canSpeak && store('talkie.voice') === '1';
-  var cloudTts = false;
+  var cloudTts = false, cloudRate = 1.12;
   var gesture = false;
   var actx = null, seq = null;
   var voiceEl = null;
-  fetch('/api/config').then(function (r) { return r.json(); }).then(function (d) { cloudTts = !!(d && d.tts); }).catch(function () {});
+  fetch('/api/config').then(function (r) { return r.json(); }).then(function (d) { cloudTts = !!(d && d.tts); if (d && d.ttsRate) cloudRate = d.ttsRate; }).catch(function () {});
 
   function unlockVoice() {
     if (gesture) return;
@@ -834,8 +1022,41 @@
   function stopChirps() {
     if (seq) { try { seq.gain.cancelScheduledValues(0); seq.gain.value = 0; seq.disconnect(); } catch (e) { /* ignore */ } seq = null; }
   }
+  var frVoice = null;
+  function pickVoice() {
+    if (!canTTS) return;
+    var vs = speechSynthesis.getVoices().filter(function (v) { return /^fr/i.test(v.lang); });
+    if (!vs.length) return;
+    function score(v) {
+      var n = v.name + ' ' + (v.voiceURI || '');
+      var sc = 0;
+      if (/natural|neural|online/i.test(n)) sc += 6;
+      if (/enhanced|premium|siri|am[eé]lie|audrey|aur[eé]lie|marie|julie|c[eé]line|denise|eloise|[eé]lo[iï]se|hortense|vivienne|brigitte|jeanne|fem|woman/i.test(n)) sc += 3;
+      if (/google/i.test(n)) sc += 2;
+      if (/^fr[-_]FR/i.test(v.lang)) sc += 1;
+      if (/thomas|henri|paul|claude|jean|male|homme|antoine|remy/i.test(n)) sc -= 3;
+      return sc;
+    }
+    vs.sort(function (a, b) { return score(b) - score(a); });
+    frVoice = vs[0];
+  }
+  if (canTTS) { pickVoice(); if (speechSynthesis.addEventListener) speechSynthesis.addEventListener('voiceschanged', pickVoice); }
+  // Voix du téléphone (la plus naturelle trouvée), un peu plus aiguë : compréhensible, sans clé.
+  function ttsSpeak(text) {
+    if (!canTTS || !frVoice || !gesture) return false;
+    try {
+      speechSynthesis.cancel();
+      var u = new SpeechSynthesisUtterance(speakable(text));
+      u.lang = frVoice.lang || 'fr-FR'; u.voice = frVoice; u.pitch = 1.45; u.rate = 1.04; u.volume = 1;
+      u.onstart = function () { setTalking(true); };
+      u.onend = u.onerror = function () { setTalking(false); };
+      speechSynthesis.speak(u);
+      return true;
+    } catch (e) { return false; }
+  }
   function stopSpeaking() {
     stopChirps();
+    if (canTTS) { try { speechSynthesis.cancel(); } catch (e) { /* ignore */ } }
     if (voiceEl) { try { voiceEl.pause(); voiceEl.onended = null; } catch (e) { /* ignore */ } }
     setTalking(false);
   }
@@ -892,6 +1113,8 @@
       a.addEventListener('canplaythrough', ok);
       a.addEventListener('error', ko);
       a.onended = function () { setTalking(false); };
+      // Un peu plus aigu et pétillant : la hauteur suit la vitesse, comme une petite voix d'anime.
+      try { a.preservesPitch = false; a.mozPreservesPitch = false; a.webkitPreservesPitch = false; a.defaultPlaybackRate = cloudRate; a.playbackRate = cloudRate; } catch (e) { /* ignore */ }
       a.src = '/api/tts?t=' + encodeURIComponent(speakable(text));
       try { a.load(); } catch (e) { finish(e); }
     });
@@ -899,17 +1122,20 @@
   // Phrases de la conversation (texte écrit par des personnes ou par Mika en salon) : jamais envoyées au serveur de voix.
   function speak(text) {
     if (!canSpeak || !voiceOn) return;
+    if (ttsSpeak(String(text).slice(0, 160))) return;
     var ms = chirpSeq(String(text).slice(0, 70), 80);
     if (ms) { setTalking(true); setTimeout(function () { setTalking(false); }, ms + 300); }
   }
   function renderVoice() {
     $('btn-voice').hidden = !canSpeak;
-    $('row-voice').hidden = !canSpeak;
     $('btn-voice').setAttribute('aria-pressed', String(voiceOn));
     $('btn-voice').setAttribute('aria-label', voiceOn ? 'Couper la voix de Mika' : 'Activer la voix de Mika');
     $('voice-ico').textContent = voiceOn ? '🔊' : '🔇';
-    $('btn-voice2').setAttribute('aria-pressed', String(voiceOn));
-    $('btn-voice2').textContent = voiceOn ? 'Activée' : 'Coupée';
+    Array.prototype.forEach.call(document.querySelectorAll('.js-voicerow'), function (r) { r.hidden = !canSpeak; });
+    Array.prototype.forEach.call(document.querySelectorAll('.js-voice'), function (b) {
+      b.setAttribute('aria-pressed', String(voiceOn));
+      b.textContent = voiceOn ? 'Activée' : 'Coupée';
+    });
   }
   function toggleVoice() {
     voiceOn = !voiceOn;
@@ -1052,6 +1278,7 @@
     closeSheets();
     $('msg').value = '';
     $('conv-theme').textContent = room.theme;
+    perchEnter();
     var av = $('conv-av');
     av.className = 'avatar ' + tint(room.theme);
     av.textContent = '💬';
@@ -1090,6 +1317,14 @@
         w.textContent = isHost
           ? 'Ton invitation est visible dans le salon. Les personnes qui ont activé les notifications sont prévenues. Reste sur cette page.'
           : 'Plus personne d’autre n’est là. Tu peux quitter pour revenir au salon.';
+      }
+      if (isHost && !w.querySelector('.invite-box')) {
+        var ib = el('div', 'invite-box');
+        var bt = el('button', null, '💌 Inviter un·e ami·e');
+        bt.type = 'button';
+        bt.addEventListener('click', shareRoom);
+        ib.appendChild(bt);
+        w.appendChild(ib);
       }
     } else { w.hidden = true; }
 
@@ -1216,9 +1451,10 @@
       box.appendChild(btn);
     });
     applyBg();
-    var sb = $('btn-sound');
-    sb.textContent = soundOn ? 'Activés' : 'Coupés';
-    sb.setAttribute('aria-pressed', String(soundOn));
+    Array.prototype.forEach.call(document.querySelectorAll('.js-sound'), function (sb) {
+      sb.textContent = soundOn ? 'Activés' : 'Coupés';
+      sb.setAttribute('aria-pressed', String(soundOn));
+    });
   }
   function unlockAudio() {
     try {
@@ -1261,6 +1497,7 @@
     var near = isNear(log);
     var ai = !!m.ai;
     var mine = !ai && m.pid === myPid;
+    perchReact(ai ? 'ai' : (mine ? 'me' : 'human'));
     if (ai) { typingOn = false; if (!replaying) speak(text); }
     removeTypingNode();
     ensureDay();
@@ -1482,7 +1719,7 @@
   }
 
   /* ---------- Feuilles ---------- */
-  function closeSheets() { $('sheet-safety').hidden = true; $('sheet-leave').hidden = true; $('sheet-mika').hidden = true; $('sheet-place').hidden = true; }
+  function closeSheets() { $('sheet-safety').hidden = true; $('sheet-leave').hidden = true; $('sheet-mika').hidden = true; $('sheet-place').hidden = true; $('sheet-settings').hidden = true; }
 
   function renderSafety(o) {
     var ul = $('safety-list');
@@ -1533,7 +1770,16 @@
       // Rien à proposer : l'autorisation doit être rétablie dans les réglages du téléphone.
       $('notif').hidden = true;
     }
+    $('tips').hidden = false;
   }
+  $('btn-share-app').addEventListener('click', function () {
+    var url = location.origin + '/';
+    var text = 'Viens papoter sur Talkie : un thème, quelqu’un te rejoint, et Mika met l’ambiance 💚';
+    if (navigator.share) { navigator.share({ title: 'Talkie', text: text, url: url }).catch(function () {}); return; }
+    if (navigator.clipboard && navigator.clipboard.writeText) navigator.clipboard.writeText(text + ' ' + url).then(function () { toast('Lien copié ! 💌'); }, function () { window.prompt('Copie ce lien :', text + ' ' + url); });
+    else window.prompt('Copie ce lien :', text + ' ' + url);
+  });
+  $('btn-install-ios').addEventListener('click', function () { toast('Touche Partager dans Safari, puis « Sur l’écran d’accueil » 📲'); });
 
   function b64ToBytes(s) {
     var pad = '='.repeat((4 - s.length % 4) % 4);
@@ -1602,7 +1848,7 @@
     var theme = clean($('theme').value, 60);
     if (!theme) { $('theme').focus(); return; }
     var checked = document.querySelector('input[name="size"]:checked');
-    if (send({ t: 'invite', theme: theme, max: checked ? parseInt(checked.value, 10) : 2 })) { $('theme').value = ''; hideBranches(); }
+    if (send({ t: 'invite', theme: theme, max: checked ? parseInt(checked.value, 10) : 2 })) { mem.theme = theme; saveMem(); $('theme').value = ''; hideBranches(); }
     else toast('Connexion en cours, réessaie dans un instant.');
   });
   $('msg-form').addEventListener('submit', function (e) { e.preventDefault(); sendText(); });
@@ -1619,10 +1865,57 @@
   });
   $('mika-fab').addEventListener('click', openMikaSheet);
   $('btn-voice').addEventListener('click', toggleVoice);
-  $('btn-voice2').addEventListener('click', toggleVoice);
-  $('btn-place').addEventListener('click', function () { $('city').value = place.city; $('sheet-place').hidden = false; });
+  function applyScheme(v, save) {
+    if (save) store('talkie.scheme', v);
+    var dark = v === 'dark' || (v === 'auto' && window.matchMedia && matchMedia('(prefers-color-scheme: dark)').matches);
+    if (dark) document.documentElement.setAttribute('data-scheme', 'dark'); else document.documentElement.removeAttribute('data-scheme');
+    var tc = document.querySelector('meta[name="theme-color"]');
+    if (tc) tc.setAttribute('content', dark ? '#17103A' : '#FFF8EE');
+    Array.prototype.forEach.call(document.querySelectorAll('.seg button'), function (b) { b.setAttribute('aria-pressed', String(b.getAttribute('data-scheme') === v)); });
+  }
+  applyScheme(store('talkie.scheme') || 'light', false);
+  Array.prototype.forEach.call(document.querySelectorAll('.seg button'), function (b) { b.addEventListener('click', function () { applyScheme(b.getAttribute('data-scheme'), true); }); });
+  $('btn-settings').addEventListener('click', function () { closeSheets(); renderVoice(); renderLook(); $('sheet-settings').hidden = false; });
+  $('btn-settings-close').addEventListener('click', closeSheets);
+  $('btn-settings-place').addEventListener('click', openPlace);
+  Array.prototype.forEach.call(document.querySelectorAll('.js-voice'), function (b) { b.addEventListener('click', toggleVoice); });
+  var COUNTRIES = ['FR', 'BE', 'CH', 'LU', 'CA', 'US', 'GB', 'IE', 'DE', 'ES', 'IT', 'PT', 'NL', 'MA', 'DZ', 'TN', 'SN', 'CI', 'BR', 'MX', 'AU'];
+  function openPlace() {
+    var sel = $('country');
+    if (!sel.options.length) {
+      COUNTRIES.forEach(function (c) { var o = document.createElement('option'); o.value = c; o.textContent = countryName(c); sel.appendChild(o); });
+    }
+    if (COUNTRIES.indexOf(place.cc) === -1) { var o2 = document.createElement('option'); o2.value = place.cc; o2.textContent = countryName(place.cc); sel.appendChild(o2); }
+    sel.value = place.cc;
+    $('city').value = place.city;
+    $('place-results').hidden = true;
+    closeSheets();
+    $('sheet-place').hidden = false;
+  }
+  function applyPlace(cc, city) { savePlace(cc, city); closeSheets(); toast('📍 ' + (city || countryName(cc)) + ' : j’actualise les thèmes !'); }
+  $('btn-place').addEventListener('click', openPlace);
+  $('country').addEventListener('change', function () { applyPlace($('country').value, ''); });
   $('btn-place-close').addEventListener('click', closeSheets);
-  $('place-form').addEventListener('submit', function (e) { e.preventDefault(); savePlace(place.cc, $('city').value); closeSheets(); });
+  $('place-form').addEventListener('submit', function (e) {
+    e.preventDefault();
+    var q = clean($('city').value, 40);
+    if (!q) { applyPlace(place.cc, ''); return; }
+    var box = $('place-results');
+    box.hidden = true;
+    fetch('/api/place?q=' + encodeURIComponent(q) + '&lang=' + UILANG).then(function (r) { return r.json(); }).then(function (d) {
+      var items = (d && d.items) || [];
+      if (!items.length) { toast('Je ne trouve pas « ' + q + ' ». Vérifie l’orthographe ou choisis juste un pays.'); return; }
+      if (items.length === 1) { applyPlace(items[0].cc, items[0].city); return; }
+      box.textContent = '';
+      items.forEach(function (it) {
+        var b = el('button', null, it.city + ' · ' + (it.region ? it.region + ', ' : '') + it.country);
+        b.type = 'button';
+        b.addEventListener('click', function () { applyPlace(it.cc, it.city); });
+        box.appendChild(b);
+      });
+      box.hidden = false;
+    }).catch(function () { toast('La recherche de ville est indisponible, réessaie dans un instant.'); });
+  });
   $('btn-geo').addEventListener('click', geolocate);
   $('btn-more').addEventListener('click', function () {
     var openIt = $('more').hidden;
@@ -1659,12 +1952,14 @@
     store('talkie.adult', '1');
     $('sheet-age').hidden = true;
     send({ t: 'adult', v: true });
+    setTimeout(tryJoinLink, 400);
   });
   $('btn-age-no').addEventListener('click', function () { $('age-no').hidden = false; });
   if (store('talkie.adult') !== '1') showAge();
   loadConfig();
-  $('btn-sound').addEventListener('click', function () { soundOn = !soundOn; store('talkie.sound', soundOn ? '1' : '0'); renderLook(); if (soundOn) { unlockAudio(); setTimeout(sfx.recv, 60); } });
-  ['sheet-safety', 'sheet-leave'].forEach(function (id) {
+  Array.prototype.forEach.call(document.querySelectorAll('.js-sound'), function (b) { b.addEventListener('click', soundToggle); });
+  function soundToggle() { soundOn = !soundOn; store('talkie.sound', soundOn ? '1' : '0'); renderLook(); if (soundOn) { unlockAudio(); setTimeout(sfx.recv, 60); } }
+  ['sheet-safety', 'sheet-leave', 'sheet-settings'].forEach(function (id) {
     $(id).addEventListener('click', function (ev) { if (ev.target === $(id)) closeSheets(); });
   });
   document.addEventListener('keydown', function (ev) {

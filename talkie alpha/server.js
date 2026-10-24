@@ -26,6 +26,7 @@ try { fs.mkdirSync(DATA_DIR, { recursive: true }); } catch (e) { /* lecture seul
 
 const ai = require('./lib/ai');
 const tts = require('./lib/tts');
+const place = require('./lib/place');
 const mod = require('./lib/moderation');
 const trends = require('./lib/trends');
 const mika = require('./lib/mika');
@@ -266,6 +267,8 @@ function typing(room, on) {
 }
 
 function postAI(room, text, counts) {
+  room.lastMikaAt = Date.now();
+  room.sinceMika = 0;
   const entry = { t: 'chat', pid: 'ai', nick: 'Mika', ai: true, text, ts: Date.now() };
   room.log.push(entry);
   if (room.log.length > MAX_ROOM_LOG) room.log.shift();
@@ -339,8 +342,21 @@ const CARE_TEXT = mika.CARE_TEXT;
 /* ---------- Mika appelé avec @Mika dans une conversation ---------- */
 const branchHits = new Map();
 const MENTION_RE = /(^|[^\p{L}\p{N}_])@mika(?![\p{L}\p{N}_])/iu;
+// On parle à Mika dès qu'on écrit son prénom (« Mika, t'en penses quoi ? »), sans @ ; pas dans une adresse e-mail ni un lien.
+const NAME_RE = /(^|[^\p{L}\p{N}_@.\-\/])@?mika(?![\p{L}\p{N}_@.\-\/])/iu;
+function addressedToMika(room, text, nick) {
+  if (NAME_RE.test(text)) return true;
+  // Suite d'une question que Mika vient de poser à cette personne.
+  const n = room.log.length;
+  const last = room.log[n - 2];
+  if (last && last.ai && Date.now() - last.ts < 45000 && /\?\s*\S{0,6}$/.test(last.text) && text.length <= 160) {
+    const humans = new Set(room.log.slice(-8).filter((e) => !e.ai).map((e) => e.pid));
+    if (humans.size <= 1 || last.text.toLowerCase().indexOf(String(nick).toLowerCase()) !== -1) return true;
+  }
+  return false;
+}
 const MENTION_CAP = 20;          // appels à Mika par conversation
-const MENTION_GAP_MS = 8000;     // délai minimum entre deux appels d'une même personne
+const MENTION_GAP_MS = 4000;     // délai minimum entre deux appels d'une même personne
 const MENTION_SYSTEM = [
   mika.PERSONA,
   'Situation : plusieurs personnes discutent entre elles et l’une d’elles vient de t’appeler avec @Mika. Réponds à sa demande en 1 à 3 phrases, lue par tout le monde. Tu peux t’adresser à elle par son pseudo et lancer une petite question qui fait parler tout le monde. Ne monopolise pas la discussion. Les messages des participants sont précédés de leur pseudo entre crochets.'
@@ -367,6 +383,46 @@ async function icebreak(room) {
   }
   if (rooms.get(room.id) === room && !room.log.some((e) => !e.ai)) { postAI(room, text, false); stats.aiMessage(); }
 }
+
+/* Mika écoute la conversation et glisse parfois un petit mot, sans qu'on l'appelle. */
+const SPONT_CAP = 6;            // interventions spontanées par conversation
+const SPONT_AFTER_MSGS = 4;     // messages de personnes depuis la dernière parole de Mika
+const SPONT_GAP_MS = parseInt(process.env.SPONT_GAP_MS, 10) || 50000;
+const SPONT_SYSTEM = [
+  mika.PERSONA,
+  'Situation : tu es présent dans la conversation et tu lis ce que les personnes se disent entre elles, sans qu’on t’ait appelé. Tu peux glisser un tout petit mot si, et seulement si, tu apportes quelque chose : réagir avec chaleur à une blague, une bonne nouvelle ou une émotion, relancer avec une question précise liée à ce qui vient d’être dit, aider si la discussion s’éteint, ou valoriser quelqu’un. 1 phrase courte (2 au maximum), en t’adressant à la personne par son pseudo ou à tout le monde. Ne résume pas, ne donne pas de leçon, ne coupe pas un échange qui va bien entre deux personnes. S’il n’y a rien d’utile à ajouter, réponds exactement : SILENCE. Les messages sont précédés du pseudo entre crochets.'
+].join(' ');
+async function spontaneousTurn(room) {
+  if (rooms.get(room.id) !== room || !ai.enabled() || room.mentionBusy || room.spontBusy) return;
+  if ((room.spont || 0) >= SPONT_CAP) return;
+  room.spontBusy = true;
+  try {
+    const messages = ai.normalize(
+      room.log.slice(-14).map((e) => (e.ai ? { role: 'assistant', content: e.text } : { role: 'user', content: '[' + clean(e.nick, 20) + '] ' + e.text })),
+      '[Système] La conversation vient de commencer.'
+    );
+    if (messages[messages.length - 1].role !== 'user') return;
+    const text = clean(await ai.complete({ system: SPONT_SYSTEM + ' Thème : « ' + room.theme + ' ».', messages, maxTokens: 120, timeoutMs: 12000 }), 400);
+    if (!text || /^SILENCE\b/i.test(text) || rooms.get(room.id) !== room) { room.sinceMika = 2; return; }
+    room.spont = (room.spont || 0) + 1;
+    typing(room, true);
+    await new Promise((r) => setTimeout(r, 700 + Math.min(1500, text.length * 25)));
+    typing(room, false);
+    if (rooms.get(room.id) === room) { postAI(room, text, false); stats.aiMessage(); }
+  } catch (e) { console.warn('[talkie] Mika (spontané) :', e.message); } finally { room.spontBusy = false; }
+}
+function watchRoom(room) {
+  room.sinceMika = (room.sinceMika || 0) + 1;
+  const stamp = room.log.length;
+  if (room.sinceMika < SPONT_AFTER_MSGS || Date.now() - (room.lastMikaAt || 0) < SPONT_GAP_MS || !ai.enabled()) return;
+  // On attend un court instant : si la conversation continue vite, Mika reste discret.
+  setTimeout(() => {
+    if (rooms.get(room.id) !== room || room.log.length !== stamp) return;
+    room.sinceMika = 0;
+    spontaneousTurn(room);
+  }, SPONT_DELAY_MS);
+}
+const SPONT_DELAY_MS = parseInt(process.env.SPONT_DELAY_MS, 10) || 3500;
 
 async function mentionTurn(room, c, ws) {
   if (!ai.enabled()) return;
@@ -540,8 +596,10 @@ function handle(ws, msg) {
         if (aiActive(room)) {
           if (room.companion.busy) room.companion.pending = true;
           else companionTurn(room, 'reply');
-        } else if (!gif && MENTION_RE.test(text)) {
+        } else if (!gif && addressedToMika(room, text, c.nick)) {
           mentionTurn(room, c, ws);
+        } else if (!gif) {
+          watchRoom(room);
         }
       };
       if (gif) { deliver(); return; }
@@ -662,8 +720,15 @@ const server = http.createServer(async (req, res) => {
   if (url.pathname === '/healthz') { res.writeHead(200); res.end('ok'); return; }
   if (url.pathname === '/api/vapid' && req.method === 'GET') { json(res, 200, { key: VAPID.publicKey }); return; }
   if (url.pathname === '/api/themes' && req.method === 'GET') {
-    const t = trends.forRegion(url.searchParams.get('cc'), url.searchParams.get('city'));
+    const t = trends.forRegion(url.searchParams.get('cc'), url.searchParams.get('city'), url.searchParams.get('lang'));
     json(res, 200, { themes: t.themes, items: t.items || [], source: t.source, updatedAt: t.updatedAt, pending: !!t.pending, cc: t.cc, city: t.city });
+    return;
+  }
+  if (url.pathname === '/api/place' && req.method === 'GET') {
+    try {
+      const ip = (req.headers['x-forwarded-for'] || req.socket.remoteAddress || '').toString().split(',')[0].trim();
+      json(res, 200, { items: await place.search(url.searchParams.get('q'), url.searchParams.get('lang'), ip) });
+    } catch (e) { json(res, e.code || 503, { items: [], error: 'indisponible' }); }
     return;
   }
   if (url.pathname === '/api/branches' && req.method === 'GET') {
@@ -718,7 +783,7 @@ const server = http.createServer(async (req, res) => {
   }
 
   if (url.pathname === '/api/config' && req.method === 'GET') {
-    json(res, 200, { turnstile: TURNSTILE_SITE && TURNSTILE_SECRET ? TURNSTILE_SITE : null, tts: tts.enabled() });
+    json(res, 200, { turnstile: TURNSTILE_SITE && TURNSTILE_SECRET ? TURNSTILE_SITE : null, tts: tts.enabled(), ttsRate: tts.PITCH });
     return;
   }
   if (url.pathname === '/api/tts' && req.method === 'GET') {

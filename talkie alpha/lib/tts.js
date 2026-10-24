@@ -6,7 +6,15 @@ const KEY = process.env.OPENAI_API_KEY || '';
 const MODEL = process.env.TTS_MODEL || 'gpt-4o-mini-tts';
 const VOICE = process.env.TTS_VOICE || 'coral';
 const DAILY_CAP = parseInt(process.env.TTS_DAILY_CAP, 10) || 400;
-const INSTRUCTIONS = process.env.TTS_STYLE || 'Voix de petite mascotte d’anime, très mignonne, aiguë, douce et pétillante. Français naturel et fluide, sourire dans la voix, rythme vif et joyeux, intonations chantantes, petits rires tendres. Jamais robotique ni monotone.';
+const INSTRUCTIONS = process.env.TTS_STYLE || [
+  'Voice Affect: une adorable petite mascotte d’anime kawaii, voix jeune, aiguë, douce et cristalline, toute mignonne.',
+  'Tone: tendre, câlin, ultra enthousiaste, avec un sourire permanent dans la voix ; jamais froid, jamais robotique, jamais plat.',
+  'Pacing: vif et sautillant, avec de petites pauses espiègles ; les phrases montent en fin de question et chantonnent un peu.',
+  'Emotion: émerveillée et affectueuse ; sur les exclamations, de petits éclats de joie ; sur « hihi », un vrai petit rire timide.',
+  'Pronunciation: français naturel et très fluide, articulation douce, sons arrondis ; « kyaa » se dit « kiya » aigu et joyeux.'
+].join('\n');
+// Hauteur de la voix : 1.12 la rend un peu plus aiguë et plus pétillante, 1 la laisse telle quelle.
+const PITCH = Math.max(0.9, Math.min(1.3, parseFloat(process.env.TTS_PITCH) || 1.12));
 const MAX_CACHE_BYTES = 30 * 1024 * 1024;
 
 const cache = new Map(); // texte -> Buffer (le plus ancien d'abord)
@@ -62,4 +70,4 @@ async function synth(text, ip) {
     return buf;
   } finally { clearTimeout(timer); running--; }
 }
-module.exports = { enabled, synth, usedToday: () => { budgetLeft(); return used; }, DAILY_CAP };
+module.exports = { enabled, PITCH, synth, usedToday: () => { budgetLeft(); return used; }, DAILY_CAP };
