@@ -406,14 +406,6 @@ fieldset { border: 0; padding: 0; margin: 0; min-width: 0; display: flex; flex-d
 @media (prefers-color-scheme: dark) { #toast { background: #FFF3FF; color: #2A1B5E; } }
 
 /* Astuce @Mika et suggestion */
-.tip { max-width: 720px; margin: 0 auto; padding: 8px 12px 0; position: relative; }
-.tipb { position: relative; display: flex; align-items: center; gap: 10px; background: #5A3FD6; color: #fff; border-radius: 20px; padding: 9px 8px 9px 10px; box-shadow: 0 10px 26px rgba(11, 18, 38, 0.28); font-size: 14px; line-height: 1.3; }
-.tipb::after { content: ''; position: absolute; left: 24px; bottom: -5px; width: 11px; height: 11px; background: #5A3FD6; transform: rotate(45deg); border-radius: 2px; }
-.tipb .tipav { flex: none; width: 34px; height: 34px; border-radius: 50%; background: #fff; display: grid; place-items: center; }
-.tipb .tipav svg { width: 28px; height: 28px; }
-.tipb .tiptx { flex: 1; min-width: 0; }
-.tipgo { flex: none; border: 0; border-radius: 999px; padding: 7px 14px; font-family: var(--font-display); font-weight: 600; background: var(--sun); color: #2A1B5E; cursor: pointer; box-shadow: 0 2px 0 var(--sun-deep); }
-.tipx { flex: none; border: 0; background: transparent; color: rgba(241, 244, 255, 0.7); width: 30px; height: 30px; border-radius: 50%; font-size: 18px; cursor: pointer; }
 .mpop { max-width: 720px; margin: 0 auto; padding: 8px 12px 0; }
 .mpop button { display: flex; align-items: center; gap: 10px; width: 100%; text-align: left; border: 1px solid var(--line); background: var(--surface); color: inherit; border-radius: 18px; padding: 8px 12px; font: inherit; font-weight: 700; cursor: pointer; box-shadow: var(--shadow); }
 .mpop small { color: var(--muted); }
@@ -421,6 +413,37 @@ fieldset { border: 0; padding: 0; margin: 0; min-width: 0; display: flex; flex-d
 .mpop .tipav svg { width: 24px; height: 24px; }
 .mention { font-weight: 700; color: inherit; background: rgba(255, 255, 255, 0.22); border-radius: 6px; padding: 0 3px; }
 .msg:not(.mine) .mention { background: color-mix(in srgb, var(--blue) 14%, transparent); color: var(--accent-text); }
+
+
+/* Mika toujours à portée, au-dessus du clavier */
+.mika-row { max-width: 720px; margin: 0 auto; padding: 8px 12px 0; display: flex; }
+.mika-pill { display: inline-flex; align-items: center; gap: 6px; border: 0; background: #C9F6E3; color: #0A6B4D; border-radius: 999px; padding: 3px 14px 3px 4px; height: 32px; font-family: var(--font-display); font-weight: 600; font-size: 15px; cursor: pointer; box-shadow: 0 2px 0 #8FE3C2; transition: transform 0.1s ease; }
+.mika-pill:active { transform: translateY(2px); box-shadow: none; }
+.mika-pill .pav { width: 26px; height: 26px; border-radius: 50%; background: #fff; display: grid; place-items: center; }
+.mika-pill .pav svg { width: 22px; height: 22px; }
+@media (prefers-color-scheme: dark) { .mika-pill { background: #13503E; color: #8CF3CC; box-shadow: 0 2px 0 #0B3A2D; } }
+.mpop .tipav { width: 30px; height: 30px; border-radius: 50%; background: #C9F6E3; display: grid; place-items: center; flex: none; }
+.mpop .tipav svg { width: 24px; height: 24px; }
+
+/* Voix */
+.vbtn { margin-left: auto; border: 0; background: rgba(255, 255, 255, 0.7); border-radius: 999px; width: 32px; height: 32px; font-size: 16px; cursor: pointer; display: grid; place-items: center; }
+.vbtn[aria-pressed="true"] { background: var(--mint); }
+@media (prefers-color-scheme: dark) { .vbtn { background: rgba(255, 255, 255, 0.16); } }
+.mika-av.talking { animation-duration: 0.9s; }
+.mika-av .mouth { transform-origin: center; transform-box: fill-box; }
+.mika-av.talking .mouth { animation: talk 0.28s ease-in-out infinite alternate; }
+@keyframes talk { from { transform: scaleY(0.5); } to { transform: scaleY(1.6); } }
+
+/* Lieu et thèmes en bref */
+.place { border: 0; background: var(--surface); color: var(--fg); border-radius: 999px; padding: 6px 13px; font-size: 14px; font-weight: 800; cursor: pointer; box-shadow: var(--shadow); max-width: 55%; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.more { margin: 14px auto 0; display: flex; align-items: center; gap: 6px; border: 0; background: transparent; color: var(--accent-text); font-size: 15px; font-weight: 800; cursor: pointer; padding: 6px 10px; }
+.more svg { transition: transform 0.2s ease; width: 18px; height: 18px; }
+.more[aria-expanded="true"] svg { transform: rotate(180deg); }
+#more { margin-top: 10px; }
+.place-form { display: flex; gap: 8px; }
+.place-form input { flex: 1; min-width: 0; background: var(--bg); border: 2px solid var(--line); border-radius: 16px; padding: 11px 14px; font-size: 16px; font-weight: 700; }
+.place-form input:focus { outline: none; border-color: var(--violet); }
+.tcard { min-height: 118px; }
 
 /* Fonds de conversation */
 #log[data-bg="aurore"] { background-image: linear-gradient(160deg, rgba(120,230,190,.35), rgba(120,160,255,.30) 55%, rgba(210,150,255,.28)); background-size: auto; }
@@ -471,13 +494,14 @@ fieldset { border: 0; padding: 0; margin: 0; min-width: 0; display: flex; flex-d
       <section class="hero" aria-label="Commencer une discussion">
         <span class="deco d1" aria-hidden="true">💬</span><span class="deco d2" aria-hidden="true">✨</span><span class="deco d3" aria-hidden="true">🍟</span>
         <h2>Envie de papoter ?</h2>
-        <p class="sub">Choisis un thème : quelqu’un te rejoint, ou Mika te tient compagnie.</p>
+        <p class="sub">Un thème, et quelqu’un te rejoint.</p>
         <button type="button" class="ghost reconnect" id="btn-reconnect" hidden>Reprendre ici</button>
 
         <div id="mika-hero" class="mika" role="group" aria-label="Mika, assistant Talkie">
           <div class="mika-av" id="mika-av" aria-hidden="true"></div>
           <div class="mika-body">
-            <div class="mika-name">Mika <span class="badge">IA</span> <small>ton assistant</small></div>
+            <div class="mika-name">Mika <span class="badge">IA</span> <small>ton assistant</small>
+              <button type="button" class="vbtn" id="btn-voice" aria-pressed="false" aria-label="Activer la voix de Mika" hidden><span id="voice-ico">🔇</span></button></div>
             <div class="mika-bubble thinking" id="mika-say" aria-live="polite"><i></i><i></i><i></i></div>
           </div>
           <div class="mika-qr" id="mika-qr"></div>
@@ -511,7 +535,6 @@ fieldset { border: 0; padding: 0; margin: 0; min-width: 0; display: flex; flex-d
                 </div>
               </div>
             </details>
-            <p class="hint" id="hint-ai" hidden>Personne n’arrive tout de suite ? Mika lance la discussion avec toi.</p>
           </form>
         </div>
       </section>
@@ -541,14 +564,18 @@ fieldset { border: 0; padding: 0; margin: 0; min-width: 0; display: flex; flex-d
 
       <section id="explore" aria-labelledby="themes-h">
         <div class="sec-head">
-          <h2 id="themes-h">Thèmes du jour</h2>
-          <small id="themes-sub"></small>
+          <h2 id="themes-h">Ce qui se dit aujourd’hui</h2>
+          <button type="button" class="place" id="btn-place" aria-label="Changer de lieu"><span id="place-txt">📍 France</span></button>
         </div>
-        <div id="cats" class="cats" role="tablist" aria-label="Catégories"></div>
         <div id="themes" class="themes"></div>
+        <button type="button" class="more" id="btn-more" aria-expanded="false">Plus de thèmes <svg class="i" viewBox="0 0 24 24" aria-hidden="true"><path d="M6 9l6 6 6-6"/></svg></button>
+        <div id="more" hidden>
+          <div id="cats" class="cats" role="tablist" aria-label="Catégories"></div>
+          <div id="themes2" class="themes"></div>
+        </div>
       </section>
 
-      <p class="foot">Talkie est réservé aux 18 ans et plus. C’est un espace pour discuter, pas un service d’aide : si ça ne va vraiment pas, le 3114 répond jour et nuit, gratuitement (France).<span id="foot-ai" hidden> Mika est une IA : la modération automatique lit les messages pour protéger tout le monde. Quand tu lui écris, ou quand tu cherches des idées de thèmes, le texte est envoyé à Anthropic pour produire la réponse.</span><span id="foot-gif" hidden> Les GIF viennent de GIPHY : en les cherchant, ta recherche leur est transmise.</span></p>
+      <p class="foot">Talkie est réservé aux 18 ans et plus. Ton pays est deviné grâce à ton fuseau horaire pour choisir les thèmes. C’est un espace pour discuter, pas un service d’aide : si ça ne va vraiment pas, le 3114 répond jour et nuit, gratuitement (France).<span id="foot-ai" hidden> Mika est une IA : la modération automatique lit les messages pour protéger tout le monde. Quand tu lui écris, ou quand tu cherches des idées de thèmes, le texte est envoyé à Anthropic pour produire la réponse.</span><span id="foot-gif" hidden> Les GIF viennent de GIPHY : en les cherchant, ta recherche leur est transmise.</span></p>
     </main>
 
     <button type="button" id="mika-fab" aria-label="Demander des idées à Mika" hidden>
@@ -576,13 +603,8 @@ fieldset { border: 0; padding: 0; margin: 0; min-width: 0; display: flex; flex-d
     <p id="wait" class="wait" hidden></p>
     <div id="log" role="log" aria-live="polite" aria-label="Messages"></div>
     <div id="composer">
-    <div class="tip" id="mika-tip" hidden>
-      <div class="tipb" role="note">
-        <span class="tipav" data-mika aria-hidden="true"></span>
-        <span class="tiptx">Tape <b>@Mika</b> pour appeler l’assistant.</span>
-        <button type="button" class="tipgo" id="tip-go">Essayer</button>
-        <button type="button" class="tipx" id="tip-x" aria-label="Fermer l’astuce">×</button>
-      </div>
+    <div class="mika-row" id="mika-row" hidden>
+      <button type="button" class="mika-pill" id="mika-pill" aria-label="Appeler Mika dans la conversation"><span class="pav" data-mika aria-hidden="true"></span><span>@Mika</span></button>
     </div>
     <div class="mpop" id="mention-pop" hidden>
       <button type="button" id="mention-pick"><span class="tipav" data-mika aria-hidden="true"></span><span><b>@Mika</b> <small>assistant IA, répond à tout le monde</small></span></button>
@@ -623,6 +645,7 @@ fieldset { border: 0; padding: 0; margin: 0; min-width: 0; display: flex; flex-d
       <h3 id="sheet-look-h">Ambiance</h3>
       <div class="swatches" id="swatches" role="group" aria-label="Fond d’écran du tchat"></div>
       <div class="optrow"><span>Sons</span><button type="button" id="btn-sound" aria-pressed="true">Activés</button></div>
+      <div class="optrow" id="row-voice" hidden><span>Voix de Mika</span><button type="button" id="btn-voice2" aria-pressed="false">Coupée</button></div>
       <h3 id="sheet-safety-h">Sécurité</h3>
       <p>Tu peux quitter à tout moment, sans explication. Bloquer masque la personne et ses invitations, et elle ne verra plus les tiennes. Un signalement est enregistré avec les derniers messages pour être examiné.</p>
       <ul id="safety-list"></ul>
@@ -655,6 +678,23 @@ fieldset { border: 0; padding: 0; margin: 0; min-width: 0; display: flex; flex-d
         <button type="button" class="primary" id="btn-surprise">🎲 Surprends-moi</button>
         <button type="button" class="ghost" id="btn-mika-close">Fermer</button>
       </div>
+    </div>
+  </div>
+
+  <div id="sheet-place" class="scrim" hidden>
+    <div class="sheet" role="dialog" aria-modal="true" aria-labelledby="sheet-place-h">
+      <div class="grab"></div>
+      <h3 id="sheet-place-h">Où es-tu ?</h3>
+      <p>Talkie choisit les thèmes de ton pays. Ajoute ta ville pour des thèmes encore plus locaux.</p>
+      <form id="place-form" class="place-form" autocomplete="off">
+        <input type="text" id="city" maxlength="40" placeholder="Ta ville (facultatif)" aria-label="Ta ville">
+        <button type="submit" class="primary">Ok</button>
+      </form>
+      <div class="stack">
+        <button type="button" class="ghost" id="btn-geo">📍 Utiliser ma position</button>
+        <button type="button" class="ghost" id="btn-place-close">Fermer</button>
+      </div>
+      <p class="hint">Ta position approximative est envoyée à BigDataCloud (service de géolocalisation) pour trouver ta ville. Seule la ville est gardée sur ton téléphone et transmise à Talkie.</p>
     </div>
   </div>
 

@@ -149,6 +149,7 @@
       case 'typing': setTyping(!!m.on); break;
       case 'sys': addSys(m.text); sfx.join(); break;
       case 'left':
+        stopSpeaking();
         room = null;
         typingOn = false;
         showLobby();
@@ -202,12 +203,12 @@
   }
 
   function applyFlags() {
-    $('hint-ai').hidden = !aiOn;
     $('foot-ai').hidden = !aiOn;
     $('foot-gif').hidden = !gifOn;
     $('btn-gif').hidden = !gifOn;
     $('tab-gif').hidden = !gifOn;
     updateTip();
+    renderVoice();
   }
 
   /* ---------- Mika (dessin) ---------- */
@@ -222,7 +223,7 @@
       '<ellipse class="eye" cx="24" cy="35" rx="3.4" ry="4.6" fill="#2A1B5E"/><ellipse class="eye" cx="40" cy="35" rx="3.4" ry="4.6" fill="#2A1B5E"/>' +
       '<circle cx="25.2" cy="33.2" r="1.2" fill="#fff"/><circle cx="41.2" cy="33.2" r="1.2" fill="#fff"/>' +
       '<ellipse cx="16.5" cy="43" rx="4.6" ry="3" fill="#FF8FC0" opacity=".75"/><ellipse cx="47.5" cy="43" rx="4.6" ry="3" fill="#FF8FC0" opacity=".75"/>' +
-      '<path d="M27 44 Q32 50 37 44" stroke="#2A1B5E" stroke-width="2.6" fill="none" stroke-linecap="round"/></svg>';
+      '<path class="mouth" d="M27 44 Q32 50 37 44" stroke="#2A1B5E" stroke-width="2.6" fill="none" stroke-linecap="round"/></svg>';
   }
   function fillMika() {
     Array.prototype.forEach.call(document.querySelectorAll('#mika-av, #fab-orb, [data-mika]'), function (n) { n.innerHTML = mikaSvg(); });
@@ -289,8 +290,24 @@
     loadBranches(t, []);
   }
 
+  function themeCard(x) {
+    var b = el('button', 'tcard');
+    b.type = 'button';
+    b.appendChild(el('span', 'em', emojiOf(x)));
+    b.appendChild(el('span', 'txt', x.text));
+    var go = el('span', 'go', 'Choisir');
+    go.insertAdjacentHTML('beforeend', ARROW);
+    b.appendChild(go);
+    b.addEventListener('click', function () { pickTheme(x.text); });
+    return b;
+  }
   function renderTrends() {
-    var data = exploreData();
+    // Le haut de page : 4 thèmes précis du jour, et rien d'autre à lire.
+    var box = $('themes');
+    box.textContent = '';
+    todayThemes().slice(0, 4).forEach(function (x) { box.appendChild(themeCard(x)); });
+    // « Plus de thèmes » : par catégorie, replié par défaut.
+    var data = exploreData().filter(function (d) { return d.name !== 'Tendance'; });
     if (!catSel || !data.some(function (d) { return d.name === catSel; })) catSel = data[0].name;
     var tabs = $('cats');
     tabs.textContent = '';
@@ -304,35 +321,51 @@
       b.addEventListener('click', function () { catSel = d.name; renderTrends(); });
       tabs.appendChild(b);
     });
-    var box = $('themes');
-    box.textContent = '';
-    var cur = data.filter(function (d) { return d.name === catSel; })[0];
-    cur.list.forEach(function (x) {
-      var b = el('button', 'tcard');
-      b.type = 'button';
-      b.appendChild(el('span', 'em', emojiOf(x)));
-      b.appendChild(el('span', 'txt', x.text));
-      var go = el('span', 'go', 'Choisir');
-      go.insertAdjacentHTML('beforeend', ARROW);
-      b.appendChild(go);
-      b.addEventListener('click', function () { pickTheme(x.text); });
-      box.appendChild(b);
-    });
-    $('themes-sub').textContent = AI_ITEMS.length ? new Date().toLocaleDateString('fr-FR', { weekday: 'long', day: 'numeric', month: 'long' }) : '';
+    var box2 = $('themes2');
+    box2.textContent = '';
+    data.filter(function (d) { return d.name === catSel; })[0].list.slice(0, 4).forEach(function (x) { box2.appendChild(themeCard(x)); });
+    $('place-txt').textContent = '📍 ' + placeLabel();
   }
   var ARROW = '<svg class="i" viewBox="0 0 24 24" aria-hidden="true"><path d="M5 12h14M13 6l6 6-6 6"/></svg>';
 
+  /* ---------- Lieu : pays (fuseau horaire ou langue) et ville (facultative) ---------- */
+  var TZ_CC = { 'Europe/Paris': 'FR', 'Europe/Brussels': 'BE', 'Europe/Zurich': 'CH', 'Europe/Luxembourg': 'LU', 'Europe/London': 'GB', 'Europe/Dublin': 'IE', 'Europe/Madrid': 'ES', 'Europe/Berlin': 'DE', 'Europe/Rome': 'IT', 'Europe/Lisbon': 'PT', 'Europe/Amsterdam': 'NL', 'Africa/Casablanca': 'MA', 'Africa/Algiers': 'DZ', 'Africa/Tunis': 'TN', 'Africa/Dakar': 'SN', 'Africa/Abidjan': 'CI', 'America/Toronto': 'CA', 'America/Montreal': 'CA', 'America/Vancouver': 'CA', 'America/New_York': 'US', 'America/Chicago': 'US', 'America/Denver': 'US', 'America/Los_Angeles': 'US', 'America/Sao_Paulo': 'BR', 'America/Mexico_City': 'MX', 'Australia/Sydney': 'AU' };
+  function guessCountry() {
+    try {
+      var tz = Intl.DateTimeFormat().resolvedOptions().timeZone;
+      if (tz && TZ_CC[tz]) return TZ_CC[tz];
+    } catch (e) { /* ignore */ }
+    var m = /-([A-Za-z]{2})$/.exec(navigator.language || '');
+    return m ? m[1].toUpperCase() : 'FR';
+  }
+  var place = (function () {
+    try { var p = JSON.parse(store('talkie.place') || 'null'); if (p && /^[A-Z]{2}$/.test(p.cc)) return { cc: p.cc, city: clean(p.city, 40) }; } catch (e) { /* ignore */ }
+    return { cc: guessCountry(), city: '' };
+  })();
+  function countryName(cc) {
+    try { return new Intl.DisplayNames(['fr'], { type: 'region' }).of(cc) || cc; } catch (e) { return cc; }
+  }
+  function placeLabel() { return place.city || countryName(place.cc); }
+  function savePlace(cc, city) {
+    place = { cc: cc, city: clean(city, 40) };
+    store('talkie.place', JSON.stringify(place));
+    loadThemes();
+  }
+
+  var themesTry = 0, themesTimer = null;
   function loadThemes() {
-    fetch('/api/themes').then(function (r) { return r.json(); }).then(function (d) {
+    clearTimeout(themesTimer);
+    fetch('/api/themes?cc=' + encodeURIComponent(place.cc) + '&city=' + encodeURIComponent(place.city)).then(function (r) { return r.json(); }).then(function (d) {
       AI_ITEMS = [];
       if (d && (d.source === 'trends' || d.source === 'ai') && Array.isArray(d.items)) {
         AI_ITEMS = d.items.map(function (x) {
           var em = String(x.emoji || '');
           return { cat: clean(x.cat, 20) || 'Actu', text: clean(x.text, 64), emoji: em.length <= 12 && /\p{Extended_Pictographic}/u.test(em) ? em : '' };
         }).filter(function (x) { return x.text; }).slice(0, 40);
-        if (AI_ITEMS.some(function (i) { return i.cat === 'Tendance'; })) catSel = 'Tendance';
       }
       renderTrends();
+      // Les thèmes de ce lieu sont en préparation : on repasse dans quelques secondes.
+      if (d && d.pending && themesTry < 5) { themesTry++; themesTimer = setTimeout(loadThemes, 7000); } else themesTry = 0;
     }).catch(function () {});
   }
 
@@ -349,7 +382,7 @@
     box.hidden = false;
     box.textContent = '';
     var h = el('div', 'br-head');
-    h.appendChild(el('strong', null, 'Mika réfléchit à des pistes…'));
+    h.appendChild(el('strong', null, 'Mika cherche…'));
     box.appendChild(h);
     for (var i = 0; i < 3; i++) box.appendChild(el('div', 'br-skel'));
     var seq = ++brSeq;
@@ -364,7 +397,7 @@
     if (!items.length) { box.hidden = true; return; }
     box.textContent = '';
     var head = el('div', 'br-head');
-    head.appendChild(el('strong', null, d.ai ? 'Mika te propose d’aller plus loin ✨' : 'Quelques pistes pour lancer la discussion'));
+    head.appendChild(el('strong', null, d.ai ? 'Mika te propose ✨' : 'Quelques pistes'));
     if (brPath.length) {
       var back = el('button', 'br-back');
       back.type = 'button';
@@ -380,7 +413,7 @@
     box.appendChild(head);
     if (brPath.length) box.appendChild(el('div', 'br-path', brPath.concat([brTopic]).join('  ›  ')));
     var parent = brTopic, parentPath = brPath;
-    items.slice(0, 5).forEach(function (it, idx) {
+    items.slice(0, 3).forEach(function (it, idx) {
       var b = el('button', 'br-item');
       b.type = 'button';
       b.style.animationDelay = (idx * 60) + 'ms';
@@ -394,16 +427,23 @@
       });
       box.appendChild(b);
     });
-    box.appendChild(el('div', 'br-foot', 'Touche une piste pour la préciser, ou publie ton thème tel quel.'));
   }
 
   /* ---------- Mika sur la première page ---------- */
-  function mikaSay(text) {
+  function greeting() {
+    var h = new Date().getHours();
+    if (h >= 5 && h < 11) return 'Coucou ! Un café et un thème ? ☕';
+    if (h >= 11 && h < 18) return 'Hello ! De quoi tu as envie de parler ? 😄';
+    if (h >= 18 && h < 23) return 'Salut toi ! On papote de quoi ce soir ? ✨';
+    return 'Les couche-tard, c’est par ici 🌙 Un thème ?';
+  }
+  function mikaSay(text, silent) {
     var bub = $('mika-say');
     bub.classList.remove('thinking', 'say');
     bub.textContent = text;
     void bub.offsetWidth;
     bub.classList.add('say');
+    if (!silent) speak(text);
   }
   function setQr(opts) {
     var qr = $('mika-qr');
@@ -441,9 +481,87 @@
     var bub = $('mika-say');
     var reduce = window.matchMedia && matchMedia('(prefers-reduced-motion: reduce)').matches;
     if (bub.classList.contains('thinking')) {
-      setTimeout(function () { mikaSay('Salut ! De quoi as-tu envie de parler ce soir ?'); }, reduce ? 0 : 1000);
+      setTimeout(function () { mikaSay(greeting(), true); }, reduce ? 0 : 1000);
     }
     mainQr();
+  }
+
+  /* ---------- Voix de Mika (facultative, coupée par défaut) ---------- */
+  var canSpeak = 'speechSynthesis' in window && typeof SpeechSynthesisUtterance !== 'undefined';
+  var voiceOn = canSpeak && store('talkie.voice') === '1';
+  var frVoice = null;
+  function pickVoice() {
+    if (!canSpeak) return;
+    var vs = speechSynthesis.getVoices().filter(function (v) { return /^fr/i.test(v.lang); });
+    if (!vs.length) return;
+    var pref = /(amélie|amelie|audrey|aurélie|aurelie|marie|julie|céline|celine|google fran|female|femme)/i;
+    frVoice = vs.filter(function (v) { return pref.test(v.name); })[0] || vs.filter(function (v) { return /FR/i.test(v.lang); })[0] || vs[0];
+  }
+  if (canSpeak) {
+    pickVoice();
+    if (speechSynthesis.addEventListener) speechSynthesis.addEventListener('voiceschanged', pickVoice);
+  }
+  function setTalking(on) {
+    Array.prototype.forEach.call(document.querySelectorAll('#mika-av, #fab-orb'), function (n) { n.classList.toggle('talking', on); });
+  }
+  function speakable(t) {
+    return String(t || '').replace(/@mika/gi, 'Mika').replace(/[\p{Extended_Pictographic}\uFE0F\u200D]/gu, '').replace(/https?:\/\/\S+/g, '').replace(/\s+/g, ' ').trim().slice(0, 300);
+  }
+  function speak(text) {
+    if (!canSpeak || !voiceOn) return;
+    var t = speakable(text);
+    if (!t) return;
+    try {
+      speechSynthesis.cancel();
+      var u = new SpeechSynthesisUtterance(t);
+      u.lang = 'fr-FR';
+      if (frVoice) u.voice = frVoice;
+      u.pitch = 1.3;
+      u.rate = 1.05;
+      u.onstart = function () { setTalking(true); };
+      u.onend = u.onerror = function () { setTalking(false); };
+      speechSynthesis.speak(u);
+    } catch (e) { /* ignore */ }
+  }
+  function stopSpeaking() { if (canSpeak) { try { speechSynthesis.cancel(); } catch (e) { /* ignore */ } } setTalking(false); }
+  function renderVoice() {
+    $('btn-voice').hidden = !canSpeak;
+    $('row-voice').hidden = !canSpeak;
+    $('btn-voice').setAttribute('aria-pressed', String(voiceOn));
+    $('btn-voice').setAttribute('aria-label', voiceOn ? 'Couper la voix de Mika' : 'Activer la voix de Mika');
+    $('voice-ico').textContent = voiceOn ? '🔊' : '🔇';
+    $('btn-voice2').setAttribute('aria-pressed', String(voiceOn));
+    $('btn-voice2').textContent = voiceOn ? 'Activée' : 'Coupée';
+  }
+  function toggleVoice() {
+    voiceOn = !voiceOn;
+    store('talkie.voice', voiceOn ? '1' : '0');
+    renderVoice();
+    if (voiceOn) speak('Coucou ! Me voilà, avec ma petite voix.'); else stopSpeaking();
+  }
+
+  /* ---------- Lieu : position facultative ---------- */
+  function geolocate() {
+    if (!navigator.geolocation) { toast('La localisation n’est pas disponible sur cet appareil.'); return; }
+    var btn = $('btn-geo');
+    btn.disabled = true;
+    navigator.geolocation.getCurrentPosition(function (pos) {
+      var lat = Math.round(pos.coords.latitude * 100) / 100, lon = Math.round(pos.coords.longitude * 100) / 100;
+      fetch('https://api.bigdatacloud.net/data/reverse-geocode-client?latitude=' + lat + '&longitude=' + lon + '&localityLanguage=fr')
+        .then(function (r) { return r.json(); })
+        .then(function (j) {
+          var cc = /^[A-Za-z]{2}$/.test(j.countryCode || '') ? j.countryCode.toUpperCase() : place.cc;
+          var city = clean(j.city || j.locality || '', 40);
+          savePlace(cc, city);
+          closeSheets();
+          toast(city ? 'Thèmes de ' + city + ' ✨' : 'Thèmes mis à jour ✨');
+        })
+        .catch(function () { toast('Ville introuvable. Tu peux la taper à la main.'); })
+        .then(function () { btn.disabled = false; });
+    }, function () {
+      btn.disabled = false;
+      toast('Position refusée. Tu peux taper ta ville à la main.');
+    }, { timeout: 10000, maximumAge: 600000 });
   }
 
   /* Mika flottant : toujours à portée quand l'accueil défile */
@@ -626,11 +744,10 @@
     if (last < text.length) span.appendChild(document.createTextNode(text.slice(last)));
     return span;
   }
-  function tipDismissed() { return store('talkie.tipMika') === '1'; }
   function updateTip() {
-    var show = aiOn && !!room && !room.ai && !tipDismissed() && !$('conv').hidden;
+    var show = aiOn && !!room && !$('conv').hidden;
+    $('mika-row').hidden = !show;
     if (show) fillMika();
-    $('mika-tip').hidden = !show;
   }
   function mentionQuery() {
     var inp = $('msg');
@@ -646,6 +763,8 @@
   }
   function pickMention() {
     var inp = $('msg'), q = mentionQuery();
+    if (inp.disabled) return;
+    if (!q && /@mika\b/i.test(inp.value)) { inp.focus(); return; }
     if (!q) { inp.value = (inp.value && !/\s$/.test(inp.value) ? inp.value + ' ' : inp.value) + '@Mika '; }
     else inp.value = inp.value.slice(0, q.pos - q.len) + '@Mika ' + inp.value.slice(q.pos);
     if (inp.value.length > 500) inp.value = inp.value.slice(0, 500);
@@ -763,7 +882,7 @@
     var near = isNear(log);
     var ai = !!m.ai;
     var mine = !ai && m.pid === myPid;
-    if (ai) typingOn = false;
+    if (ai) { typingOn = false; if (!replaying) speak(text); }
     removeTypingNode();
     ensureDay();
 
@@ -984,7 +1103,7 @@
   }
 
   /* ---------- Feuilles ---------- */
-  function closeSheets() { $('sheet-safety').hidden = true; $('sheet-leave').hidden = true; $('sheet-mika').hidden = true; }
+  function closeSheets() { $('sheet-safety').hidden = true; $('sheet-leave').hidden = true; $('sheet-mika').hidden = true; $('sheet-place').hidden = true; }
 
   function renderSafety(o) {
     var ul = $('safety-list');
@@ -1120,6 +1239,18 @@
     brTimer = setTimeout(function () { loadBranches(v, []); }, 900);
   });
   $('mika-fab').addEventListener('click', openMikaSheet);
+  $('btn-voice').addEventListener('click', toggleVoice);
+  $('btn-voice2').addEventListener('click', toggleVoice);
+  $('btn-place').addEventListener('click', function () { $('city').value = place.city; $('sheet-place').hidden = false; });
+  $('btn-place-close').addEventListener('click', closeSheets);
+  $('place-form').addEventListener('submit', function (e) { e.preventDefault(); savePlace(place.cc, $('city').value); closeSheets(); });
+  $('btn-geo').addEventListener('click', geolocate);
+  $('btn-more').addEventListener('click', function () {
+    var openIt = $('more').hidden;
+    $('more').hidden = !openIt;
+    $('btn-more').setAttribute('aria-expanded', String(openIt));
+    $('btn-more').childNodes[0].nodeValue = openIt ? 'Moins de thèmes ' : 'Plus de thèmes ';
+  });
   $('btn-mika-close').addEventListener('click', closeSheets);
   $('btn-surprise').addEventListener('click', function () { closeSheets(); surprise(); });
   $('msg').addEventListener('input', updateSend);
@@ -1127,8 +1258,9 @@
   $('msg').addEventListener('keyup', function (e) { if (e.key !== 'Enter') updateMention(); });
   $('mention-pick').addEventListener('mousedown', function (e) { e.preventDefault(); });
   $('mention-pick').addEventListener('click', pickMention);
-  $('tip-go').addEventListener('click', function () { pickMention(); });
-  $('tip-x').addEventListener('click', function () { store('talkie.tipMika', '1'); updateTip(); });
+  $('mika-pill').addEventListener('pointerdown', function (e) { e.preventDefault(); });
+  $('mika-pill').addEventListener('mousedown', function (e) { e.preventDefault(); });
+  $('mika-pill').addEventListener('click', function () { pickMention(true); });
   $('msg').addEventListener('focus', function () { closePanel(); setTimeout(function () { $('log').scrollTop = $('log').scrollHeight; }, 250); });
   $('btn-emoji').addEventListener('click', function () { togglePanel('emoji'); });
   $('btn-gif').addEventListener('click', function () { togglePanel('gif'); });
@@ -1186,7 +1318,7 @@
   if ('serviceWorker' in navigator) {
     window.addEventListener('load', function () { navigator.serviceWorker.register('/sw.js').catch(function () {}); });
   }
-  renderChips(); renderMika(); renderTrends(); renderLook(); watchHero(); fillMika();
+  renderChips(); renderMika(); renderTrends(); renderLook(); watchHero(); fillMika(); renderVoice();
   renderTrends();
   loadThemes();
   setInterval(loadThemes, 30 * 60 * 1000);
