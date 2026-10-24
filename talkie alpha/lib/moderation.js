@@ -36,7 +36,7 @@ async function verdict(context, text) {
   if (!ai.enabled()) return null;
   try {
     const content = (context.length ? 'Messages récents :\n' + context.join('\n') + '\n\n' : '') + 'Dernier message à examiner :\n' + text;
-    const out = await ai.complete({ system: SYSTEM, messages: [{ role: 'user', content }], maxTokens: 5, timeoutMs: 6000 });
+    const out = await ai.complete({ system: SYSTEM, messages: [{ role: 'user', content }], maxTokens: 5, timeoutMs: 6000, allowEmpty: true });
     return /BLOCK/i.test(out) ? 'BLOCK' : 'OK';
   } catch (e) { return null; }
 }

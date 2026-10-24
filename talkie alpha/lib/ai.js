@@ -28,7 +28,8 @@ function normalize(messages, firstUserText) {
   return out;
 }
 
-async function complete({ system, messages, maxTokens, timeoutMs, tools }) {
+async function complete(opts) {
+  const { system, messages, maxTokens, timeoutMs, tools } = opts;
   if (!KEY) throw new Error('clé absente');
   if (!budgetLeft()) throw new Error('plafond quotidien atteint');
   used++;
@@ -43,7 +44,9 @@ async function complete({ system, messages, maxTokens, timeoutMs, tools }) {
     });
     if (!r.ok) throw new Error('API ' + r.status);
     const j = await r.json();
-    return (j.content || []).filter((b) => b.type === 'text').map((b) => b.text).join('').trim();
+    const out = (j.content || []).filter((b) => b.type === 'text').map((b) => b.text).join('').trim();
+    if (!out && !opts.allowEmpty) throw new Error('réponse vide (stop_reason=' + j.stop_reason + ', blocs=' + (j.content || []).map((b) => b.type).join('+') + ')');
+    return out;
   } finally { clearTimeout(timer); }
 }
 

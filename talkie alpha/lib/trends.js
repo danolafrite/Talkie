@@ -143,7 +143,14 @@ async function generate(r) {
         if (!/\[[\s\S]*\]/.test(text)) text = '';
       } catch (e) { console.warn('[talkie] recherche web IA indisponible :', e.message); }
     }
-    if (!text) text = await ai.complete(req);
+    if (!text) {
+      try { text = await ai.complete(req); } catch (e) {
+        if (!/vide/.test(e.message)) throw e;
+        // Réponse vide (souvent un titre de presse qui bloque le modèle) : on réessaie sans les titres.
+        console.warn('[talkie] thèmes : ' + e.message + ' — nouvel essai sans les titres de presse');
+        text = await ai.complete(Object.assign({}, req, { messages: [{ role: 'user', content: JSON.stringify({ date: frenchDate(), lieu: placeName(r), actualite: [] }) }] }));
+      }
+    }
     // Lecture tolérante : on récupère chaque objet {c,t,e} même si la réponse est coupée ou entourée de texte.
     let arr = [];
     try { arr = JSON.parse((text.match(/\[[\s\S]*\]/) || [])[0] || '[]'); } catch (e) { arr = []; }
