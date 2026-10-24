@@ -502,18 +502,25 @@
     if (h >= 18 && h < 23) return pick(['Coucou ! 🌙 Soirée papote ? Je m’occupe de tout.', 'Hey toi ! ✨ On se fait une petite discussion ce soir ?']);
     return pick(['Oh, une âme de nuit… 🌙 Moi non plus je ne dors jamais !', 'Les couche-tard, c’est par ici 🌙 Je suis là, viens !']);
   }
-  var sayTimer = null;
+  var sayTimer = null, sayTok = 0;
   function mikaSay(text, silent, state) {
     var bub = $('mika-say');
+    var tok = ++sayTok;
     clearInterval(sayTimer);
-    bub.classList.remove('thinking', 'say');
-    void bub.offsetWidth;
-    bub.classList.add('say');
+    stopSpeaking();
     bub.setAttribute('aria-label', text);
     if (state !== false) mood(state || 'happy', 2600);
-    if (reduceMotion || String(text).length < 3) {
-      bub.textContent = text;
-    } else {
+    var wantVoice = voiceOn && !silent && gesture;
+    function start(audio) {
+      if (tok !== sayTok) return;
+      bub.classList.remove('thinking', 'say');
+      void bub.offsetWidth;
+      bub.classList.add('say');
+      var len = String(text).length;
+      var tickMs = audio && audio.duration ? Math.max(24, Math.min(120, audio.duration * 1000 / Math.max(1, len / 2))) : (wantVoice ? 70 : 26);
+      if (audio) setTalking(true);
+      else if (wantVoice) { var ms = chirpSeq(text, tickMs); if (ms) setTalking(true); }
+      if (reduceMotion || len < 3) { bub.textContent = text; if (!audio) setTimeout(function () { if (tok === sayTok) setTalking(false); }, 600); return; }
       var node = document.createTextNode('');
       var cur = el('span', 'cursor');
       cur.setAttribute('aria-hidden', 'true');
@@ -525,14 +532,25 @@
       sayTimer = setInterval(function () {
         i += 2;
         node.nodeValue = String(text).slice(0, i);
-        if (i >= text.length) {
+        if (i >= len) {
           clearInterval(sayTimer);
           if (cur.parentNode) cur.parentNode.removeChild(cur);
           talkFlags.t = false; applyTalk();
+          if (!audio) setTimeout(function () { if (tok === sayTok) setTalking(false); }, 350);
         }
-      }, 26);
+      }, tickMs);
     }
-    if (!silent) speak(text);
+    if (wantVoice && cloudTts && voiceEl) {
+      bub.classList.add('thinking');
+      bub.textContent = '';
+      for (var d = 0; d < 3; d++) bub.appendChild(document.createElement('i'));
+      cloudLine(text).then(function (a) {
+        if (tok !== sayTok) return;
+        var pr = a.play();
+        if (pr && pr.then) pr.then(function () { start(a); }).catch(function () { start(null); });
+        else start(a);
+      }).catch(function () { start(null); });
+    } else start(null);
   }
   function setQr(opts) {
     var qr = $('mika-qr');
@@ -572,7 +590,7 @@
   }
   var OPENERS = ['Psst… chez toi, ça parle beaucoup de « %T ». Tu en dis quoi ? 👀', 'Gros sujet du jour : « %T ». On en discute ? 🌸', 'Là, tout le monde parle de « %T » ! Ça te tente ? ✨', 'Ooh, « %T »… ça ferait un super débat 🍿'];
   var YES = ['Kyaa ! Excellent choix, je suis trop contente 💖', 'Daebak ! On lance ça ✨', 'Hwaiting ! Tu vas faire de belles rencontres 🌸', 'Ouiii ! J’adore ton énergie 💚'];
-  function voiceChip() { return (canSpeak && !voiceOn) ? [['🔊 Active ma voix', enableVoice, 'voice']] : []; }
+  function voiceChip() { return (canSpeak && !voiceOn) ? [['🎵 Écoute ma voix', enableVoice, 'voice']] : []; }
   function propose(i) {
     var items = todayThemes();
     if (!items.length) { dir.waiting = true; setQr([]); mikaSay('Une seconde, je regarde ce qui buzz chez toi… 👀', true, 'wow'); return; }
@@ -655,46 +673,155 @@
     bumpIdle();
   }
 
-  /* ---------- Voix de Mika (facultative, coupée par défaut) ---------- */
-  var canSpeak = 'speechSynthesis' in window && typeof SpeechSynthesisUtterance !== 'undefined';
+  /* ---------- Le monde de Mika : ciel selon l'heure, Mika qui flotte et se promène ---------- */
+  function setTod() {
+    var h = new Date().getHours();
+    var t = h >= 5 && h < 11 ? 'morning' : h >= 11 && h < 18 ? 'day' : h >= 18 && h < 22 ? 'evening' : 'night';
+    var hero = document.querySelector('.hero');
+    if (hero) hero.setAttribute('data-tod', t);
+  }
+  setTod();
+  setInterval(setTod, 10 * 60 * 1000);
+
+  var roam = { x: 0.08, tx: 0.5, nextMove: 0, y: 0, last: 0, tilt: 0, w: 0 };
+  function stageLoop(ts) {
+    requestAnimationFrame(stageLoop);
+    if (document.hidden || room) { roam.last = 0; return; }
+    var stage = $('mika-stage'), actor = $('mika-actor');
+    if (!stage || !actor) return;
+    var dt = roam.last ? Math.min(0.05, (ts - roam.last) / 1000) : 0.016;
+    roam.last = ts;
+    var range = Math.max(0, stage.clientWidth - 104);
+    var sleeping = asleep();
+    var busy = talkFlags.t || talkFlags.v;
+    if (!sleeping && !busy && ts > roam.nextMove) {
+      roam.tx = 0.02 + Math.random() * 0.96;
+      roam.nextMove = ts + 3200 + Math.random() * 3800;
+    }
+    var prev = roam.x;
+    var speed = sleeping ? 0 : (busy ? 0.25 : 0.7);
+    roam.x += (roam.tx - roam.x) * Math.min(1, dt * speed);
+    var vx = (roam.x - prev) / Math.max(dt, 0.001) * range / 60;
+    roam.tilt += (Math.max(-9, Math.min(9, vx * 1.4)) - roam.tilt) * Math.min(1, dt * 6);
+    var floatH = sleeping ? 0 : 20 + 8 * Math.sin(ts / 620) + (busy ? 3 * Math.sin(ts / 160) : 0);
+    roam.y += (floatH - roam.y) * Math.min(1, dt * 5);
+    var px = roam.x * range;
+    actor.style.transform = 'translate3d(' + px.toFixed(1) + 'px,' + (-roam.y).toFixed(1) + 'px,0) rotate(' + roam.tilt.toFixed(1) + 'deg)';
+    var sh = $('mika-shadow');
+    if (sh) { sh.style.transform = 'translateX(' + px.toFixed(1) + 'px) scale(' + (1 - roam.y / 70).toFixed(2) + ',1)'; sh.style.opacity = (0.9 - roam.y / 60).toFixed(2); }
+    $('mika-say').style.setProperty('--mx', (px + 52).toFixed(0) + 'px');
+  }
+  if (reduceMotion) {
+    var _st = $('mika-actor'); if (_st) _st.style.transform = 'translate3d(8px,-6px,0)';
+  } else requestAnimationFrame(stageLoop);
+
+  /* ---------- Voix de Mika (facultative, coupée par défaut) ----------
+     Deux voix : une vraie voix neuronale mignonne si le serveur en a une (clé OPENAI_API_KEY), sinon
+     la voix « gazouillis » de Mika, fabriquée dans le navigateur (WebAudio), toujours douce et jamais robotique. */
+  var AC = window.AudioContext || window.webkitAudioContext;
+  var canSpeak = !!AC;
   var voiceOn = canSpeak && store('talkie.voice') === '1';
-  var frVoice = null;
-  function pickVoice() {
-    if (!canSpeak) return;
-    var vs = speechSynthesis.getVoices().filter(function (v) { return /^fr/i.test(v.lang); });
-    if (!vs.length) return;
-    var pref = /(amélie|amelie|audrey|aurélie|aurelie|marie|julie|céline|celine|denise|eloise|éloïse|hortense|google fran|female|femme)/i;
-    frVoice = vs.filter(function (v) { return pref.test(v.name); })[0] || vs.filter(function (v) { return /FR/i.test(v.lang); })[0] || vs[0];
-  }
-  if (canSpeak) {
-    pickVoice();
-    if (speechSynthesis.addEventListener) speechSynthesis.addEventListener('voiceschanged', pickVoice);
-  }
-  function setTalking(on) { talkFlags.v = !!on; applyTalk(); }
-  var pendingSpeech = '';
-  document.addEventListener('pointerdown', function () { if (pendingSpeech) { var t = pendingSpeech; pendingSpeech = ''; speak(t); } }, { passive: true });
-  function speakable(t) {
-    return String(t || '').replace(/@mika/gi, 'Mika').replace(/hwaiting/gi, 'oué-tingue').replace(/daebak/gi, 'dè-bak').replace(/kyaa+/gi, 'kiya').replace(/zzz+/gi, '').replace(/[\p{Extended_Pictographic}\uFE0F\u200D]/gu, '').replace(/https?:\/\/\S+/g, '').replace(/\s+/g, ' ').trim().slice(0, 300);
-  }
-  function speak(text) {
-    if (!canSpeak || !voiceOn) return;
-    var t = speakable(text);
-    if (!t) return;
-    // Les navigateurs interdisent de parler avant le premier toucher : on garde la phrase en attente.
-    if (navigator.userActivation && !navigator.userActivation.hasBeenActive) { pendingSpeech = text; return; }
+  var cloudTts = false;
+  var gesture = false;
+  var actx = null, seq = null;
+  var voiceEl = null;
+  fetch('/api/config').then(function (r) { return r.json(); }).then(function (d) { cloudTts = !!(d && d.tts); }).catch(function () {});
+
+  function unlockVoice() {
+    if (gesture) return;
+    gesture = true;
     try {
-      speechSynthesis.cancel();
-      var u = new SpeechSynthesisUtterance(t);
-      u.lang = 'fr-FR';
-      if (frVoice) u.voice = frVoice;
-      u.pitch = 1.65;
-      u.rate = 1.08;
-      u.onstart = function () { setTalking(true); };
-      u.onend = u.onerror = function () { setTalking(false); };
-      speechSynthesis.speak(u);
+      voiceEl = new Audio();
+      voiceEl.src = 'data:audio/wav;base64,UklGRiQAAABXQVZFZm10IBAAAAABAAEAESsAACJWAAACABAAZGF0YQAAAAA=';
+      var pr = voiceEl.play();
+      if (pr && pr.catch) pr.catch(function () {});
     } catch (e) { /* ignore */ }
   }
-  function stopSpeaking() { if (canSpeak) { try { speechSynthesis.cancel(); } catch (e) { /* ignore */ } } setTalking(false); }
+  ['pointerdown', 'touchend', 'click', 'keydown'].forEach(function (ev) { document.addEventListener(ev, unlockVoice, { passive: true, capture: true }); });
+
+  function audioReady() {
+    if (!canSpeak || !gesture) return false;
+    try {
+      if (!actx) actx = new AC();
+      if (actx.state === 'suspended') actx.resume();
+      return true;
+    } catch (e) { return false; }
+  }
+  function setTalking(on) { talkFlags.v = !!on; applyTalk(); }
+  function speakable(t) {
+    return String(t || '').replace(/@mika/gi, 'Mika').replace(/[\p{Extended_Pictographic}️‍]/gu, '').replace(/https?:\/\/\S+/g, '').replace(/\s+/g, ' ').trim().slice(0, 220);
+  }
+  function stopChirps() {
+    if (seq) { try { seq.gain.cancelScheduledValues(0); seq.gain.value = 0; seq.disconnect(); } catch (e) { /* ignore */ } seq = null; }
+  }
+  function stopSpeaking() {
+    stopChirps();
+    if (voiceEl) { try { voiceEl.pause(); voiceEl.onended = null; } catch (e) { /* ignore */ } }
+    setTalking(false);
+  }
+  function blip(dest, f, t0, dur, vol) {
+    var o = actx.createOscillator(), o2 = actx.createOscillator(), g = actx.createGain(), g2 = actx.createGain(), lp = actx.createBiquadFilter();
+    o.type = 'sine'; o2.type = 'triangle';
+    o.frequency.setValueAtTime(f, t0); o.frequency.exponentialRampToValueAtTime(f * 1.09, t0 + dur * 0.7);
+    o2.frequency.setValueAtTime(f * 2, t0); o2.frequency.exponentialRampToValueAtTime(f * 2.18, t0 + dur * 0.7);
+    g2.gain.value = 0.22;
+    o2.connect(g2); g2.connect(g); o.connect(g);
+    lp.type = 'lowpass'; lp.frequency.value = 3600;
+    g.connect(lp); lp.connect(dest);
+    g.gain.setValueAtTime(0.0001, t0);
+    g.gain.exponentialRampToValueAtTime(vol, t0 + 0.012);
+    g.gain.exponentialRampToValueAtTime(0.0001, t0 + dur);
+    o.start(t0); o2.start(t0); o.stop(t0 + dur + 0.03); o2.stop(t0 + dur + 0.03);
+  }
+  var SCALE = [0, 2, 4, 7, 9, 12, 14, 16];
+  // Un petit gazouillis par groupe de 2 lettres, au rythme de la machine à écrire.
+  function chirpSeq(text, tickMs) {
+    if (!audioReady()) return 0;
+    stopChirps();
+    seq = actx.createGain();
+    seq.gain.value = 0.85;
+    seq.connect(actx.destination);
+    var s = speakable(text).toLowerCase();
+    var t = actx.currentTime + 0.04, k = 0, last = '';
+    for (var i = 0; i < s.length; i += 2, k++) {
+      var ch = s.charAt(i);
+      if (!/[a-zà-ÿ0-9]/.test(ch)) continue;
+      var step = SCALE[(s.charCodeAt(i) + s.charCodeAt(i + 1 < s.length ? i + 1 : i)) % SCALE.length] + (/[aeiouyàâéèêîôù]/.test(ch) ? 3 : 0);
+      blip(seq, 600 * Math.pow(2, step / 12) * (1 + (Math.random() - 0.5) * 0.04), t + k * tickMs / 1000, tickMs / 1000 * 0.92, 0.1);
+    }
+    var end = t + k * tickMs / 1000;
+    last = s.replace(/\s+$/, '').slice(-1);
+    if (last === '?') { blip(seq, 880, end, 0.16, 0.1); blip(seq, 1180, end + 0.12, 0.2, 0.1); }
+    else if (last === '!' || /[🎉💖]/u.test(String(text))) { blip(seq, 1046, end, 0.1, 0.1); blip(seq, 1318, end + 0.09, 0.1, 0.1); blip(seq, 1568, end + 0.18, 0.16, 0.1); }
+    return k * tickMs;
+  }
+  // Vraie voix (serveur) : on charge la phrase, puis on la joue avec la bouche de Mika qui bouge.
+  function cloudLine(text) {
+    return new Promise(function (resolve, reject) {
+      if (!voiceEl) { reject(new Error('audio')); return; }
+      var a = voiceEl, done = false;
+      var to = setTimeout(function () { finish(new Error('lent')); }, 6000);
+      function finish(err) {
+        if (done) return;
+        done = true; clearTimeout(to);
+        a.removeEventListener('canplaythrough', ok); a.removeEventListener('error', ko);
+        if (err) reject(err); else resolve(a);
+      }
+      function ok() { finish(null); }
+      function ko() { finish(new Error('voix')); }
+      a.addEventListener('canplaythrough', ok);
+      a.addEventListener('error', ko);
+      a.onended = function () { setTalking(false); };
+      a.src = '/api/tts?t=' + encodeURIComponent(speakable(text));
+      try { a.load(); } catch (e) { finish(e); }
+    });
+  }
+  // Phrases de la conversation (texte écrit par des personnes ou par Mika en salon) : jamais envoyées au serveur de voix.
+  function speak(text) {
+    if (!canSpeak || !voiceOn) return;
+    var ms = chirpSeq(String(text).slice(0, 70), 80);
+    if (ms) { setTalking(true); setTimeout(function () { setTalking(false); }, ms + 300); }
+  }
   function renderVoice() {
     $('btn-voice').hidden = !canSpeak;
     $('row-voice').hidden = !canSpeak;
@@ -708,7 +835,8 @@
     voiceOn = !voiceOn;
     store('talkie.voice', voiceOn ? '1' : '0');
     renderVoice();
-    if (voiceOn) speak('Coucou ! Me voilà, avec ma petite voix.'); else stopSpeaking();
+    if (!voiceOn) { stopSpeaking(); return; }
+    if (!room) mikaSay('Coucou ! Me voilà avec ma petite voix 🎵', false, 'happy'); else speak('Coucou ! Me voilà !');
   }
 
   /* ---------- Lieu : position facultative ---------- */

@@ -123,7 +123,7 @@ svg.i { width: 20px; height: 20px; fill: none; stroke: currentColor; stroke-widt
 .reconnect { align-self: flex-start; margin-top: 10px; }
 
 /* ---------- Accueil : un gros sourire avec Mika ---------- */
-.hero { position: relative; overflow: hidden; isolation: isolate; border-radius: 34px; padding: 46px 18px 18px; color: var(--ink); background: linear-gradient(145deg, #D9CCFF 0%, #FFD0EA 55%, #FFE2C9 100%); box-shadow: 0 3px 0 rgba(124, 92, 255, 0.15), 0 22px 40px -22px rgba(124, 92, 255, 0.6); }
+.hero { position: relative; overflow: hidden; isolation: isolate; border-radius: 34px; padding: 24px 18px 18px; color: var(--ink); background: linear-gradient(145deg, #D9CCFF 0%, #FFD0EA 55%, #FFE2C9 100%); box-shadow: 0 3px 0 rgba(124, 92, 255, 0.15), 0 22px 40px -22px rgba(124, 92, 255, 0.6); }
 @media (prefers-color-scheme: dark) { .hero { background: linear-gradient(145deg, #4A2FB8 0%, #8A2E92 60%, #B2476F 100%); color: #FFF3FF; } }
 .hero h2 { font-family: var(--font-display); font-weight: 600; font-size: clamp(30px, 9vw, 40px); line-height: 1.04; letter-spacing: -0.015em; max-width: 12em; }
 .hero .sub { margin-top: 6px; font-size: 16px; font-weight: 700; opacity: 0.82; max-width: 26rem; }
@@ -519,6 +519,56 @@ button.mika-av { border: 0; background: none; padding: 0; cursor: pointer; -webk
 .mika-qr button.voice { background: #C9F6E3; border-color: transparent; color: #0A6B4D; }
 .mika-bubble .bq { color: var(--violet); }
 @media (prefers-reduced-motion: reduce) { .mika-av .mk *, .mika-av.jump, .mika-av.shy, .mika-fx span, .mika-bubble .cursor { animation: none !important; } }
+
+/* Le monde de Mika */
+.hero { color: var(--hero-fg, var(--ink)); }
+.hero[data-tod="morning"] { background: linear-gradient(160deg, #FFE9B8 0%, #FFCFE0 52%, #DCD0FF 100%); }
+.hero[data-tod="evening"] { background: linear-gradient(165deg, #FFB690 0%, #F274A8 50%, #7550D6 100%); --hero-fg: #2A1050; }
+.hero[data-tod="night"] { background: linear-gradient(165deg, #1C1458 0%, #3D2C94 55%, #8A43A8 100%); --hero-fg: #FFF3FF; }
+@media (prefers-color-scheme: dark) {
+  .hero[data-tod="morning"] { background: linear-gradient(160deg, #6A3A9A 0%, #B04A8C 60%, #D9805F 100%); --hero-fg: #FFF3FF; }
+  .hero[data-tod="day"] { --hero-fg: #FFF3FF; }
+  .hero[data-tod="evening"] { background: linear-gradient(165deg, #B8456A 0%, #7A2E9A 55%, #3A2A94 100%); --hero-fg: #FFF3FF; }
+}
+.sky { position: absolute; inset: 0; z-index: -1; overflow: hidden; pointer-events: none; }
+.sky .orb { position: absolute; top: 172px; right: 64px; width: 54px; height: 54px; border-radius: 50%; background: radial-gradient(circle at 35% 35%, #FFF6C9, #FFD25E 70%); box-shadow: 0 0 0 10px rgba(255, 224, 120, 0.25), 0 0 40px 14px rgba(255, 214, 110, 0.45); animation: orbpulse 6s ease-in-out infinite; }
+.hero[data-tod="evening"] .orb { top: 214px; background: radial-gradient(circle at 35% 35%, #FFE1B5, #FF9A5C 75%); box-shadow: 0 0 0 12px rgba(255, 150, 90, 0.28), 0 0 46px 16px rgba(255, 130, 90, 0.5); }
+.hero[data-tod="night"] .orb { background: radial-gradient(circle at 35% 35%, #FFFFFF, #E8E4FF 70%); box-shadow: 0 0 0 9px rgba(220, 215, 255, 0.18), 0 0 34px 10px rgba(200, 195, 255, 0.45); }
+@keyframes orbpulse { 0%, 100% { transform: scale(1); } 50% { transform: scale(1.06); } }
+.sky .cloud { position: absolute; height: 26px; width: 92px; border-radius: 999px; background: rgba(255, 255, 255, 0.75); filter: blur(0.3px); animation: cdrift 46s linear infinite alternate; }
+.sky .cloud::before, .sky .cloud::after { content: ''; position: absolute; background: inherit; border-radius: 50%; }
+.sky .cloud::before { width: 38px; height: 38px; left: 14px; top: -18px; }
+.sky .cloud::after { width: 28px; height: 28px; left: 46px; top: -12px; }
+.sky .c1 { top: 96px; left: -20px; }
+.sky .c2 { top: 190px; right: -30px; transform: scale(0.8); animation-duration: 62s; animation-direction: alternate-reverse; opacity: 0.7; }
+.sky .c3 { top: 38px; left: 38%; transform: scale(0.6); animation-duration: 80s; opacity: 0.6; }
+@keyframes cdrift { to { translate: 120px 0; } }
+.hero[data-tod="night"] .cloud, .hero[data-tod="evening"] .cloud { background: rgba(255, 255, 255, 0.22); }
+@media (prefers-color-scheme: dark) { .sky .cloud { background: rgba(255, 255, 255, 0.2); } }
+.sky .star { display: none; position: absolute; width: 5px; height: 5px; border-radius: 50%; background: #fff; box-shadow: 0 0 8px 2px rgba(255, 255, 255, 0.8); animation: twinkle 2.6s ease-in-out infinite; }
+.hero[data-tod="night"] .star { display: block; }
+.sky .t1 { top: 20px; left: 12%; } .sky .t2 { top: 52px; left: 34%; animation-delay: .6s; } .sky .t3 { top: 30px; left: 58%; animation-delay: 1.2s; }
+.sky .t4 { top: 120px; left: 8%; animation-delay: 1.8s; } .sky .t5 { top: 150px; right: 10%; animation-delay: .3s; } .sky .t6 { top: 84px; right: 28%; animation-delay: 1.5s; } .sky .t7 { top: 230px; left: 20%; animation-delay: 2.1s; }
+@keyframes twinkle { 0%, 100% { opacity: 0.25; transform: scale(0.7); } 50% { opacity: 1; transform: scale(1.3); } }
+.sky .petal { position: absolute; top: 100%; font-size: 16px; opacity: 0; animation: petal 14s linear infinite; }
+.sky .p1 { left: 14%; } .sky .p2 { left: 48%; animation-delay: 4s; font-size: 14px; } .sky .p3 { left: 74%; animation-delay: 8s; } .sky .p4 { left: 88%; animation-delay: 11s; font-size: 13px; }
+@keyframes petal { 0% { transform: translate(0, 0) rotate(0); opacity: 0; } 10% { opacity: 0.85; } 100% { transform: translate(34px, -360px) rotate(160deg); opacity: 0; } }
+
+.mika-world { margin-top: 6px; position: relative; }
+.mika-stage { position: relative; height: 136px; }
+.mika-actor { position: absolute; left: 0; bottom: 14px; width: 104px; will-change: transform; z-index: 2; }
+.mika-actor .mika-av.big { margin: 0; display: block; }
+.mika-tag { display: block; text-align: center; margin-top: -6px; font-family: var(--font-display); font-weight: 600; font-size: 14px; letter-spacing: 0.02em; opacity: 0.9; }
+.mika-shadow { position: absolute; left: 0; bottom: 8px; width: 74px; height: 12px; margin-left: 15px; border-radius: 50%; background: rgba(60, 20, 120, 0.22); filter: blur(3px); will-change: transform, opacity; }
+.mika-world .vbtn { position: absolute; right: 0; top: 0; z-index: 3; margin: 0; }
+.mika-world .mika-bubble { position: relative; display: block; width: fit-content; max-width: 100%; margin: 4px 0 0; border-radius: 22px; }
+.mika-world .mika-bubble::before { content: ''; position: absolute; top: -8px; left: clamp(20px, var(--mx, 52px), calc(100% - 34px)); width: 18px; height: 18px; background: inherit; border-radius: 4px; transform: translateX(-50%) rotate(45deg); box-shadow: -2px -2px 0 rgba(124, 92, 255, 0.10); }
+.mika-world .mika-bubble.thinking::before { display: block; }
+.mika-ia { margin: 6px 4px 0; font-size: 11.5px; font-weight: 800; opacity: 0.62; }
+.mika-world .mika-qr { margin-top: 10px; }
+.mika-world .mika-fx { left: 0; top: 0; }
+.mika-world .mika-tag { text-shadow: 0 1px 0 rgba(255, 255, 255, 0.35); }
+@media (prefers-reduced-motion: reduce) { .sky .orb, .sky .cloud, .sky .star, .sky .petal { animation: none !important; } .sky .petal { display: none; } }
 </style>
 </head>
 <body>
@@ -542,20 +592,29 @@ button.mika-av { border: 0; background: none; padding: 0; cursor: pointer; -webk
 
     <main class="wrap page">
       <section class="hero" aria-label="Commencer une discussion">
-        <span class="deco d1" aria-hidden="true">💬</span><span class="deco d2" aria-hidden="true">✨</span><span class="deco d3" aria-hidden="true">🍟</span>
+        <div class="sky" aria-hidden="true">
+          <i class="orb"></i>
+          <i class="cloud c1"></i><i class="cloud c2"></i><i class="cloud c3"></i>
+          <i class="star t1"></i><i class="star t2"></i><i class="star t3"></i><i class="star t4"></i><i class="star t5"></i><i class="star t6"></i><i class="star t7"></i>
+          <i class="petal p1">🌸</i><i class="petal p2">✨</i><i class="petal p3">💚</i><i class="petal p4">🌸</i>
+        </div>
         <h2>Envie de papoter ?</h2>
         <p class="sub">Un thème, et quelqu’un te rejoint.</p>
         <button type="button" class="ghost reconnect" id="btn-reconnect" hidden>Reprendre ici</button>
 
-        <div id="mika-hero" class="mika" role="group" aria-label="Mika, assistant Talkie">
-          <button type="button" class="mika-av big" id="mika-av" aria-label="Faire coucou à Mika"></button>
-          <div class="mika-body">
-            <div class="mika-name">Mika <span class="badge">IA</span> <small>ton assistant</small>
-              <button type="button" class="vbtn" id="btn-voice" aria-pressed="false" aria-label="Activer la voix de Mika" hidden><span id="voice-ico">🔇</span></button></div>
-            <div class="mika-bubble thinking" id="mika-say" aria-live="polite"><i></i><i></i><i></i></div>
+        <div id="mika-hero" class="mika-world" role="group" aria-label="Mika">
+          <div class="mika-stage" id="mika-stage">
+            <button type="button" class="vbtn" id="btn-voice" aria-pressed="false" aria-label="Activer la voix de Mika" hidden><span id="voice-ico">🔇</span></button>
+            <div class="mika-shadow" id="mika-shadow" aria-hidden="true"></div>
+            <div class="mika-actor" id="mika-actor">
+              <button type="button" class="mika-av big" id="mika-av" aria-label="Faire coucou à Mika"></button>
+              <span class="mika-tag">Mika</span>
+              <div class="mika-fx" id="mika-fx" aria-hidden="true"></div>
+            </div>
           </div>
+          <div class="mika-bubble thinking" id="mika-say" role="status" aria-live="polite"><i></i><i></i><i></i></div>
+          <div class="mika-ia">Mika est une IA 💚</div>
           <div class="mika-qr" id="mika-qr"></div>
-          <div class="mika-fx" id="mika-fx" aria-hidden="true"></div>
         </div>
 
         <div class="compose" id="compose">

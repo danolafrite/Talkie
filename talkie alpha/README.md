@@ -36,3 +36,14 @@ Puis ouvre http://localhost:3000. Les notifications demandent une adresse en htt
 | `TURNSTILE_SECRET_KEY` | Clé secrète Turnstile (à ne jamais publier) |
 
 Sans ces deux clés, la vérification anti-bot est désactivée. La confirmation « 18 ans et plus » reste obligatoire.
+
+## Voix de Mika (facultative)
+
+Sans réglage, Mika « gazouille » (voix synthétisée dans le navigateur, gratuite). Pour une vraie voix mignonne et fluide :
+
+| Variable | Rôle |
+|---|---|
+| `OPENAI_API_KEY` | active la voix neuronale pour les phrases d'accueil de Mika (jamais pour les messages des gens) |
+| `TTS_VOICE` | voix OpenAI, `coral` par défaut (essaie `nova`, `shimmer`) |
+| `TTS_DAILY_CAP` | nombre maximum de phrases générées par jour, 400 par défaut |
+| `TTS_STYLE` | consigne de style de la voix (texte libre) |

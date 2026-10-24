@@ -25,6 +25,7 @@ const MAX_ROOM_LOG = 30;
 try { fs.mkdirSync(DATA_DIR, { recursive: true }); } catch (e) { /* lecture seule : on continue sans disque */ }
 
 const ai = require('./lib/ai');
+const tts = require('./lib/tts');
 const mod = require('./lib/moderation');
 const trends = require('./lib/trends');
 const mika = require('./lib/mika');
@@ -717,7 +718,18 @@ const server = http.createServer(async (req, res) => {
   }
 
   if (url.pathname === '/api/config' && req.method === 'GET') {
-    json(res, 200, { turnstile: TURNSTILE_SITE && TURNSTILE_SECRET ? TURNSTILE_SITE : null });
+    json(res, 200, { turnstile: TURNSTILE_SITE && TURNSTILE_SECRET ? TURNSTILE_SITE : null, tts: tts.enabled() });
+    return;
+  }
+  if (url.pathname === '/api/tts' && req.method === 'GET') {
+    try {
+      const buf = await tts.synth(url.searchParams.get('t') || '', String(req.headers['x-forwarded-for'] || req.socket.remoteAddress || '').split(',')[0].trim());
+      res.writeHead(200, { 'content-type': 'audio/mpeg', 'content-length': buf.length, 'cache-control': 'public, max-age=86400' });
+      res.end(buf);
+    } catch (e) {
+      res.writeHead(e.code || 503, { 'content-type': 'text/plain; charset=utf-8', 'cache-control': 'no-store' });
+      res.end(e.message || 'voix indisponible');
+    }
     return;
   }
   if (url.pathname === '/api/verify' && req.method === 'POST') {
