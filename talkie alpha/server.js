@@ -775,10 +775,14 @@ const server = http.createServer(async (req, res) => {
   fs.readFile(file, (err, data) => {
     if (err) { res.writeHead(404, { 'Content-Type': 'text/plain; charset=utf-8' }); res.end('Introuvable'); return; }
     const ext = path.extname(file).toLowerCase();
-    const noCache = rel === '/sw.js' || rel === '/index.html' || rel === '/manifest.webmanifest';
+    // Le code (html, js, css…) est toujours revalidé : une mise à jour est vue tout de suite, jamais un vieux mélange.
+    const longCache = /\.(woff2|png|jpg|jpeg|webp|ico|svg)$/.test(ext ? rel : '');
+    const etag = 'W/"' + data.length + '-' + require('crypto').createHash('md5').update(data).digest('hex').slice(0, 16) + '"';
+    if (!longCache && req.headers['if-none-match'] === etag) { res.writeHead(304, { ETag: etag, 'Cache-Control': 'no-cache' }); res.end(); return; }
     res.writeHead(200, {
       'Content-Type': MIME[ext] || 'application/octet-stream',
-      'Cache-Control': noCache ? 'no-cache' : 'public, max-age=86400'
+      'Cache-Control': longCache ? 'public, max-age=86400' : 'no-cache',
+      ...(longCache ? {} : { ETag: etag })
     });
     res.end(req.method === 'HEAD' ? undefined : data);
   });

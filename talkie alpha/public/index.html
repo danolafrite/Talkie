@@ -556,14 +556,15 @@ button.mika-av { border: 0; background: none; padding: 0; cursor: pointer; -webk
 
 .mika-world { margin-top: 6px; position: relative; }
 .mika-stage { position: relative; height: 136px; }
-.mika-actor { position: absolute; left: 0; bottom: 14px; width: 104px; will-change: transform; z-index: 2; }
+.mika-actor { position: fixed; left: 0; top: 0; width: 104px; will-change: transform; z-index: 6; transform-origin: 50% 100%; touch-action: none; -webkit-user-select: none; user-select: none; }
 .mika-actor .mika-av.big { margin: 0; display: block; }
 .mika-tag { display: block; text-align: center; margin-top: -6px; font-family: var(--font-display); font-weight: 600; font-size: 14px; letter-spacing: 0.02em; opacity: 0.9; }
-.mika-shadow { position: absolute; left: 0; bottom: 8px; width: 74px; height: 12px; margin-left: 15px; border-radius: 50%; background: rgba(60, 20, 120, 0.22); filter: blur(3px); will-change: transform, opacity; }
+.mika-shadow { position: fixed; left: 0; top: 0; z-index: 5; width: 74px; height: 12px; margin-left: 15px; pointer-events: none; border-radius: 50%; background: rgba(60, 20, 120, 0.22); filter: blur(3px); will-change: transform, opacity; }
 .mika-world .vbtn { position: absolute; right: 0; top: 0; z-index: 3; margin: 0; }
 .mika-world .mika-bubble { position: relative; display: block; width: fit-content; max-width: 100%; margin: 4px 0 0; border-radius: 22px; }
 .mika-world .mika-bubble::before { content: ''; position: absolute; top: -8px; left: clamp(20px, var(--mx, 52px), calc(100% - 34px)); width: 18px; height: 18px; background: inherit; border-radius: 4px; transform: translateX(-50%) rotate(45deg); box-shadow: -2px -2px 0 rgba(124, 92, 255, 0.10); }
 .mika-world .mika-bubble.thinking::before { display: block; }
+.mika-world .mika-bubble.away::before { display: none; }
 .mika-ia { margin: 6px 4px 0; font-size: 11.5px; font-weight: 800; opacity: 0.62; }
 .mika-world .mika-qr { margin-top: 10px; }
 .mika-world .mika-fx { left: 0; top: 0; }
@@ -821,6 +822,6 @@ button.mika-av { border: 0; background: none; padding: 0; cursor: pointer; -webk
   </div>
 </div>
 <div id="toast" role="status" aria-live="polite" hidden></div>
-<script src="/app.js"></script>
+<script src="/app.js?v=11"></script>
 </body>
 </html>

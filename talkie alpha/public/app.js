@@ -508,6 +508,8 @@
     var tok = ++sayTok;
     clearInterval(sayTimer);
     stopSpeaking();
+    pet.lastSpoke = Date.now();
+    if (pet.mode === 'roam') callHome();
     bub.setAttribute('aria-label', text);
     if (state !== false) mood(state || 'happy', 2600);
     var wantVoice = voiceOn && !silent && gesture;
@@ -645,7 +647,9 @@
   }
   var TAPS = ['Hihi, ça chatouille ! 🌸', 'Kyaa ! Doucement, je suis tout mou 🥹', 'Encore, encore ! …non, je rigole 💚', 'Aww, tu me fais rougir ✨', 'On papote, ou on joue à cache-cache ? 🍃'];
   $('mika-av').addEventListener('click', function () {
+    if (pet.justDragged) return;
     dir.engaged = true;
+    if (pet.mode !== 'home') { callHome(); pet.mode = 'home'; anim('jump'); burst(['💚', '✨']); mikaSay(pick(['Tu m’as trouvé ! 🌸', 'Cache-cache gagné… hihi 💚', 'Coucou, me revoilà ! ✨']), false, 'happy'); bumpIdle(); return; }
     bumpIdle();
     if (asleep()) { mood('wow', 1800); anim('shy'); mikaSay(pick(['Oh ! Je ne dormais pas, je méditais… 😳', 'Mmh ? Ah, tu es là ! Bonjour 🌸']), false, 'wow'); mainOffer(); return; }
     anim('jump'); burst(['💚', '✨', '🌸']);
@@ -683,37 +687,113 @@
   setTod();
   setInterval(setTod, 10 * 60 * 1000);
 
-  var roam = { x: 0.08, tx: 0.5, nextMove: 0, y: 0, last: 0, tilt: 0, w: 0 };
-  function stageLoop(ts) {
-    requestAnimationFrame(stageLoop);
-    if (document.hidden || room) { roam.last = 0; return; }
-    var stage = $('mika-stage'), actor = $('mika-actor');
-    if (!stage || !actor) return;
-    var dt = roam.last ? Math.min(0.05, (ts - roam.last) / 1000) : 0.016;
-    roam.last = ts;
-    var range = Math.max(0, stage.clientWidth - 104);
-    var sleeping = asleep();
-    var busy = talkFlags.t || talkFlags.v;
-    if (!sleeping && !busy && ts > roam.nextMove) {
-      roam.tx = 0.02 + Math.random() * 0.96;
-      roam.nextMove = ts + 3200 + Math.random() * 3800;
-    }
-    var prev = roam.x;
-    var speed = sleeping ? 0 : (busy ? 0.25 : 0.7);
-    roam.x += (roam.tx - roam.x) * Math.min(1, dt * speed);
-    var vx = (roam.x - prev) / Math.max(dt, 0.001) * range / 60;
-    roam.tilt += (Math.max(-9, Math.min(9, vx * 1.4)) - roam.tilt) * Math.min(1, dt * 6);
-    var floatH = sleeping ? 0 : 20 + 8 * Math.sin(ts / 620) + (busy ? 3 * Math.sin(ts / 160) : 0);
-    roam.y += (floatH - roam.y) * Math.min(1, dt * 5);
-    var px = roam.x * range;
-    actor.style.transform = 'translate3d(' + px.toFixed(1) + 'px,' + (-roam.y).toFixed(1) + 'px,0) rotate(' + roam.tilt.toFixed(1) + 'deg)';
-    var sh = $('mika-shadow');
-    if (sh) { sh.style.transform = 'translateX(' + px.toFixed(1) + 'px) scale(' + (1 - roam.y / 70).toFixed(2) + ',1)'; sh.style.opacity = (0.9 - roam.y / 60).toFixed(2); }
-    $('mika-say').style.setProperty('--mx', (px + 52).toFixed(0) + 'px');
+  /* Mika est un petit compagnon qui vit sur tout l'écran : il flotte chez lui, part se balader,
+     se cache sur les bords, revient quand on lui parle, et on peut l'attraper pour le promener. */
+  var PW = 104;
+  var pet = { mode: 'home', x: 0, y: 0, s: 1, tilt: 0, hx: 0.1, htx: 0.55, nextHome: 0, wp: [], restUntil: 0, last: 0, init: false, drag0: null, drag: null, dropX: 0, dropY: 0, dropUntil: 0, nextTour: performance.now() + 15000, lastSpoke: Date.now(), vis: 1, justDragged: false };
+  document.body.appendChild($('mika-actor'));
+  document.body.appendChild($('mika-shadow'));
+  function callHome() { if (pet.mode === 'roam') { pet.mode = 'home'; pet.wp = []; pet.restUntil = 0; } }
+  function startTour() {
+    var vh = window.innerHeight, pts = [];
+    for (var i = 0; i < 2; i++) pts.push({ side: Math.random() < 0.5 ? 'L' : 'R', y: 120 + Math.random() * Math.max(80, vh - 360) });
+    pet.wp = pts; pet.mode = 'roam'; pet.restUntil = 0;
   }
-  if (reduceMotion) {
-    var _st = $('mika-actor'); if (_st) _st.style.transform = 'translate3d(8px,-6px,0)';
-  } else requestAnimationFrame(stageLoop);
+  function petLoop(ts) {
+    requestAnimationFrame(petLoop);
+    var actor = $('mika-actor'), shadow = $('mika-shadow');
+    if (document.hidden) { pet.last = 0; return; }
+    if (room || $('lobby').hidden) { actor.style.display = 'none'; shadow.style.display = 'none'; pet.last = 0; return; }
+    actor.style.display = ''; shadow.style.display = '';
+    var sr = $('mika-stage').getBoundingClientRect();
+    var vw = window.innerWidth, vh = window.innerHeight;
+    var stageVisible = sr.bottom > 60 && sr.top < vh - 60;
+    var dt = pet.last ? Math.min(0.05, (ts - pet.last) / 1000) : 0.016;
+    pet.last = ts;
+    var sleeping = asleep(), busy = talkFlags.t || talkFlags.v;
+    if (sleeping && pet.mode === 'roam') callHome();
+    var range = Math.max(0, sr.width - PW);
+    var bob = (sleeping || reduceMotion) ? 0 : 18 + 7 * Math.sin(ts / 620) + (busy ? 3 * Math.sin(ts / 150) : 0);
+    var tx, ty, sc = 1, k = 14;
+    if (pet.mode === 'drag' && pet.drag) {
+      tx = pet.drag.px - PW / 2; ty = pet.drag.py - PW * 0.75; sc = 1.14; k = 22;
+    } else if (pet.mode === 'roam' && pet.wp.length) {
+      var w = pet.wp[0];
+      sc = 0.72; k = 3.2;
+      tx = w.side === 'L' ? -PW * sc * 0.4 : vw - PW * sc * 0.6;
+      ty = w.y + bob * 0.4;
+      var arrived = Math.abs(pet.x - tx) < 8 && Math.abs(pet.y - ty) < 14;
+      if (arrived && !pet.restUntil) { pet.restUntil = ts + 3400; mood('happy', 2400); }
+      else if (pet.restUntil && ts > pet.restUntil) { pet.wp.shift(); pet.restUntil = 0; if (!pet.wp.length) pet.mode = 'home'; }
+    } else if (pet.mode === 'drop') {
+      tx = pet.dropX; ty = pet.dropY + bob * 0.4; k = 8;
+      if (ts > pet.dropUntil) pet.mode = 'home';
+    } else {
+      pet.mode = 'home';
+      if (!sleeping && !busy && !reduceMotion && ts > pet.nextHome) { pet.htx = 0.02 + Math.random() * 0.96; pet.nextHome = ts + 3200 + Math.random() * 3800; }
+      pet.hx += (pet.htx - pet.hx) * Math.min(1, dt * (busy ? 0.25 : 0.7));
+      tx = sr.left + pet.hx * range;
+      ty = sr.bottom - PW - 18 - bob;
+      k = 9;
+      var typing = document.activeElement && /^(INPUT|TEXTAREA)$/.test(document.activeElement.tagName);
+      if (!reduceMotion && !sleeping && !busy && !typing && stageVisible && ts > pet.nextTour && Date.now() - pet.lastSpoke > 9000) { startTour(); pet.nextTour = ts + 26000 + Math.random() * 16000; }
+    }
+    if (!pet.init) { pet.x = tx; pet.y = ty; pet.init = true; }
+    var px = pet.x;
+    pet.x += (tx - pet.x) * Math.min(1, dt * k);
+    pet.y += (ty - pet.y) * Math.min(1, dt * k);
+    pet.s += (sc - pet.s) * Math.min(1, dt * 6);
+    var vx = (pet.x - px) / Math.max(dt, 0.001);
+    var tiltT = pet.mode === 'roam' && pet.restUntil ? (pet.wp[0] && pet.wp[0].side === 'L' ? 16 : -16) : Math.max(-10, Math.min(10, vx / 40));
+    pet.tilt += (tiltT - pet.tilt) * Math.min(1, dt * 6);
+    var show = pet.mode !== 'home' || stageVisible;
+    pet.vis += ((show ? 1 : 0) - pet.vis) * Math.min(1, dt * 8);
+    actor.style.opacity = pet.vis.toFixed(2);
+    actor.style.pointerEvents = pet.vis < 0.5 || (pet.mode === 'roam' && !pet.restUntil) ? 'none' : 'auto';
+    actor.style.transform = 'translate3d(' + pet.x.toFixed(1) + 'px,' + pet.y.toFixed(1) + 'px,0) rotate(' + pet.tilt.toFixed(1) + 'deg) scale(' + pet.s.toFixed(3) + ')';
+    var onGround = pet.mode === 'home';
+    shadow.style.opacity = onGround ? (Math.max(0, 0.85 - (sr.bottom - PW - 18 - pet.y - 0) / 70) * pet.vis).toFixed(2) : '0';
+    shadow.style.transform = 'translate3d(' + pet.x.toFixed(1) + 'px,' + (sr.bottom - 24).toFixed(1) + 'px,0)';
+    var bub = $('mika-say');
+    bub.classList.toggle('away', pet.mode !== 'home');
+    if (onGround) bub.style.setProperty('--mx', (pet.x + 52 - bub.getBoundingClientRect().left).toFixed(0) + 'px');
+  }
+  (function () {
+    var A = $('mika-actor');
+    A.addEventListener('pointerdown', function (e) {
+      if (e.button > 0) return;
+      pet.drag0 = { x: e.clientX, y: e.clientY, moved: false, id: e.pointerId };
+    });
+    A.addEventListener('pointermove', function (e) {
+      var d = pet.drag0;
+      if (!d) return;
+      if (!d.moved && Math.hypot(e.clientX - d.x, e.clientY - d.y) > 8) {
+        d.moved = true;
+        pet.mode = 'drag'; pet.drag = { px: e.clientX, py: e.clientY };
+        try { A.setPointerCapture(d.id); } catch (er) { /* ignore */ }
+        mood('wow'); dir.engaged = true; bumpIdle(); stopSpeaking();
+      }
+      if (d.moved) { pet.drag.px = e.clientX; pet.drag.py = e.clientY; e.preventDefault(); }
+    });
+    function end() {
+      var d = pet.drag0;
+      pet.drag0 = null;
+      if (!d || !d.moved) return;
+      pet.justDragged = true;
+      setTimeout(function () { pet.justDragged = false; }, 80);
+      var vw = window.innerWidth, vh = window.innerHeight;
+      pet.mode = 'drop';
+      pet.dropX = Math.max(-20, Math.min(vw - PW + 20, pet.x));
+      pet.dropY = Math.max(70, Math.min(vh - PW - 20, pet.y));
+      pet.dropUntil = performance.now() + 3200;
+      anim('jump'); burst(['✨', '💚', '🌸']);
+      mikaSay(pick(['Wouaaah ! Ça tourne ! 🎢', 'Hihi, une balade en l’air ! 🌸', 'Posé ! Merci pour le tour 💚', 'Encore, encore ! …ok non, je suis étourdi 🥴']), false, 'happy');
+      pet.mode = 'drop';
+    }
+    A.addEventListener('pointerup', end);
+    A.addEventListener('pointercancel', end);
+  })();
+  if (reduceMotion) { requestAnimationFrame(petLoop); } else requestAnimationFrame(petLoop);
 
   /* ---------- Voix de Mika (facultative, coupée par défaut) ----------
      Deux voix : une vraie voix neuronale mignonne si le serveur en a une (clé OPENAI_API_KEY), sinon
