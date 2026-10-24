@@ -131,7 +131,7 @@ async function generate(r) {
     const req = {
       system: SYSTEM,
       messages: [{ role: 'user', content: JSON.stringify({ date: frenchDate(), lieu: placeName(r), actualite: feeds }) }],
-      maxTokens: 2500,
+      maxTokens: 4000,
       timeoutMs: 45000
     };
     let text = '';

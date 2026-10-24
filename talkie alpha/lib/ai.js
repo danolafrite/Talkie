@@ -5,6 +5,7 @@ const KEY = process.env.ANTHROPIC_API_KEY || '';
 const MODEL = process.env.AI_MODEL || 'claude-haiku-5-5';
 const DAILY_CAP = parseInt(process.env.AI_DAILY_CAP, 10) || 1000;
 
+let thinkingOff = process.env.AI_THINKING_OFF !== '0';
 let day = '';
 let used = 0;
 function budgetLeft() {
@@ -36,12 +37,15 @@ async function complete(opts) {
   const ctrl = new AbortController();
   const timer = setTimeout(() => ctrl.abort(), timeoutMs || 20000);
   try {
-    const r = await fetch(BASE + '/v1/messages', {
+    const send = (withThinkingOff) => fetch(BASE + '/v1/messages', {
       method: 'POST',
       signal: ctrl.signal,
       headers: { 'content-type': 'application/json', 'x-api-key': KEY, 'anthropic-version': '2023-06-01' },
-      body: JSON.stringify(Object.assign({ model: MODEL, max_tokens: maxTokens || 220, system, messages }, tools ? { tools } : {}))
+      body: JSON.stringify(Object.assign({ model: MODEL, max_tokens: maxTokens || 220, system, messages }, tools ? { tools } : {}, withThinkingOff ? { thinking: { type: 'disabled' } } : {}))
     });
+    // Ces tâches courtes n'ont pas besoin de « réfléchir » : sinon le modèle peut épuiser sa réponse en réflexion.
+    let r = await send(thinkingOff);
+    if (r.status === 400 && thinkingOff) { thinkingOff = false; r = await send(false); }
     if (!r.ok) throw new Error('API ' + r.status);
     const j = await r.json();
     const out = (j.content || []).filter((b) => b.type === 'text').map((b) => b.text).join('').trim();
