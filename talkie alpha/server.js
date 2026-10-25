@@ -31,6 +31,7 @@ const mod = require('./lib/moderation');
 const trends = require('./lib/trends');
 const mika = require('./lib/mika');
 const companion = require('./lib/companion');
+const bobby = require('./lib/bobby');
 const branches = require('./lib/branches');
 const stats = require('./lib/stats').create(DATA_DIR);
 const ADMIN_KEY = process.env.ADMIN_KEY || '';
@@ -467,6 +468,34 @@ async function mentionTurn(room, c, ws) {
   }
 }
 
+
+/* ---------- La Place : monde 3D partagé. Positions et emotes seulement (aucun texte libre → rien à modérer). ---------- */
+const PLAZA_MAX = 12;
+const PLAZA_EMOTES = ['wave', 'heart', 'happy', 'dance', 'wow'];
+const plazas = []; // chaque shard : Map ws -> {pid,nick,av,x,z}
+function plazaOf(ws) { return plazas.find((sh) => sh.has(ws)); }
+function plazaSend(sh, from, obj) {
+  const f = sh.get(from);
+  sh.forEach((_m, w) => { const c = clients.get(w); if (w === from || (c && f && blockedEitherWay(c.pid, f.pid))) return; send(w, obj); });
+}
+function plazaLeave(ws) {
+  const sh = plazaOf(ws); if (!sh) return;
+  const m = sh.get(ws); sh.delete(ws);
+  if (m) sh.forEach((_x, w) => send(w, { t: 'pl', pid: m.pid }));
+  const i = plazas.indexOf(sh); if (!sh.size && i >= 0) plazas.splice(i, 1);
+}
+function plazaJoin(ws, c) {
+  if (plazaOf(ws)) return;
+  let sh = plazas.find((x) => x.size < PLAZA_MAX);
+  if (!sh) { sh = new Map(); plazas.push(sh); }
+  const me = { pid: c.pid, nick: c.nick, av: c.av || '', x: (Math.random() - 0.5) * 3, z: 1.5 + Math.random() * 2, last: 0, lastE: 0 };
+  const list = [];
+  sh.forEach((m, w) => { const oc = clients.get(w); if (oc && !blockedEitherWay(oc.pid, c.pid)) list.push({ pid: m.pid, nick: m.nick, av: m.av, x: m.x, z: m.z }); });
+  sh.set(ws, me);
+  send(ws, { t: 'plaza', me: { pid: me.pid, x: me.x, z: me.z }, list });
+  plazaSend(sh, ws, { t: 'pj', p: { pid: me.pid, nick: me.nick, av: me.av, x: me.x, z: me.z } });
+}
+
 function handle(ws, msg) {
   const c = clients.get(ws);
   if (!c || !msg || typeof msg.t !== 'string') return;
@@ -496,6 +525,31 @@ function handle(ws, msg) {
   if (!c.cid) return;
 
   switch (msg.t) {
+    case 'plaza': {
+      if (!msg.on) { plazaLeave(ws); return; }
+      if (!c.adult) { send(ws, { t: 'error', code: 'adult', text: 'Talkie est réservé aux personnes majeures (18 ans et plus).' }); return; }
+      plazaJoin(ws, c);
+      return;
+    }
+    case 'wpos': {
+      const sh = plazaOf(ws); if (!sh) return;
+      const m = sh.get(ws), now = Date.now();
+      if (now - m.last < 90) return;
+      m.last = now;
+      const x = Number(msg.x), z = Number(msg.z);
+      if (!isFinite(x) || !isFinite(z)) return;
+      m.x = Math.max(-5.2, Math.min(5.2, x)); m.z = Math.max(-3.2, Math.min(4.2, z));
+      plazaSend(sh, ws, { t: 'pm', pid: m.pid, x: m.x, z: m.z });
+      return;
+    }
+    case 'emote': {
+      const sh = plazaOf(ws); if (!sh) return;
+      const m = sh.get(ws), now = Date.now();
+      if (now - m.lastE < 900 || PLAZA_EMOTES.indexOf(msg.k) < 0) return;
+      m.lastE = now;
+      plazaSend(sh, ws, { t: 'pe', pid: m.pid, k: msg.k });
+      return;
+    }
     case 'nick': {
       const n = clean(msg.nick, 20);
       if (!n) return;
@@ -660,6 +714,7 @@ function handle(ws, msg) {
 }
 
 function onClose(ws) {
+  plazaLeave(ws);
   const c = clients.get(ws);
   clients.delete(ws);
   if (!c || !c.cid) return;
@@ -810,6 +865,23 @@ const server = http.createServer(async (req, res) => {
       if (!ai.enabled()) { json(res, 200, companion.fallback(body)); return; }
       try { json(res, 200, await companion.turn(body)); }
       catch (e) { console.warn('[talkie] compagnon indisponible :', e.message); json(res, 200, companion.fallback(body)); }
+    } catch (e) { json(res, 400, { error: 'requête invalide' }); }
+    return;
+  }
+  if (url.pathname === '/api/bobby' && req.method === 'POST') {
+    const ip = String(req.headers['x-forwarded-for'] || req.socket.remoteAddress || '').split(',')[0].trim();
+    try {
+      if (!rateOk('bob:' + ip, 30, 60000)) { json(res, 429, { error: 'trop vite' }); return; }
+      const body = JSON.parse((await readBody(req, 12000)) || '{}');
+      const last = Array.isArray(body.messages) && body.messages.length ? body.messages[body.messages.length - 1] : null;
+      if (body.kind !== 'start' && last && last.r === 'u') {
+        const a = mod.analyse(last.t);
+        if (a.level === 'care') { json(res, 200, Object.assign(bobby.blocked(body, mika.CARE_TEXT), { care: true, e: 'worried' })); return; }
+        if (a.level === 'block' || (a.level === 'suspect' && a.hard)) { json(res, 200, bobby.blocked(body, a.msg)); return; }
+      }
+      if (!ai.enabled()) { json(res, 200, bobby.fallback(body)); return; }
+      try { json(res, 200, await bobby.turn(body)); }
+      catch (e) { console.warn('[talkie] Bobby indisponible :', e.message); json(res, 200, bobby.fallback(body)); }
     } catch (e) { json(res, 400, { error: 'requête invalide' }); }
     return;
   }

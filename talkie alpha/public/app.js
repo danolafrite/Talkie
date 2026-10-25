@@ -141,9 +141,11 @@
   }
 
   function onMessage(m) {
+    if (m.t === 'plaza' || m.t === 'pj' || m.t === 'pl' || m.t === 'pm' || m.t === 'pe') { plazaMsg(m); return; }
     switch (m.t) {
       case 'welcome':
         myPid = m.pid;
+        if (plazaScene) { plazaMe = null; send({ t: 'plaza', on: true }); }
         aiOn = !!m.ai;
         gifOn = !!m.gif;
         applyFlags();
@@ -158,6 +160,7 @@
         renderLobby();
         break;
       case 'joined':
+        progressQuest('salon'); bump('s', 5);
         room = m.room;
         typingOn = false;
         showConv();
@@ -172,6 +175,7 @@
       case 'typing': setTyping(!!m.on); break;
       case 'sys': addSys(m.text); sfx.join(); break;
       case 'left':
+        destroyStage3d();
         stopSpeaking();
         room = null;
         typingOn = false;
@@ -236,18 +240,29 @@
 
   /* ---------- Mika (dessin kawaii) ---------- */
   var WARD = [
-    { id: 'scarf', label: 'Écharpe', need: 3 }, { id: 'bow', label: 'Nœud', need: 6 }, { id: 'crown', label: 'Couronne', need: 12 },
-    { id: 'glasses', label: 'Lunettes', premium: '1,49 €' }, { id: 'hat', label: 'Sorcier', premium: '1,99 €' },
-    { id: 'wings', label: 'Ailes', premium: '2,49 €' }, { id: 'pj', label: 'Bonnet dodo', premium: '1,49 €' }
+    { id: 'scarf', label: 'Écharpe', need: 3, price: 30 }, { id: 'bow', label: 'Nœud', need: 6, price: 50 }, { id: 'glasses', label: 'Lunettes', price: 80 },
+    { id: 'pj', label: 'Bonnet dodo', price: 100 }, { id: 'crown', label: 'Couronne', need: 12, price: 250 },
+    { id: 'hat', label: 'Sorcier', premium: '1,99 €' }, { id: 'wings', label: 'Ailes', premium: '2,49 €' }
   ];
+  var HEAD = ['crown', 'hat', 'pj'];
+  var DECOR = [{ id: 'plushbear', label: 'Ours en peluche', e: '🧸', price: 60 }, { id: 'neon', label: 'Néon cœur', e: '💗', price: 120 }];
   var equip = (function () { try { var e = JSON.parse(store('talkie.equip') || 'null'); if (Array.isArray(e)) return e.slice(0, 8); } catch (er) { /* ignore */ } return null; })();
-  function unlocked(w) { return !w.premium && ((mem && mem.visits) || 0) >= w.need; }
+  var game = (function () {
+    var g = { petals: 0, q: { d: '', ids: [], done: [] }, owned: [], decorOwn: [], decorOn: [], bown: [], bobOn: [] };
+    try {
+      var j = JSON.parse(store('talkie.game') || '{}');
+      g.petals = Math.max(0, Number(j.petals) || 0);
+      if (j.q && typeof j.q.d === 'string') g.q = { d: j.q.d, ids: Array.isArray(j.q.ids) ? j.q.ids.slice(0, 5) : [], done: Array.isArray(j.q.done) ? j.q.done.slice(0, 5) : [] };
+      ['owned', 'decorOwn', 'decorOn', 'bown', 'bobOn'].forEach(function (k) { if (Array.isArray(j[k])) g[k] = j[k].filter(function (x) { return typeof x === 'string'; }).slice(0, 20); });
+    } catch (er) { /* ignore */ }
+    return g;
+  })();
+  function saveGame() { store('talkie.game', JSON.stringify(game)); }
+  function unlocked(w) { return !w.premium && (game.owned.indexOf(w.id) >= 0 || (w.need && ((mem && mem.visits) || 0) >= w.need)); }
+  function accList() { return WARD.filter(function (w) { return unlocked(w) && (equip ? equip.indexOf(w.id) >= 0 : true); }).map(function (w) { return w.id; }); }
   function accClasses(force) {
-    var out = '';
-    WARD.forEach(function (w) {
-      var on = force ? force === w.id : (equip ? equip.indexOf(w.id) >= 0 && unlocked(w) : unlocked(w));
-      if (on) out += ' has-' + w.id;
-    });
+    var list = force ? [force] : accList(), out = '';
+    list.forEach(function (id) { out += ' has-' + id; });
     return out;
   }
   function mikaSvg(force) {
@@ -1250,6 +1265,7 @@
   }
 
   function showLobby() {
+    destroyStage3d();
     closePanel();
     closeSheets();
     $('conv').hidden = true;
@@ -1728,7 +1744,7 @@
   }
 
   /* ---------- Feuilles ---------- */
-  function closeSheets() { $('sheet-safety').hidden = true; $('sheet-leave').hidden = true; $('sheet-mika').hidden = true; $('sheet-place').hidden = true; $('sheet-settings').hidden = true; }
+  function closeSheets() { if (typeof closeAvSheet === 'function' && !$('sheet-av').hidden && store('talkie.avset')) closeAvSheet(); $('sheet-safety').hidden = true; $('sheet-leave').hidden = true; $('sheet-mika').hidden = true; $('sheet-place').hidden = true; $('sheet-settings').hidden = true; }
 
   function renderSafety(o) {
     var ul = $('safety-list');
@@ -2006,6 +2022,7 @@
   function defaultAv(seed) { var h = hash(seed); return '' + (h % 8) + (Math.floor(h / 8) % 4) + (Math.floor(h / 32) % 3) + (Math.floor(h / 96) % 5); }
   function avatarSvg(code) {
     code = /^[0-7][0-3][0-2][0-4]$/.test(code || '') ? code : defaultAv(code || 'x');
+    if (m3d && window.Mika3DMod) { var u = Mika3DMod.avatarPng(code); if (u) return '<img alt="" src="' + u + '">'; }
     var c = AV_COLORS[+code[0]], ear = +code[1], face = +code[2], acc = +code[3];
     var ink = '#2A1B5E', g = '';
     if (ear === 0) g += '<path d="M12 36 L14 8 L32 22Z" fill="' + c + '"/><path d="M68 36 L66 8 L48 22Z" fill="' + c + '"/><path d="M16 28 L17 15 L26 22Z" fill="#FFB3D1"/><path d="M64 28 L63 15 L54 22Z" fill="#FFB3D1"/>';
@@ -2026,37 +2043,54 @@
   }
   var myAv = (function () { var v = store('talkie.av'); return /^[0-7][0-3][0-2][0-4]$/.test(v || '') ? v : defaultAv(cid); })();
   var avDraft = myAv;
-  function renderAvEditor() {
-    $('avprev').innerHTML = avatarSvg(avDraft);
+  var avPrev = null;
+  function renderAvEditor(changed) {
+    if (avPrev) { if (changed) avPrev.rebuild(); } else $('avprev').innerHTML = avatarSvg(avDraft);
     function row(id, labels, idx, swatch) {
       var box = $(id); box.textContent = '';
       labels.forEach(function (l, i) {
         var b = el('button', (swatch ? 'sw ' : '') + (+avDraft[idx] === i ? 'on' : ''), swatch ? '' : l);
         b.type = 'button';
         if (swatch) { b.style.background = l; b.setAttribute('aria-label', 'Couleur ' + (i + 1)); }
-        b.addEventListener('click', function () { var a = avDraft.split(''); a[idx] = String(i); avDraft = a.join(''); renderAvEditor(); });
+        b.addEventListener('click', function () { var a = avDraft.split(''); a[idx] = String(i); avDraft = a.join(''); renderAvEditor(true); });
         box.appendChild(b);
       });
     }
     row('av-colors', AV_COLORS, 0, true); row('av-ears', AV_EARS, 1); row('av-face', AV_FACE, 2); row('av-acc', AV_ACC, 3);
   }
-  function openAvEditor() { closeSheets(); avDraft = myAv; renderAvEditor(); $('sheet-av').hidden = false; }
+  function closeAvSheet() { if (avPrev) { avPrev.destroy(); avPrev = null; } $('avprev').classList.remove('is3d'); $('avprev').textContent = ''; $('sheet-av').hidden = true; }
+  function openAvEditor() {
+    closeSheets(); avDraft = myAv; $('sheet-av').hidden = false;
+    $('av-name').value = store('talkie.avset') ? nick : ''; $('sheet-av-h').textContent = store('talkie.avset') ? 'Le look de ton Mika' : 'Crée ton Mika'; $('av-intro').hidden = !!store('talkie.avset');
+    if (m3d && window.Mika3DMod && Mika3DMod.initPreview) {
+      $('avprev').classList.add('is3d'); $('avprev').textContent = '';
+      avPrev = Mika3DMod.initPreview($('avprev'), function () { return Mika3DMod.avatarOpts(avDraft); });
+      if (!avPrev) $('avprev').classList.remove('is3d');
+    }
+    renderAvEditor(false);
+  }
   function saveAv() {
+    var first = !store('talkie.avset');
+    var nm = clean($('av-name').value, 20);
+    if (first && !nm) { toast('Donne-lui un prénom pour continuer 💚'); $('av-name').focus(); return; }
     myAv = avDraft; store('talkie.av', myAv); store('talkie.avset', '1');
+    if (nm) { nick = nm; store('tablee.nick', nick); $('nick').value = nick; }
     send({ t: 'nick', nick: nick, av: myAv });
-    $('sheet-av').hidden = true; renderMoi(); toast('Avatar enregistré ✨');
+    closeAvSheet(); renderMoi();
+    if (m3d) { m3d.setLook(Mika3DMod.avatarOpts(myAv)); m3d.emit('heart', 8); }
+    if (first) { toast('Bienvenue, ' + nick + ' ! 💚'); setTab('chambre'); cmpOpen(); } else toast('Mika a changé de look ✨');
   }
   $('btn-edit-av').addEventListener('click', openAvEditor);
   $('me-av').addEventListener('click', openAvEditor);
   $('av-save').addEventListener('click', saveAv);
-  $('av-rand').addEventListener('click', function () { avDraft = '' + Math.floor(Math.random() * 8) + Math.floor(Math.random() * 4) + Math.floor(Math.random() * 3) + Math.floor(Math.random() * 5); renderAvEditor(); });
-  $('sheet-av').addEventListener('click', function (ev) { if (ev.target === $('sheet-av')) $('sheet-av').hidden = true; });
+  $('av-rand').addEventListener('click', function () { avDraft = '' + Math.floor(Math.random() * 8) + Math.floor(Math.random() * 4) + Math.floor(Math.random() * 3) + Math.floor(Math.random() * 5); renderAvEditor(true); });
+  $('sheet-av').addEventListener('click', function (ev) { if (ev.target === $('sheet-av') && store('talkie.avset')) closeAvSheet(); });
 
   /* ---------- Onglets ---------- */
   var curTab = 'chambre';
   function setTab(name) {
     curTab = name;
-    ['chambre', 'salon', 'moi'].forEach(function (t) {
+    ['chambre', 'salon', 'bobby', 'boutique', 'moi'].forEach(function (t) {
       $('pane-' + t).hidden = t !== name;
       document.body.classList.toggle('tab-' + t, t === name);
     });
@@ -2065,6 +2099,9 @@
     });
     updateFab();
     if (name === 'moi') renderMoi();
+    if (name === 'boutique') openShop(); else closeShopPreview();
+    if (name === 'bobby') openBobby(); else closeBobby();
+    if (name === 'salon') openPlaza(); else closePlaza();
     if (name === 'chambre' && !cmpOpened) cmpOpen();
     window.scrollTo(0, 0);
   }
@@ -2131,9 +2168,13 @@
     return {
       kind: kind, name: nick, hour: new Date().getHours(), day: new Date().toLocaleDateString('fr-FR', { weekday: 'long' }),
       awayH: kind === 'open' ? last : null, visits: mem.visits, streak: mem.streak, bond: cmp.bond,
-      moods: cmp.moods.slice(-5).map(function (x) { return x.m; }), facts: cmp.facts, follow: cmp.follow,
+      moods: cmp.moods.slice(-5).map(function (x) { return x.m; }), facts: cmp.facts, follow: cmp.follow, quests: questSummary(), pet: nick, needs: needsText(),
       messages: cmp.thread.slice(-12).map(function (x) { return { r: x.r, t: x.t }; })
     };
+  }
+  function questSummary() {
+    ensureQuests();
+    return game.q.done.length + '/' + game.q.ids.length + ' faites' + (game.q.done.length ? ' (' + game.q.done.map(function (i) { return QPOOL[i] ? QPOOL[i].t : ''; }).join(' ; ') + ')' : '') + '. Programme du jour : ' + game.q.ids.map(function (i) { return QPOOL[i] ? QPOOL[i].t : ''; }).join(' ; ');
   }
   function think(on) {
     var b = $('mika-say');
@@ -2185,20 +2226,21 @@
     bumpIdle();
   }
   function cmpOpen() {
+    if (!store('talkie.avset')) return;
     cmpOpened = true;
+    renderQuests(); renderNeeds();
     $('thread').textContent = '';
     pendingM = '';
     cmp.thread.slice(-6).forEach(function (x) { $('thread').appendChild(el('div', 'tmsg ' + x.r, x.t)); });
     $('thread').scrollTop = $('thread').scrollHeight;
     renderBond();
-    if (!store('talkie.avset')) setTimeout(function () { if (curTab === 'chambre') { var q = $('mika-qr'); var b = el('button', null, '🎨 Crée ton avatar'); b.type = 'button'; b.addEventListener('click', openAvEditor); q.appendChild(b); } }, 6000);
     setTimeout(function () { if (!reduceMotion) { mood('love', 1600); anim('jump'); } callCompanion('open'); }, reduceMotion ? 0 : 700);
   }
   function cmpSend(text) {
     text = clean(text, 400);
     if (!text || cmpBusy) return;
     lastUserAt = Date.now();
-    dir.engaged = true; cmpNudges = 0;
+    dir.engaged = true; cmpNudges = 0; bump('s', 2);
     addThread('u', text);
     cmp.bond++;
     saveCmp();
@@ -2218,6 +2260,7 @@
     b.addEventListener('click', function () {
       var m = Number(b.getAttribute('data-m'));
       recordMood(m);
+      completeQuest('mood');
       $('mood-row').hidden = true;
       addThread('u', b.textContent + ' ' + ['Au plus bas', 'Bof', 'Bof, ça va', 'Plutôt bien', 'Au top'][m - 1]);
       cmp.bond++; saveCmp();
@@ -2231,6 +2274,500 @@
     if (cmpNudges >= 2 || !cmpOpened || !cmp.thread.length || cmp.thread[cmp.thread.length - 1].r !== 'm') return;
     cmpNudges++;
     callCompanion('nudge');
+  }
+
+
+  /* ---------- Quêtes du jour, pétales, boutique (la boucle à la Finch) ---------- */
+  var QPOOL = {
+    mood: { t: 'Dire à ton Mika comment tu te sens', e: '🫶', auto: true }, salon: { t: 'Retrouver du monde dans le Monde', e: '🌍', auto: true },
+    feed: { t: 'Nourrir ton Mika', e: '🍙', need: 2 }, nap: { t: 'Lui faire faire une sieste', e: '😴' }, hug: { t: 'Lui faire un câlin', e: '🤗' },
+    play: { t: 'Jouer ensemble', e: '🎈' }, wave: { t: 'Dire coucou à quelqu’un', e: '👋', auto: true }, bobby: { t: 'Papoter avec Professeur Bobby', e: '🎓', auto: true }
+  };
+  function ensureQuests() {
+    var d = todayKey();
+    if (game.q.d === d && game.q.ids.length) return;
+    var pool = ['feed', 'nap', 'hug', 'play', 'salon', 'wave', 'bobby'], h = hash(d + cid), ids = ['mood'];
+    var i = h % pool.length; ids.push(pool[i]);
+    var j = (h >> 3) % (pool.length - 1); if (j >= i) j++; ids.push(pool[j]);
+    game.q = { d: d, ids: ids, done: [], prog: {} };
+    saveGame();
+  }
+  function renderPetals() { ['petals', 'petals2', 'petals3'].forEach(function (k) { if ($(k)) $(k).textContent = String(game.petals); }); }
+  function renderQuests() {
+    ensureQuests();
+    var box = $('quests'); box.textContent = '';
+    var n = game.q.done.length, tot = game.q.ids.length;
+    var h = el('div', 'qh'); h.appendChild(el('span', null, n >= tot ? 'Journée complète, bravo ! 🎉' : 'Aujourd’hui avec ton Mika'));
+    h.appendChild(el('b', null, n + '/' + tot)); box.appendChild(h);
+    var bar = el('div', 'qb'); var bi = el('i'); bi.style.width = Math.round(n / tot * 100) + '%'; bar.appendChild(bi); box.appendChild(bar);
+    game.q.ids.forEach(function (id) {
+      var q = QPOOL[id]; if (!q) return;
+      var done = game.q.done.indexOf(id) >= 0, pr = (game.q.prog && game.q.prog[id]) || 0;
+      var b = el('button', 'q' + (done ? ' done' : '') + (q.auto ? ' auto' : '')); b.type = 'button';
+      b.appendChild(el('span', 'ck', done ? '✓' : ''));
+      b.appendChild(el('span', 'tx', q.e + ' ' + q.t + (q.need && !done ? ' (' + pr + '/' + q.need + ')' : '')));
+      b.appendChild(el('span', 'rw', '+10 🌸'));
+      b.addEventListener('click', function () {
+        if (done) return;
+        if (id === 'mood') { mikaSay('Choisis un visage juste en dessous, je veux savoir comment tu vas 🫶', false, 'happy'); if (!moodToday()) $('mood-row').hidden = false; return; }
+        if (id === 'salon' || id === 'wave') { mikaSay('Va faire un tour dans le Monde : mes copains mochis t’y attendent 🌍', false, 'happy'); return; }
+        if (id === 'bobby') { setTab('bobby'); return; }
+        var act = { feed: openFood, nap: doNap, hug: doHug, play: doPlay }[id]; if (act) act();
+      });
+      box.appendChild(b);
+    });
+    renderPetals();
+  }
+  function earn(n) { game.petals += n; saveGame(); renderPetals(); }
+  var CHEERS = ['Yesss, bravo toi ! Je suis trop fier·ère 🥹', 'Kyaa ! Un pas de plus vers une belle journée ✨', 'Tu gères ! Tiens, des pétales pour toi 🌸', 'Hwaiting ! Ça, c’est du soin 💚'];
+  function progressQuest(id) {
+    ensureQuests();
+    if (game.q.ids.indexOf(id) < 0 || game.q.done.indexOf(id) >= 0) return;
+    game.q.prog = game.q.prog || {};
+    game.q.prog[id] = (game.q.prog[id] || 0) + 1;
+    if (game.q.prog[id] < (QPOOL[id].need || 1)) { saveGame(); renderQuests(); return; }
+    completeQuest(id);
+  }
+  function completeQuest(id) {
+    ensureQuests();
+    if (game.q.ids.indexOf(id) < 0 || game.q.done.indexOf(id) >= 0) return;
+    game.q.done.push(id);
+    earn(10);
+    var all = game.q.done.length >= game.q.ids.length;
+    if (all) earn(15);
+    saveGame(); renderQuests();
+    toast(all ? '+25 🌸 Journée complète !' : '+10 🌸');
+    if (curTab === 'chambre' && !cmpBusy && id !== 'mood') {
+      setTimeout(function () {
+        if (cmpBusy) return;
+        feel(all ? 'proud' : 'cheer');
+        mikaSay(all ? 'Trois sur trois ! Je suis tellement fier·ère de nous 🥹 Voilà un bonus de pétales !' : pick(CHEERS), false, false);
+        if (m3d) m3d.emit('heart', 5);
+      }, 2200);
+    }
+  }
+
+  /* ---------- Soins : faim, énergie, compagnie (jamais punitifs : une jauge basse, c'est juste un câlin à demander) ---------- */
+  var care = (function () {
+    var c = { h: 70, e: 80, s: 60, t: Date.now() };
+    try { var j = JSON.parse(store('talkie.care') || '{}'); ['h', 'e', 's'].forEach(function (k) { if (isFinite(j[k])) c[k] = Math.max(0, Math.min(100, Number(j[k]))); }); if (j.t > 0) c.t = Number(j.t); } catch (e) { /* ignore */ }
+    return c;
+  })();
+  function decayCare() {
+    var now = Date.now(), hrs = Math.max(0, Math.min(48, (now - care.t) / 3600000));
+    care.t = now;
+    care.h = Math.max(12, care.h - 5 * hrs); care.e = Math.max(12, care.e - 3 * hrs); care.s = Math.max(12, care.s - 4 * hrs);
+    store('talkie.care', JSON.stringify(care));
+  }
+  function bump(k, n) { decayCare(); care[k] = Math.max(0, Math.min(100, care[k] + n)); store('talkie.care', JSON.stringify(care)); renderNeeds(); }
+  function renderNeeds() {
+    var box = $('needs'); box.textContent = '';
+    [['h', '🍙', 'Faim'], ['e', '⚡', 'Énergie'], ['s', '💞', 'Compagnie']].forEach(function (x) {
+      var d = el('div', 'nd' + (care[x[0]] < 30 ? ' low' : '')); d.title = x[2] + ' : ' + Math.round(care[x[0]]) + '%';
+      d.appendChild(el('span', null, x[1]));
+      var bar = el('i'); var b = el('b'); b.style.width = Math.round(care[x[0]]) + '%'; bar.appendChild(b); d.appendChild(bar);
+      box.appendChild(d);
+    });
+  }
+  function needsText() { return 'faim ' + Math.round(care.h) + '%, énergie ' + Math.round(care.e) + '%, compagnie ' + Math.round(care.s) + '%'; }
+  var FOODS = [
+    { id: 'onigiri', e: '🍙', t: 'Onigiri', d: 'Le classique, toujours gratuit', price: 0, gain: 25 },
+    { id: 'mochi', e: '🍡', t: 'Mochi', d: 'Petit et moelleux', price: 10, gain: 22 },
+    { id: 'dango', e: '🍢', t: 'Dango', d: 'Trois boules sucrées', price: 15, gain: 30 },
+    { id: 'boba', e: '🧋', t: 'Bubble tea', d: 'Il adore ça', price: 25, gain: 35 },
+    { id: 'ramen', e: '🍜', t: 'Ramen', d: 'Le repas qui réchauffe', price: 40, gain: 45 }
+  ];
+  var careBusy = false;
+  function setCareBusy(on) { careBusy = on; Array.prototype.forEach.call(document.querySelectorAll('#care button'), function (b) { b.disabled = on; }); }
+  function openFood() {
+    if (careBusy) return;
+    var box = $('foods'); box.textContent = '';
+    FOODS.forEach(function (f) {
+      var b = el('button', 'food'); b.type = 'button';
+      b.appendChild(el('span', 'fe', f.e));
+      var t = el('span', 'ft', f.t); t.appendChild(el('small', null, f.d)); b.appendChild(t);
+      b.appendChild(el('span', 'fp', f.price ? '🌸 ' + f.price : 'Gratuit'));
+      b.addEventListener('click', function () { feed(f); });
+      box.appendChild(b);
+    });
+    $('sheet-food').hidden = false;
+  }
+  function feed(f) {
+    decayCare();
+    if (care.h >= 96) { $('sheet-food').hidden = true; mikaSay('Je suis tout rond, je n’ai plus de place ! 🥹 Merci, c’est adorable.', false, 'shy'); return; }
+    if (game.petals < f.price) { toast('Il te manque ' + (f.price - game.petals) + ' 🌸 : l’onigiri est gratuit !'); return; }
+    $('sheet-food').hidden = true;
+    game.petals -= f.price; saveGame(); renderPetals();
+    bump('h', f.gain);
+    setCareBusy(true);
+    if (m3d) m3d.act('eat'); else { mood('happy', 2500); anim('jump'); }
+    mikaSay(pick(['Miam miam ! ' + f.e + ' Merci, c’est délicieux 🥹', 'Itadakimasu ! ' + f.e + ' Oh que c’est bon…', 'Hmmm ' + f.e + ' tu prends tellement soin de moi 💚']), true, false);
+    progressQuest('feed');
+    setTimeout(function () { setCareBusy(false); }, m3d ? 2900 : 1500);
+  }
+  function doNap() {
+    decayCare();
+    if (careBusy) return;
+    if (care.e >= 88) { mikaSay('Je suis en pleine forme, regarde ! ✨ Mais merci d’y penser 💚', false, 'happy'); return; }
+    setCareBusy(true);
+    mikaSay('Oh oui, une petite sieste… Bonne nuit, ou presque 😴', true, 'sleep');
+    var done = function () { bump('e', 45); setCareBusy(false); progressQuest('nap'); mood('happy', 3000); mikaSay(pick(['Ahhh, ça fait un bien fou ! 😴➡️✨ Merci de m’avoir laissé dormir.', 'J’ai rêvé de frites géantes… et de toi 🍟💚']), false, false); };
+    if (m3d) { napDone = done; m3d.act('nap', 7000); setTimeout(function () { if (napDone === done) { napDone = null; done(); } }, 16000); } else setTimeout(done, 3000);
+  }
+  var napDone = null;
+  var hugAt = 0;
+  function doHug() {
+    if (careBusy || Date.now() - hugAt < 2500) return;
+    hugAt = Date.now();
+    bump('s', 7);
+    if (m3d) m3d.act('hug'); else { mood('love', 2500); anim('jump'); burst(['💖', '💚']); }
+    mikaSay(pick(['Câlin ! 🤗 Je me sens tout chaud…', 'Kyaaa, encore, encore ! 🥹', 'Tu es mon humain préféré 💚']), false, false);
+    progressQuest('hug');
+  }
+  function doPlay() {
+    decayCare();
+    if (careBusy) return;
+    if (care.e < 20) { mikaSay('Je suis trop fatigué pour jouer… une sieste d’abord ? 😪', false, 'sleep'); return; }
+    bump('e', -10); bump('h', -6); bump('s', 4);
+    setCareBusy(true);
+    if (m3d) m3d.act('play'); else { mood('happy', 3000); anim('jump'); }
+    mikaSay(pick(['Youhouuu ! 🎈 On s’amuse trop !', 'Attrape-moi si tu peux ! ✨', 'Hihihi, je tourbillonne ! 🌀']), true, false);
+    earn(2); progressQuest('play');
+    setTimeout(function () { setCareBusy(false); }, 3600);
+  }
+  Array.prototype.forEach.call(document.querySelectorAll('#care button'), function (b) {
+    b.addEventListener('click', function () { dir.engaged = true; bumpIdle(); ({ feed: openFood, nap: doNap, hug: doHug, play: doPlay })[b.getAttribute('data-act')](); });
+  });
+  $('food-close').addEventListener('click', function () { $('sheet-food').hidden = true; });
+  $('sheet-food').addEventListener('click', function (ev) { if (ev.target === $('sheet-food')) $('sheet-food').hidden = true; });
+  var lastSelfTalk = Date.now();
+  function selfTalk() {
+    decayCare(); renderNeeds();
+    if (curTab !== 'chambre' || room || document.hidden || cmpBusy || careBusy || asleep() || Date.now() - lastSelfTalk < 90000 || Date.now() - lastUserAt < 20000) return;
+    var k = care.h < 30 ? 'h' : care.e < 25 ? 'e' : care.s < 25 ? 's' : null;
+    if (!k) return;
+    lastSelfTalk = Date.now();
+    if (k === 'h') { if (m3d) m3d.act('rumble'); mikaSay('Gloup… mon ventre fait des bruits de frites 🍟 Tu aurais un petit quelque chose ?', false, 'worry'); setQr([['🍙 Nourrir', openFood, 'yes']]); }
+    else if (k === 'e') { mikaSay('*bâille* Je commence à avoir les yeux qui piquent… 😪', false, 'sleep'); setQr([['😴 Sieste', doNap, 'yes']]); }
+    else { mikaSay('Je me sens un peu seul… et si on allait voir du monde ? 💞', false, 'sad'); setQr([['🌍 Aller au Monde', function () { setTab('salon'); }, 'yes'], ['🤗 Câlin', doHug]]); }
+  }
+  setInterval(selfTalk, 30000);
+  setInterval(function () { decayCare(); renderNeeds(); }, 60000);
+
+  /* ---------- Boutique : tenues, maison, premium (maquette) ---------- */
+  var shopSeg = 'outfit', shopSel = null, shopPrev = null;
+  function shopLook() {
+    var o = Mika3DMod.avatarOpts(myAv), list = accList().slice();
+    if (shopSel && shopSel.kind === 'outfit') { if (HEAD.indexOf(shopSel.id) >= 0) list = list.filter(function (x) { return HEAD.indexOf(x) < 0; }); if (list.indexOf(shopSel.id) < 0) list.push(shopSel.id); }
+    o.acc = list; return o;
+  }
+  function openShop() {
+    renderShop();
+    if (m3d && window.Mika3DMod && Mika3DMod.initPreview && !shopPrev) {
+      $('shop-prev').textContent = '';
+      shopPrev = Mika3DMod.initPreview($('shop-prev'), shopLook);
+    }
+  }
+  function closeShopPreview() { if (shopPrev) { shopPrev.destroy(); shopPrev = null; } }
+  function items() {
+    if (shopSeg === 'outfit') return WARD.filter(function (w) { return !w.premium; }).map(function (w) { return { kind: 'outfit', id: w.id, label: w.label, price: w.price, need: w.need, own: unlocked(w), on: unlocked(w) && accList().indexOf(w.id) >= 0 }; });
+    if (shopSeg === 'decor') return DECOR.map(function (d) { return { kind: 'decor', id: d.id, label: d.label, e: d.e, price: d.price, own: game.decorOwn.indexOf(d.id) >= 0, on: game.decorOn.indexOf(d.id) >= 0 }; });
+    if (shopSeg === 'bobby') return BFEATS.map(function (f) { return { kind: 'bfeat', id: f.id, label: f.label, e: f.e, price: f.price, d: f.d, own: bHas(f.id), on: false }; })
+      .concat(BOUT.map(function (f) { return { kind: 'bout', id: f.id, label: 'Bobby : ' + f.label, e: f.e, price: f.price, own: bHas(f.id), on: game.bobOn.indexOf(f.id) >= 0 }; }));
+    return WARD.filter(function (w) { return w.premium; }).map(function (w) { return { kind: 'outfit', id: w.id, label: w.label, premium: w.premium, own: false, on: false }; })
+      .concat([{ kind: 'pack', id: 'bobpro', label: 'Bobby Pro', e: '🎓', premium: '4,99 €/mois' }, { kind: 'pack', id: 'sakura', label: 'Pack Sakura', e: '🌸', premium: '3,99 €' }, { kind: 'pack', id: 'pyjama', label: 'Pack Nuit étoilée', e: '🌙', premium: '3,99 €' }]);
+  }
+  function renderShop() {
+    renderPetals();
+    Array.prototype.forEach.call(document.querySelectorAll('#shop-seg button'), function (b) { b.classList.toggle('on', b.getAttribute('data-seg') === shopSeg); });
+    var g = $('shop-grid'); g.textContent = '';
+    g.classList.toggle('decor', shopSeg !== 'outfit');
+    items().forEach(function (it) {
+      var b = el('button', 'ward' + (it.on ? ' on' : '') + (it.own ? '' : ' locked') + (shopSel && shopSel.id === it.id ? ' sel' : '')); b.type = 'button';
+      if (it.kind === 'outfit') {
+        var img = (m3d && window.Mika3DMod) ? Mika3DMod.mikaPng(it.id) : '';
+        if (img) b.innerHTML = '<img alt="" src="' + img + '">'; else b.innerHTML = mikaSvg(it.id).replace('class="mk', 'class="mk mini-m');
+      } else b.appendChild(el('span', 'em', it.e));
+      b.appendChild(el('span', null, it.label));
+      b.appendChild(el('span', 'px', it.premium ? '💎 ' + it.premium : it.own ? (it.on ? 'Actif' : 'Dans l’armoire') : (it.need ? '🌸 ' + it.price + ' · ' + it.need + ' j' : '🌸 ' + it.price)));
+      if (!it.own) b.appendChild(el('span', 'lk', it.premium ? '💎' : '🔒'));
+      b.addEventListener('click', function () { shopSel = it; if (shopPrev && it.kind === 'outfit') shopPrev.rebuild(); renderShop(); });
+      g.appendChild(b);
+    });
+    renderShopAct();
+  }
+  function renderShopAct() {
+    var box = $('shop-act'); box.textContent = '';
+    var it = shopSel;
+    if (!it) { var h = el('div', 'sn', 'Touche un article pour l’essayer'); h.appendChild(el('small', null, 'Ton Mika te montre ce que ça donne.')); box.appendChild(h); return; }
+    var n = el('div', 'sn', it.label); n.appendChild(el('small', null, it.d && !it.own ? it.d + ' · 🌸 ' + it.price : it.premium ? 'Maquette : bientôt disponible' : it.own ? (it.on ? 'Il le porte' : 'Dans ton armoire') : '🌸 ' + it.price)); box.appendChild(n);
+    var b = el('button', 'primary', it.premium ? '💎 Bientôt' : (it.kind === 'bfeat' && it.own) ? 'Ouvrir la classe' : it.own ? (it.on ? (it.kind === 'decor' ? 'Retirer' : 'Retirer') : (it.kind === 'decor' ? 'Poser' : 'Porter')) : 'Acheter'); b.type = 'button';
+    b.addEventListener('click', function () { shopAction(it); });
+    box.appendChild(b);
+  }
+  function shopAction(it) {
+    if (it.premium) { toast('💎 Bientôt disponible !'); return; }
+    if (it.kind === 'bfeat' || it.kind === 'bout') { bobShopAction(it); return; }
+    if (!it.own) {
+      if (it.need && ((mem && mem.visits) || 0) >= it.need) { /* cadeau de fidélité : déjà possédé */ }
+      if (game.petals < it.price) { toast('Il te manque ' + (it.price - game.petals) + ' 🌸 : prends soin de ton Mika pour en gagner !'); return; }
+      game.petals -= it.price;
+      if (it.kind === 'decor') { game.decorOwn.push(it.id); game.decorOn.push(it.id); if (m3d) m3d.setDecor(game.decorOn); }
+      else { game.owned.push(it.id); equip = accList().filter(function (x) { return HEAD.indexOf(it.id) < 0 || HEAD.indexOf(x) < 0; }).concat(it.id); store('talkie.equip', JSON.stringify(equip)); fillMika(); }
+      saveGame(); toast('Acheté ! ' + it.label + ' 🎉'); shopSel = null; if (shopPrev) shopPrev.rebuild(); renderShop(); return;
+    }
+    if (it.kind === 'decor') { var k = game.decorOn.indexOf(it.id); if (k >= 0) game.decorOn.splice(k, 1); else game.decorOn.push(it.id); saveGame(); if (m3d) m3d.setDecor(game.decorOn); }
+    else {
+      var cur = accList().slice(), i2 = cur.indexOf(it.id);
+      if (i2 >= 0) cur.splice(i2, 1); else { if (HEAD.indexOf(it.id) >= 0) cur = cur.filter(function (x) { return HEAD.indexOf(x) < 0; }); cur.push(it.id); }
+      equip = cur; store('talkie.equip', JSON.stringify(equip)); fillMika();
+    }
+    shopSel = null; if (shopPrev) shopPrev.rebuild(); renderShop();
+  }
+  Array.prototype.forEach.call(document.querySelectorAll('#shop-seg button'), function (b) { b.addEventListener('click', function () { shopSeg = b.getAttribute('data-seg'); shopSel = null; if (shopPrev) shopPrev.rebuild(); renderShop(); }); });
+
+
+  /* ---------- La Place (monde 3D partagé) ---------- */
+  var plazaScene = null, plazaMe = null, plazaNames = {};
+  function plazaCount() { if (plazaScene) { var n = plazaScene.count() - 1 - 1; $('plaza-count').textContent = n > 0 ? '🌍 ' + n + ' autre' + (n > 1 ? 's' : '') + ' sur la Place' : '🌍 Tu es seul·e sur la Place… pour l’instant 💚'; } }
+  function plazaP(p) { return { pid: p.pid, nick: clean(p.nick, 14), code: /^[0-7][0-3][0-2][0-4]$/.test(p.av || '') ? p.av : defaultAv(p.nick || p.pid), x: Number(p.x) || 0, z: Number(p.z) || 0 }; }
+  function openPlaza() {
+    if (!m3d || !window.Mika3DMod || !Mika3DMod.initPlaza) return;
+    $('plaza').hidden = false;
+    if (!plazaScene) {
+      var host = $('plaza-stage'); host.textContent = '';
+      plazaScene = Mika3DMod.initPlaza(host);
+      if (!plazaScene) { $('plaza').hidden = true; return; }
+      plazaScene.add({ pid: 'mika', npc: true, x: 1.5, z: 1.2, acc: accList() });
+      host.addEventListener('plaza3d', function (ev) {
+        var d = ev.detail || {};
+        if (d.kind === 'walk' && plazaMe) { plazaScene.moveTo(plazaMe, d.x, d.z); send({ t: 'wpos', x: d.x, z: d.z }); }
+        else if (d.kind === 'tap') {
+          if (d.me) { plazaScene.emote(plazaMe, 'happy'); return; }
+          plazaEmote('wave'); toast('👋 Tu as salué ' + (plazaNames[d.pid] || 'quelqu’un'));
+        }
+      });
+      Array.prototype.forEach.call(document.querySelectorAll('#plaza-emotes button'), function (b) { b.addEventListener('click', function () { plazaEmote(b.getAttribute('data-k')); }); });
+    }
+    plazaMe = null; send({ t: 'plaza', on: true }); plazaCount();
+  }
+  function plazaEmote(k) {
+    if (!plazaScene || !plazaMe) return;
+    plazaScene.emote(plazaMe, k); send({ t: 'emote', k: k });
+    if (k === 'wave' && plazaScene.count() > 2) progressQuest('wave');
+  }
+  function closePlaza() {
+    if (plazaScene) { send({ t: 'plaza', on: false }); plazaScene.destroy(); plazaScene = null; plazaMe = null; plazaNames = {}; }
+    if ($('plaza')) $('plaza').hidden = true;
+  }
+  function plazaMsg(m) {
+    if (!plazaScene) return;
+    switch (m.t) {
+      case 'plaza':
+        plazaScene.reset(); plazaMe = m.me.pid;
+        plazaScene.add({ pid: m.me.pid, nick: nick, code: myAv, x: m.me.x, z: m.me.z, me: true });
+        (m.list || []).forEach(function (p) { var q = plazaP(p); plazaNames[q.pid] = q.nick; plazaScene.add(q); });
+        plazaCount(); break;
+      case 'pj': { var q = plazaP(m.p || {}); plazaNames[q.pid] = q.nick; plazaScene.add(q); plazaCount(); break; }
+      case 'pl': plazaScene.remove(m.pid); plazaCount(); break;
+      case 'pm': plazaScene.moveTo(m.pid, Number(m.x) || 0, Number(m.z) || 0); break;
+      case 'pe': plazaScene.emote(m.pid, clean(m.k, 8)); break;
+    }
+  }
+
+  /* ---------- Classe du Professeur Bobby ---------- */
+  var BLANG = { de: { n: 'Deutsch', f: '🇩🇪', sr: 'de-DE' }, en: { n: 'English', f: '🇬🇧', sr: 'en-US' }, es: { n: 'Español', f: '🇪🇸', sr: 'es-ES' }, it: { n: 'Italiano', f: '🇮🇹', sr: 'it-IT' } };
+  var BSCENES = [{ id: 'intro', t: '👋 Se présenter' }, { id: 'cafe', t: '☕ Au café' }, { id: 'free', t: '💬 Libre' }, { id: 'travel', t: '🧳 Voyage', feat: 'scen_travel' }, { id: 'job', t: '💼 Entretien', feat: 'scen_job' }];
+  var BFEATS = [
+    { id: 'scen_travel', label: 'Pack Voyage', e: '🧳', price: 80, d: 'Leçon : gare, hôtel, restaurant' },
+    { id: 'scen_job', label: 'Pack Entretien', e: '💼', price: 120, d: 'Leçon : entretien d’embauche' },
+    { id: 'pron', label: 'Prononciation+', e: '🗣️', price: 150, d: 'Mika ajoute un conseil de prononciation' },
+    { id: 'book', label: 'Carnet de mots', e: '📒', price: 60, d: 'Retrouve tout ton vocabulaire' },
+    { id: 'lvl_b', label: 'Niveaux B1 / B2', e: '🚀', price: 100, d: 'Des échanges plus avancés' },
+    { id: 'lang_en', label: 'Anglais', e: '🇬🇧', price: 250, d: 'Bobby parle anglais' },
+    { id: 'lang_es', label: 'Espagnol', e: '🇪🇸', price: 250, d: 'Bobby parle espagnol' },
+    { id: 'lang_it', label: 'Italien', e: '🇮🇹', price: 250, d: 'Bobby parle italien' }
+  ];
+  var BOUT = [{ id: 'mortar', label: 'Toque de diplômé', e: '🎓', price: 90 }, { id: 'labcoat', label: 'Blouse de prof', e: '🥼', price: 70 }];
+  function bHas(id) { return game.bown.indexOf(id) >= 0; }
+  var bob = (function () {
+    var d = { xp: 0, last: '', streak: 0, vocab: [], lang: 'de', lvl: 'A1', scen: 'intro', day: '', n: 0 };
+    try { var j = JSON.parse(store('talkie.bob') || '{}');
+      d.xp = Math.max(0, Number(j.xp) || 0); d.last = clean(j.last, 12); d.streak = Math.max(0, Number(j.streak) || 0); d.day = clean(j.day, 12); d.n = Math.max(0, Number(j.n) || 0);
+      d.vocab = (Array.isArray(j.vocab) ? j.vocab : []).map(function (v) { return { w: clean(v && v.w, 50), fr: clean(v && v.fr, 50), l: clean(v && v.l, 3) }; }).filter(function (v) { return v.w; }).slice(-150);
+      if (BLANG[j.lang]) d.lang = j.lang; if (/^(A1|A2|B1|B2)$/.test(j.lvl)) d.lvl = j.lvl; if (j.scen) d.scen = clean(j.scen, 10);
+    } catch (e) { /* ignore */ }
+    return d;
+  })();
+  function saveBob() { store('talkie.bob', JSON.stringify(bob)); }
+  var bobThread = [], bobBusy = false, bobStage = null, bobStarted = false, bobTok = 0, bobSpeak = false;
+  function bobAcc() { return ['glasses', 'bowtie'].concat(game.bobOn); }
+  function bobLevel() { return Math.floor(bob.xp / 40) + 1; }
+  function bobEnsureOk() {
+    if (bob.lang !== 'de' && !bHas('lang_' + bob.lang)) bob.lang = 'de';
+    if ((bob.lvl === 'B1' || bob.lvl === 'B2') && !bHas('lvl_b')) bob.lvl = 'A1';
+    var sc = BSCENES.filter(function (x) { return x.id === bob.scen; })[0];
+    if (!sc || (sc.feat && !bHas(sc.feat))) bob.scen = 'intro';
+  }
+  function bobRenderHead() {
+    bobEnsureOk();
+    var ls = $('bob-lang'); ls.textContent = '';
+    Object.keys(BLANG).forEach(function (k) { var o = el('option', null, BLANG[k].f + ' ' + BLANG[k].n + (k !== 'de' && !bHas('lang_' + k) ? ' 🔒' : '')); o.value = k; if (k === bob.lang) o.selected = true; ls.appendChild(o); });
+    $('bob-lvl').value = bob.lvl;
+    var sc = $('bob-scenes'); sc.textContent = '';
+    BSCENES.forEach(function (x) {
+      var locked = x.feat && !bHas(x.feat);
+      var b = el('button', (x.id === bob.scen ? 'on ' : '') + (locked ? 'lock' : ''), x.t + (locked ? ' 🔒' : '')); b.type = 'button'; b.setAttribute('data-sc', x.id);
+      b.addEventListener('click', function () {
+        if (locked) { toast('🔒 Disponible dans la Boutique › Bobby'); return; }
+        bob.scen = x.id; saveBob(); bobRenderHead(); bobNewLesson();
+      });
+      sc.appendChild(b);
+    });
+    var lv = bobLevel(), into = bob.xp % 40;
+    var p = $('bob-prog'); p.textContent = '';
+    p.appendChild(el('span', null, '🎓 Niveau ' + lv));
+    var bar = el('div', 'bar'); var bi = el('i'); bi.style.width = Math.round(into / 40 * 100) + '%'; bar.appendChild(bi); p.appendChild(bar);
+    p.appendChild(el('span', null, '🔥 ' + (bob.streak || 0) + ' j · 📒 ' + bob.vocab.length));
+  }
+  function bobLog(node) { var l = $('bob-log'); l.appendChild(node); window.scrollTo({ top: document.body.scrollHeight, behavior: 'smooth' }); }
+  function bobSpeakText(t) {
+    try {
+      if (!window.speechSynthesis) return;
+      speechSynthesis.cancel();
+      var u = new SpeechSynthesisUtterance(t); u.lang = BLANG[bob.lang].sr; u.rate = bob.lvl === 'A1' ? 0.85 : 0.95; u.pitch = 0.9;
+      var vs = speechSynthesis.getVoices().filter(function (v) { return v.lang && v.lang.indexOf(bob.lang) === 0; });
+      if (vs.length) u.voice = vs[0];
+      u.onstart = function () { if (bobStage) bobStage.bobbyListen(false); };
+      speechSynthesis.speak(u);
+    } catch (e) { /* ignore */ }
+  }
+  function bobAddBobby(r) {
+    var m = el('div', 'bm b', r.bobby);
+    if (r.fr) { var tr = el('small', null, '🇫🇷 ' + r.fr); tr.hidden = true; m.appendChild(tr);
+      var tools = el('div', 'tools'); var b1 = el('button', null, '🔊 Écouter'); b1.type = 'button'; b1.addEventListener('click', function () { bobSpeakText(r.bobby); });
+      var b2 = el('button', null, '🇫🇷 Traduire'); b2.type = 'button'; b2.addEventListener('click', function () { tr.hidden = !tr.hidden; });
+      tools.appendChild(b1); tools.appendChild(b2); m.appendChild(tools); }
+    bobLog(m);
+  }
+  function bobAddMika(r, start) {
+    if (!r.say && !r.corr) return;
+    var c = el('div', 'mc' + (r.corr || start ? '' : ' ok'));
+    c.appendChild(el('b', 'who', '🌿 Mika'));
+    if (r.corr) {
+      var line = el('div'); var d = document.createElement('del'); d.textContent = r.corr.orig; var i = document.createElement('ins'); i.textContent = r.corr.fixed;
+      line.appendChild(d); line.appendChild(document.createTextNode(' → ')); line.appendChild(i); c.appendChild(line);
+      if (r.corr.why) c.appendChild(el('div', 'why', r.corr.why));
+      c.appendChild(el('span', 'ktag', '✏️ ' + r.corr.kind));
+    } else if (r.say) c.appendChild(el('div', null, r.say));
+    if (r.corr && r.say) c.insertBefore(el('div', null, r.say), c.children[1]);
+    bobLog(c);
+  }
+  function bobGain(r) {
+    var gain = 2 + (r.ok ? 3 : 0);
+    bob.xp += gain;
+    var d = todayKey();
+    if (bob.day !== d) { bob.day = d; bob.n = 0; var y = new Date(Date.now() - 86400000).toLocaleDateString('sv-SE'); bob.streak = bob.last === y ? bob.streak + 1 : 1; bob.last = d; }
+    bob.n++;
+    if (bob.n === 4) { earn(5); toast('+5 🌸 Bravo, tu travailles ton ' + BLANG[bob.lang].n + ' !'); }
+    if (bob.n === 3) progressQuest('bobby');
+    (r.vocab || []).forEach(function (v) { if (!bob.vocab.some(function (x) { return x.w.toLowerCase() === v.w.toLowerCase(); })) bob.vocab.push({ w: v.w, fr: v.fr, l: bob.lang }); });
+    bob.vocab = bob.vocab.slice(-150);
+    saveBob(); bobRenderHead();
+  }
+  function bobApply(r, start) {
+    bobBusy = false; $('bob-send').disabled = !$('bob-in').value.trim();
+    var care = !!r.care;
+    if (r.corr || r.say) { bobAddMika(r, start); if (bobStage && r.say) bobStage.mikaSay(r.say, r.corr ? 'worried' : (r.ok ? 'proud' : 'happy')); }
+    setTimeout(function () {
+      bobThread.push({ r: 'b', t: r.bobby });
+      bobAddBobby(r);
+      if (bobStage) { bobStage.bobbySay(r.bobby, r.e); }
+      if (bobSpeak && !care) bobSpeakText(r.bobby);
+    }, care ? 100 : 900);
+    if (bobStage) {
+      if (r.corr) bobStage.board([{ t: '✗ ' + r.corr.orig, c: '#ffb3c1', s: 26 }, { t: '✓ ' + r.corr.fixed, c: '#bdf3dc', s: 34 }]);
+      else if (r.vocab && r.vocab.length) bobStage.board([{ t: r.vocab[0].w, c: '#fff6c2', s: 46 }, { t: r.vocab[0].fr, c: '#cfe9ff', s: 28 }]);
+    }
+    if (!care && !start) bobGain(r);
+    var ch = $('bob-chips'); ch.textContent = '';
+    (r.chips || []).forEach(function (t) { var b = el('button', null, t); b.type = 'button'; b.addEventListener('click', function () { bobSend(t, false); }); ch.appendChild(b); });
+    if (r.degraded) $('bob-note').textContent = 'Mode hors-ligne : Bobby suit un petit script et Mika ne peut pas corriger pour l’instant.';
+  }
+  function bobCall(kind, spoken) {
+    var tok = ++bobTok; bobBusy = true; $('bob-send').disabled = true;
+    if (bobStage) bobStage.thinking(true);
+    var body = { kind: kind, lang: bob.lang, level: bob.lvl, scen: bob.scen, name: nick, pron: bHas('pron'), spoken: !!spoken, messages: bobThread };
+    var ctrl = window.AbortController ? new AbortController() : null; var to = setTimeout(function () { if (ctrl) ctrl.abort(); }, 30000);
+    fetch('/api/bobby', { method: 'POST', headers: { 'content-type': 'application/json' }, body: JSON.stringify(body), signal: ctrl ? ctrl.signal : undefined })
+      .then(function (r) { if (!r.ok) throw new Error('http'); return r.json(); })
+      .catch(function () { return { bobby: 'Oh là là… ich habe ein kleines Problem. Versuch es gleich noch einmal!', fr: 'Petit souci de mon côté, réessaie dans un instant !', e: 'worried', corr: null, ok: true, vocab: [], chips: [], say: 'Bobby a un petit souci de connexion 🥹', degraded: true }; })
+      .then(function (r) { clearTimeout(to); if (tok !== bobTok) return; bobApply(r, kind === 'start'); });
+  }
+  function bobSend(text, spoken) {
+    text = clean(text, 300); if (!text || bobBusy) return;
+    $('bob-in').value = ''; $('bob-chips').textContent = '';
+    bobThread.push({ r: 'u', t: text });
+    bobLog(el('div', 'bm u', text));
+    if (bobStage) bobStage.userSay(text);
+    bobCall('reply', spoken);
+  }
+  function bobNewLesson() {
+    bobTok++; bobBusy = false; bobThread = []; $('bob-log').textContent = ''; $('bob-chips').textContent = '';
+    $('bob-note').textContent = 'Bobby parle uniquement dans la langue choisie. Mika corrige tes phrases et t’explique en français. Ce sont des IA : elles peuvent se tromper.';
+    if (bobStage) bobStage.board([]);
+    bobCall('start');
+  }
+  function openBobby() {
+    bobRenderHead();
+    var host = $('bob-stage');
+    if (!bobStage && m3d && window.Mika3DMod && Mika3DMod.initClass) { host.textContent = ''; bobStage = Mika3DMod.initClass(host, { code: myAv, mikaAcc: accList(), bobAcc: bobAcc() }); }
+    if (!bobStage && !host.firstChild) host.appendChild(el('div', 'bob-2d', '🐻🎓'));
+    if (bobStage) { bobStage.setMikaAcc(accList()); bobStage.setBobAcc(bobAcc()); }
+    if (!bobStarted) { bobStarted = true; bobNewLesson(); }
+  }
+  function closeBobby() { if (bobStage) { bobStage.destroy(); bobStage = null; } try { if (window.speechSynthesis) speechSynthesis.cancel(); } catch (e) { /* ignore */ } }
+  $('bob-lang').addEventListener('change', function () {
+    var v = $('bob-lang').value;
+    if (v !== 'de' && !bHas('lang_' + v)) { toast('🔒 Cette langue s’achète dans la Boutique › Bobby'); bobRenderHead(); return; }
+    bob.lang = v; saveBob(); bobNewLesson();
+  });
+  $('bob-lvl').addEventListener('change', function () {
+    var v = $('bob-lvl').value;
+    if ((v === 'B1' || v === 'B2') && !bHas('lvl_b')) { toast('🔒 Niveaux B1/B2 : Boutique › Bobby'); $('bob-lvl').value = bob.lvl; return; }
+    bob.lvl = v; saveBob(); bobNewLesson();
+  });
+  $('bob-in').addEventListener('input', function () { $('bob-send').disabled = bobBusy || !$('bob-in').value.trim(); });
+  $('bob-form').addEventListener('submit', function (e) { e.preventDefault(); bobSend($('bob-in').value, false); });
+  $('bob-new').addEventListener('click', bobNewLesson);
+  $('bob-book').addEventListener('click', function () {
+    if (!bHas('book')) { toast('🔒 Le carnet s’achète dans la Boutique › Bobby (' + bob.vocab.length + ' mot' + (bob.vocab.length > 1 ? 's' : '') + ' t’attendent)'); return; }
+    var c = el('div', 'mc'); c.appendChild(el('b', 'who', '📒 Ton carnet (' + bob.vocab.length + ')'));
+    var rows = bob.vocab.slice(-12).reverse();
+    c.appendChild(el('div', null, rows.length ? rows.map(function (v) { return (BLANG[v.l] ? BLANG[v.l].f + ' ' : '') + v.w + ' = ' + v.fr; }).join(' · ') : 'Vide pour l’instant : parle avec Bobby !'));
+    bobLog(c);
+  });
+  var SR = window.SpeechRecognition || window.webkitSpeechRecognition, bobRec = null;
+  $('bob-mic').addEventListener('click', function () {
+    if (!SR) { toast('Ton navigateur ne gère pas la dictée : utilise le micro de ton clavier 🎤'); return; }
+    if (bobRec) { try { bobRec.stop(); } catch (e) { /* ignore */ } return; }
+    var rec = new SR(); bobRec = rec; rec.lang = BLANG[bob.lang].sr; rec.interimResults = true; rec.maxAlternatives = 1;
+    var btn = $('bob-mic'), final = '';
+    btn.classList.add('rec'); if (bobStage) bobStage.bobbyListen(true);
+    rec.onresult = function (ev) { var t = ''; for (var i = 0; i < ev.results.length; i++) t += ev.results[i][0].transcript; final = t; $('bob-in').value = t; $('bob-send').disabled = !t.trim(); };
+    rec.onerror = function (ev) { if (ev.error === 'not-allowed') toast('Autorise le micro pour parler à Bobby 🎤'); };
+    rec.onend = function () { btn.classList.remove('rec'); bobRec = null; if (bobStage) bobStage.bobbyListen(false); if (final.trim()) { bobSpeak = true; bobSend(final, true); } };
+    try { rec.start(); } catch (e) { btn.classList.remove('rec'); bobRec = null; }
+  });
+  function bobShopAction(it) {
+    if (!it.own) {
+      if (game.petals < it.price) { toast('Il te manque ' + (it.price - game.petals) + ' 🌸 : prends soin de ton Mika et papote avec Bobby !'); return; }
+      game.petals -= it.price;
+      if (it.kind === 'bout') { game.bown.push(it.id); game.bobOn.push(it.id); } else game.bown.push(it.id);
+      saveGame(); toast('Acheté ! ' + it.label + ' 🎉'); shopSel = null; renderShop(); return;
+    }
+    if (it.kind === 'bout') { var k = game.bobOn.indexOf(it.id); if (k >= 0) game.bobOn.splice(k, 1); else game.bobOn.push(it.id); saveGame(); shopSel = null; renderShop(); return; }
+    setTab('bobby');
   }
 
   /* ---------- Moi ---------- */
@@ -2257,26 +2794,6 @@
       x.addEventListener('click', function () { cmp.facts.splice(idx, 1); saveCmp(); renderMoi(); });
       li.appendChild(x); ul.appendChild(li);
     });
-    var w = $('wardrobe'); w.textContent = '';
-    WARD.forEach(function (it) {
-      var on = it.premium ? false : (equip ? equip.indexOf(it.id) >= 0 : unlocked(it));
-      var ok = !it.premium && unlocked(it);
-      var b = el('button', 'ward' + (on && ok ? ' on' : '') + (ok ? '' : ' locked')); b.type = 'button';
-      b.innerHTML = mikaSvg(it.id).replace('class="mk', 'class="mk mini-m');
-      b.appendChild(el('span', null, it.label));
-      b.appendChild(el('span', 'px', it.premium ? '💎 ' + it.premium : (ok ? (on ? 'Portée' : 'Disponible') : '🔒 ' + it.need + ' jours')));
-      if (!ok) b.appendChild(el('span', 'lk', '🔒'));
-      b.addEventListener('click', function () {
-        if (it.premium) { toast('💎 Tenue premium : bientôt disponible !'); return; }
-        if (!ok) { toast('Débloquée après ' + it.need + ' jours avec Mika 🌸'); return; }
-        var cur = equip || WARD.filter(unlocked).map(function (x) { return x.id; });
-        var i2 = cur.indexOf(it.id);
-        if (i2 >= 0) cur.splice(i2, 1); else cur.push(it.id);
-        equip = cur; store('talkie.equip', JSON.stringify(equip));
-        fillMika(); renderMoi(); burst(['✨', '💚']);
-      });
-      w.appendChild(b);
-    });
   }
   $('me-nick').addEventListener('input', function () {
     var v = clean($('me-nick').value, 20);
@@ -2298,7 +2815,33 @@
     if (!room) return [];
     return room.members.filter(function (p) { return p.online || p.pid === myPid; });
   }
+  var stage3d = null, stageWired = false;
+  function ensureStage3d() {
+    if (stage3d || !m3d || !window.Mika3DMod || !Mika3DMod.initStage) return;
+    var box = $('perch');
+    box.classList.add('is3d');
+    try { stage3d = Mika3DMod.initStage(box, accList()); } catch (e) { stage3d = null; }
+    if (!stage3d) { box.classList.remove('is3d'); return; }
+    if (!stageWired) {
+      stageWired = true;
+      box.addEventListener('mika3d', function () {
+        var m = $('msg');
+        if (!m.disabled) { if (!m.value) { m.value = 'Mika, '; m.dispatchEvent(new Event('input')); } m.focus(); }
+      });
+    }
+  }
+  function destroyStage3d() { if (stage3d) { try { stage3d.destroy(); } catch (e) { /* ignore */ } stage3d = null; } $('perch').classList.remove('is3d'); }
+  function validAv(p) { return /^[0-7][0-3][0-2][0-4]$/.test(p.av || '') ? p.av : defaultAv(p.nick); }
   function renderStage() {
+    ensureStage3d();
+    if (stage3d) {
+      stage3d.setMembers(stageMembers().map(function (p) { return { id: p.pid, code: p.pid === myPid ? myAv : validAv(p), nick: clean(p.nick, 14), me: p.pid === myPid }; }));
+      stage3d.setMikaAcc(accList());
+      return;
+    }
+    renderStageLegacy();
+  }
+  function renderStageLegacy() {
     var box = $('perch');
     Object.keys(stageNodes).forEach(function (k) { if (stageNodes[k].parentNode) stageNodes[k].parentNode.removeChild(stageNodes[k]); });
     stageNodes = {};
@@ -2317,6 +2860,7 @@
   }
   function stageSay(m) {
     if (replaying || !room) return;
+    if (stage3d) { var tx = chatClean(m.text, 120) || (m.gif ? 'GIF 🎞️' : ''); if (!tx) return; if (m.ai) { stage3d.mikaSay(tx); } else stage3d.say(m.pid, tx); return; }
     var box = $('perch'), n = m.ai ? null : stageNodes[m.pid];
     var text = chatClean(m.text, 80) || (m.gif ? 'GIF' : '');
     if (!text) return;
@@ -2352,10 +2896,11 @@
     if (svg) WARD.forEach(function (w) { if (svg.classList.contains('has-' + w.id)) acc.push(w.id); });
     var key = acc.join(',');
     if (key !== m3dPrev.acc) { m3d.setAccessories(acc); m3dPrev.acc = key; }
+    if (m3d.setDecor) m3d.setDecor(game.decorOn);
   }
   function init3d() {
     if (!window.Mika3DMod || /[?&]no3d/.test(location.search)) return;
-    try { m3d = Mika3DMod.init($('mika-stage'), { preserve: /[?&]shot/.test(location.search) }); } catch (e) { m3d = null; }
+    try { m3d = Mika3DMod.init($('mika-stage'), { preserve: /[?&]shot/.test(location.search), look: Mika3DMod.avatarOpts(myAv) }); } catch (e) { m3d = null; }
     if (!m3d) return;
     document.body.classList.add('has3d');
     new MutationObserver(syncMika3d).observe($('mika-av'), { attributes: true, childList: true, subtree: true, attributeFilter: ['class'] });
@@ -2363,6 +2908,8 @@
     $('mika-stage').addEventListener('mika3d', function (ev) {
       var n = ev.detail && ev.detail.name;
       dir.engaged = true; bumpIdle();
+      if (n === 'done-nap') { if (napDone) { var f = napDone; napDone = null; f(); } return; }
+      if (n && n.indexOf('done-') === 0) return;
       if (n === 'mika') { $('mika-av').click(); return; }
       if (ROOM_LINES[n]) { mood('happy', 2200); mikaSay(pick(ROOM_LINES[n]), false, false); }
     });
@@ -2382,6 +2929,8 @@
   setInterval(function () { if (!room) renderLobby(); }, 30000);
   renderLobby();
   renderNotif();
+  renderNeeds();
   setTab('chambre');
+  if (!store('talkie.avset')) setTimeout(openAvEditor, 500);
   connect();
 })();

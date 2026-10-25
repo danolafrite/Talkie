@@ -64,3 +64,17 @@ Onglets : Mika (chambre), Salon (le salon Talkie d'avant), Moi (avatar, humeurs,
 ## Chambre 3D (v14)
 
 La chambre et Mika sont en 3D (three.js). Le code source est dans `src3d/scene3d.js` ; le fichier servi est `public/scene3d.js` (déjà généré, rien à faire pour déployer). Pour le modifier : `npm i three esbuild` dans un dossier à part, puis `esbuild scene3d.js --bundle --minify --format=iife --global-name=Mika3DMod --outfile=public/scene3d.js`. Si l'appareil ne sait pas faire de 3D, l'app garde le Mika en 2D. Ajoute `?no3d` à l'adresse pour tester ce mode.
+
+## 3D partout, quêtes et boutique (v15)
+
+- Avatars, scène du chat, aperçu du créateur d'avatar, tuiles de la garde-robe : tout est en 3D (même moteur que Mika, `src3d/scene3d.js`). Sans 3D sur l'appareil, l'app retombe sur les dessins 2D.
+- **Quêtes du jour** (3 petits gestes d'auto-soin, dont « dire son humeur » et « papoter dans le Salon » qui se valident toutes seules) → **pétales 🌸** → tenues de Mika et décorations de la chambre (ours en peluche, néon cœur). Tenues 💎 premium : maquette, aucun paiement. Tout est stocké sur le téléphone (`talkie.game`).
+- Mika connaît l'avancement des quêtes (champ `quests` envoyé à `/api/companion`) et félicite sans presser.
+
+## v17 — Classe du Professeur Bobby + Place 3D
+
+- **Onglet 🎓 Bobby** (entre Monde et Boutique) : scène 3D (ton avatar et Mika de dos, Bobby en face, tableau noir). Bobby parle uniquement la langue choisie (allemand par défaut ; anglais, espagnol, italien à débloquer), à l'écrit ou à l'oral (dictée du navigateur + voix de synthèse). **Mika corrige le dernier message** et explique en français (carte rouge → vert). Niveaux A1–B2, scénarios (se présenter, café, libre, voyage, entretien), carnet de vocabulaire, XP, série de jours. Progression dans `localStorage` (`talkie.bob`).
+- Serveur : `POST /api/bobby` (`lib/bobby.js`) — un seul appel IA par tour, modération (coordonnées bloquées, détresse → 3114), limite 30/min/IP, mode scripté sans IA.
+- **Boutique › 🎓 Bobby** : packs de scénarios, Prononciation+, carnet, niveaux B1/B2, langues, tenues de Bobby (toque, blouse). Payés en pétales 🌸 (gagnés en jouant). Les 💎 restent une maquette.
+- **Monde 3D** : une Place (fontaine, sakuras) partagée par shards de 12. Messages WebSocket `plaza`, `wpos`, `emote` (+ `pj`/`pl`/`pm`/`pe` en retour). **Aucun texte libre** sur la Place : positions + 5 emotes seulement, majeurs uniquement, blocages respectés, limitations de débit. Mika se balade aussi sur la Place.
+- Build 3D : `scene3d.js` (≈620 Ko) à remplacer en entier, comme `app.js`, `index.html`, `server.js` et le dossier `lib/`.

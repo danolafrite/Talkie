@@ -729,6 +729,133 @@ body.has3d .mika-stage .vbtn { z-index: 3; }
 body.has3d #mika-actor, body.has3d #mika-shadow { display: none !important; }
 body.has3d .mika-bubble { margin-top: -22px; position: relative; z-index: 3; margin-left: 8px; max-width: calc(100% - 16px); }
 body.has3d .hero.room .sky { opacity: .55; }
+
+/* ===== v15 : avatars 3D, quêtes, pétales ===== */
+.rh-p { display: inline-flex; align-items: center; gap: 4px; background: rgba(255,255,255,.7); border-radius: 999px; padding: 4px 10px; font-size: 13px; font-weight: 800; color: var(--ink); margin-left: auto; margin-right: 6px; white-space: nowrap; }
+.room-head .rh-t { white-space: nowrap; font-size: 18px; flex: 1; min-width: 0; overflow: hidden; text-overflow: ellipsis; }
+.room-head .rh-p { margin-left: 0; margin-right: 0; }
+.room-head { gap: 6px; }
+.rh-b .bond-bar { width: 30px; }
+.quests { background: rgba(255,255,255,.8); border-radius: 20px; padding: 10px 12px; display: grid; gap: 6px; color: var(--ink); animation: mpop .4s both; }
+.quests .qh { display: flex; justify-content: space-between; align-items: center; font-size: 13px; font-weight: 800; }
+.quests .qh b { background: #FFE9A8; color: #6a4a00; border-radius: 999px; padding: 1px 9px; }
+.quests .qb { height: 6px; border-radius: 6px; background: rgba(42,27,94,.12); overflow: hidden; }
+.quests .qb i { display: block; height: 100%; background: linear-gradient(90deg, #5DE3B4, #FF8FC0); border-radius: 6px; transition: width .5s ease; }
+.quests .q { display: flex; align-items: center; gap: 10px; border: 0; background: rgba(124,92,255,.07); border-radius: 14px; padding: 8px 10px; font: inherit; font-size: 14.5px; font-weight: 800; color: inherit; text-align: left; cursor: pointer; transition: transform .12s, background .2s; }
+.quests .q:active { transform: scale(.97); }
+.quests .q .ck { width: 24px; height: 24px; border-radius: 50%; border: 3px solid #B9A6FF; display: grid; place-items: center; font-size: 14px; color: #fff; flex: none; background: #fff; }
+.quests .q .tx { flex: 1; }
+.quests .q .rw { font-size: 12px; opacity: .75; white-space: nowrap; }
+.quests .q.done { background: rgba(93,227,180,.22); }
+.quests .q.done .ck { background: #3FC79A; border-color: #3FC79A; }
+.quests .q.done .tx { text-decoration: line-through; opacity: .65; }
+.quests .q.auto .rw::after { content: ' · auto'; }
+.petal-bal { font-size: 13px; font-weight: 800; background: #FFE9A8; color: #6a4a00; border-radius: 999px; padding: 2px 10px; }
+.avprev.is3d { width: 100%; max-width: 280px; height: 230px; border-radius: 28px; background: linear-gradient(160deg, #E7DDFF, #FFD9EC 70%, #FFE9D2); }
+.avprev.is3d .scene3d { position: absolute; inset: 0; width: 100%; height: 100%; display: block; }
+.avprev { position: relative; }
+.avatar.av-slot img, .me-av img, .ward img { width: 100%; height: 100%; object-fit: contain; display: block; }
+.me-av { overflow: visible; background: radial-gradient(circle at 50% 60%, #fff 0, #E7DDFF 70%); }
+.me-av img { transform: scale(1.18); }
+.ward img { width: 62px; height: 62px; }
+.wardrobe.decor { grid-template-columns: repeat(3, 1fr); }
+.ward .em { font-size: 34px; line-height: 62px; }
+.perch.is3d { height: 196px; background: linear-gradient(180deg, #F0E4FF 0%, #FFE6F3 100%); }
+.perch.is3d .perch-ground, .perch.is3d .perch-mika, .perch.is3d .perch-thought, .perch.is3d .sa, .perch.is3d .sa-b { display: none; }
+.perch .scene3d { position: absolute; inset: 0; width: 100%; height: 100%; display: block; }
+.st3-ov { position: absolute; inset: 0; pointer-events: none; overflow: hidden; }
+.st3-b { width: max-content; position: absolute; transform: translate(-50%, -100%); max-width: 46%; background: #fff; color: #2A1B5E; font-size: 13.5px; font-weight: 800; line-height: 1.25; padding: 6px 10px; border-radius: 14px; box-shadow: 0 2px 0 rgba(124,92,255,.2); display: -webkit-box; -webkit-line-clamp: 3; -webkit-box-orient: vertical; overflow: hidden; animation: st3pop .3s cubic-bezier(.2,.9,.3,1.3) both; }
+@keyframes st3pop { from { transform: translate(-50%, -100%) scale(.6); opacity: 0; } to { transform: translate(-50%, -100%) scale(1); opacity: 1; } }
+.st3-b.mk { background: #C9FBE8; }
+.st3-n { position: absolute; transform: translate(-50%, 0); font-size: 10.5px; font-weight: 800; color: #2A1B5E; background: rgba(255,255,255,.82); border-radius: 8px; padding: 0 7px; white-space: nowrap; max-width: 90px; overflow: hidden; text-overflow: ellipsis; }
+.st3-n.mk { background: #C9FBE8; }
+
+/* ===== v16 : besoins, soins, boutique ===== */
+.needs { display: flex; gap: 8px; position: relative; z-index: 2; margin: 2px 0 2px; }
+.nd { flex: 1; display: flex; align-items: center; gap: 6px; background: rgba(255,255,255,.72); border-radius: 999px; padding: 5px 10px; font-size: 15px; color: var(--ink); min-width: 0; }
+.nd i { flex: 1; height: 8px; border-radius: 8px; background: rgba(42,27,94,.12); overflow: hidden; display: block; }
+.nd i b { display: block; height: 100%; border-radius: 8px; background: linear-gradient(90deg, #5DE3B4, #9CF5D4); transition: width .6s ease, background .3s; }
+.nd.low i b { background: linear-gradient(90deg, #FF8FA3, #FFB89A); }
+.nd.low { animation: nlow 1.6s ease-in-out infinite; }
+@keyframes nlow { 0%, 100% { transform: scale(1); } 50% { transform: scale(1.04); } }
+.care { display: grid; grid-template-columns: repeat(4, 1fr); gap: 8px; }
+.care button { border: 0; background: rgba(255,255,255,.85); color: var(--ink); border-radius: 20px; padding: 8px 2px 7px; font: inherit; font-size: 12.5px; font-weight: 800; display: grid; justify-items: center; cursor: pointer; box-shadow: 0 3px 0 rgba(124,92,255,.18); transition: transform .12s; }
+.care button span { font-size: 24px; line-height: 1.2; }
+.care button:active { transform: translateY(2px) scale(.97); box-shadow: 0 1px 0 rgba(124,92,255,.18); }
+.care button:disabled { opacity: .5; }
+.foods { display: grid; gap: 8px; margin: 8px 0; }
+.food { display: flex; align-items: center; gap: 12px; border: 2px solid var(--line); background: var(--bg); color: inherit; border-radius: 18px; padding: 10px 14px; font: inherit; font-weight: 800; cursor: pointer; text-align: left; }
+.food .fe { font-size: 30px; }
+.food .ft { flex: 1; } .food .ft small { display: block; font-size: 12px; opacity: .65; font-weight: 700; }
+.food .fp { font-size: 13px; background: #FFE9A8; color: #6a4a00; border-radius: 999px; padding: 2px 10px; }
+.shop-hero { position: relative; margin-top: 4px; background: linear-gradient(160deg, #E7DDFF, #FFD9EC 70%, #FFE9D2); border-radius: 28px; padding: 10px 12px 12px; box-shadow: var(--shadow); }
+.shop-prev { position: relative; height: 230px; border-radius: 22px; overflow: hidden; }
+.shop-prev .scene3d { position: absolute; inset: 0; width: 100%; height: 100%; display: block; }
+.shop-top { position: absolute; top: 14px; left: 18px; right: 18px; display: flex; justify-content: space-between; align-items: center; pointer-events: none; }
+.shop-top h2 { font-family: var(--font-display); font-size: 26px; font-weight: 600; color: var(--ink); }
+.shop-act { margin-top: 10px; display: flex; gap: 8px; align-items: center; color: var(--ink); }
+.shop-act .sn { flex: 1; font-weight: 800; font-size: 15px; min-width: 0; }
+.shop-act .sn small { display: block; font-size: 12.5px; opacity: .7; font-weight: 700; }
+.shop-seg { margin: 12px 0 10px; display: flex; gap: 6px; }
+.shop-seg button { flex: 1; border: 2px solid var(--line); background: var(--surface); color: inherit; border-radius: 999px; padding: 8px 4px; font: inherit; font-size: 13.5px; font-weight: 800; cursor: pointer; }
+.shop-seg button.on { border-color: var(--violet); background: rgba(124,92,255,.14); }
+.ward.sel { outline: 3px solid var(--violet); }
+
+/* v17 · Classe du Professeur Bobby */
+.bob-top { display: flex; align-items: center; justify-content: space-between; gap: 8px; margin: 4px 2px 8px; flex-wrap: wrap; }
+.bob-top h2 { margin: 0; font-size: 22px; }
+.bob-sel { display: flex; gap: 6px; }
+.bob-sel select { font: inherit; font-size: 13px; font-weight: 800; border: 1px solid var(--line); background: var(--bg); color: inherit; border-radius: 999px; padding: 5px 10px; }
+.bob-stage { position: relative; height: 300px; border-radius: 28px; overflow: hidden; background: linear-gradient(170deg, #FFE3F1, #E7DDFF 60%, #D9F6EA); box-shadow: var(--shadow); }
+.bob-stage .scene3d { position: absolute; inset: 0; width: 100%; height: 100%; display: block; }
+.bob-stage .st3-b { max-width: 64%; -webkit-line-clamp: 4; }
+.bob-stage .st3-b.pr { background: #FFE9C9; }
+.bob-stage .st3-b.me { background: #E7DDFF; }
+.st3-n.pr { background: #FFE9C9; }
+.bob-2d { position: absolute; inset: 0; display: grid; place-items: center; font-size: 64px; }
+.bob-scenes { display: flex; gap: 6px; overflow-x: auto; padding: 8px 2px 2px; scrollbar-width: none; }
+.bob-scenes button { flex: none; border: 1px solid var(--line); background: var(--bg); color: inherit; font: inherit; font-size: 13px; font-weight: 800; padding: 6px 12px; border-radius: 999px; cursor: pointer; }
+.bob-scenes button.on { background: var(--violet, #7C5CFF); color: #fff; border-color: transparent; }
+.bob-scenes button.lock { opacity: .55; }
+.bob-prog { display: flex; align-items: center; gap: 10px; font-size: 12.5px; font-weight: 800; color: var(--muted, #7a6c9b); margin: 8px 4px 2px; }
+.bob-prog .bar { flex: 1; height: 8px; border-radius: 8px; background: var(--line); overflow: hidden; }
+.bob-prog .bar i { display: block; height: 100%; background: linear-gradient(90deg, #FFB3D1, #7C5CFF); border-radius: 8px; transition: width .4s; }
+.bob-log { display: grid; gap: 8px; margin: 10px 0 6px; }
+.bob-log .bm { max-width: 88%; padding: 9px 12px; border-radius: 18px; font-size: 15px; line-height: 1.35; font-weight: 600; }
+.bob-log .bm.b { background: #FFE9C9; color: #2A1B5E; border-bottom-left-radius: 6px; justify-self: start; }
+.bob-log .bm.u { background: #E7DDFF; color: #2A1B5E; border-bottom-right-radius: 6px; justify-self: end; }
+.bob-log .bm small { display: block; margin-top: 4px; font-size: 12.5px; font-weight: 700; opacity: .7; }
+.bob-log .bm .tools { display: flex; gap: 6px; margin-top: 5px; }
+.bob-log .bm .tools button { border: 0; background: rgba(255,255,255,.7); border-radius: 999px; font-size: 12px; font-weight: 800; padding: 2px 9px; cursor: pointer; color: inherit; }
+.bob-log .mc { justify-self: start; max-width: 94%; background: #C9FBE8; color: #0b3f31; border-radius: 18px; padding: 9px 12px; font-size: 14px; line-height: 1.4; }
+.bob-log .mc b.who { font-size: 12px; opacity: .75; display: block; margin-bottom: 3px; }
+.bob-log .mc del { background: #FFD1DC; text-decoration-color: #d6336c; border-radius: 4px; padding: 0 3px; }
+.bob-log .mc ins { background: #B8F2D2; text-decoration: none; font-weight: 800; border-radius: 4px; padding: 0 3px; }
+.bob-log .mc .why { margin-top: 5px; font-weight: 600; }
+.bob-log .mc .ktag { display: inline-block; font-size: 11px; font-weight: 800; background: #fff; border-radius: 999px; padding: 1px 8px; margin-top: 5px; }
+.bob-log .mc.ok { background: #E4FFF3; }
+.bob-chips { display: flex; gap: 6px; flex-wrap: wrap; margin: 4px 0 8px; }
+.bob-chips button { border: 1px solid var(--line); background: var(--bg); color: inherit; font: inherit; font-size: 13.5px; font-weight: 700; padding: 6px 12px; border-radius: 999px; cursor: pointer; }
+.bob-form { display: flex; gap: 8px; align-items: center; margin-bottom: 10px; }
+.bob-form input { flex: 1; min-width: 0; font: inherit; font-size: 16px; padding: 12px 14px; border-radius: 999px; border: 1px solid var(--line); background: var(--bg); color: inherit; }
+.bob-form button { flex: none; width: 46px; height: 46px; border-radius: 50%; border: 0; display: grid; place-items: center; cursor: pointer; font-size: 20px; }
+.bob-form #bob-mic { background: #FFE3F1; }
+.bob-form #bob-mic.rec { background: #ff6f8e; animation: bobrec 1s infinite; }
+@keyframes bobrec { 50% { box-shadow: 0 0 0 8px rgba(255,111,142,.25); } }
+.bob-tools { display: flex; gap: 8px; margin-bottom: 14px; }
+.bob-note { font-size: 12px; color: var(--muted, #7a6c9b); margin: 0 4px 12px; }
+.tabbar button { font-size: 11.5px; }
+
+/* v17 · La Place */
+.plaza { margin: 4px 0 10px; }
+.plaza-stage { position: relative; height: 300px; border-radius: 28px; overflow: hidden; background: linear-gradient(180deg, #BFE9FF 0%, #E9F7FF 45%, #D9F6EA 100%); box-shadow: var(--shadow); touch-action: manipulation; }
+.plaza-stage .scene3d { position: absolute; inset: 0; width: 100%; height: 100%; display: block; }
+.plaza-bar { display: flex; align-items: center; justify-content: space-between; gap: 8px; margin: 8px 2px 0; }
+.plaza-bar .pc { font-size: 13px; font-weight: 800; color: var(--muted, #7a6c9b); }
+.plaza-bar .em { display: flex; gap: 6px; }
+.plaza-bar .em button { border: 1px solid var(--line); background: var(--bg); border-radius: 999px; width: 40px; height: 40px; font-size: 20px; cursor: pointer; }
+.plaza-bar .em button:active { transform: scale(.9); }
+.plaza-hint { font-size: 12px; color: var(--muted, #7a6c9b); margin: 4px 4px 0; }
 </style>
 </head>
 <body>
@@ -760,7 +887,8 @@ body.has3d .hero.room .sky { opacity: .55; }
           <i class="star t1"></i><i class="star t2"></i><i class="star t3"></i><i class="star t4"></i><i class="star t5"></i><i class="star t6"></i><i class="star t7"></i>
           <i class="petal p1">🌸</i><i class="petal p2">✨</i><i class="petal p3">💚</i><i class="petal p4">🌸</i>
         </div>
-          <div class="room-head"><span class="rh-t" id="room-title">La chambre de Mika</span><span class="rh-b" id="bond" title="Votre lien">💚 <b id="bond-lv">Niv. 1</b><i class="bond-bar"><i id="bond-fill"></i></i></span></div>
+          <div class="room-head"><span class="rh-t" id="room-title">La chambre de Mika</span><span class="rh-p" id="petals-pill" title="Tes pétales">🌸 <b id="petals">0</b></span><span class="rh-b" id="bond" title="Votre lien">💚 <b id="bond-lv">Niv. 1</b><i class="bond-bar"><i id="bond-fill"></i></i></span></div>
+          <div class="needs" id="needs" aria-label="Besoins de ton Mika"></div>
           <button type="button" class="ghost reconnect" id="btn-reconnect" hidden>Reprendre ici</button>
           <div id="mika-hero" class="mika-world" role="group" aria-label="Mika">
           <div class="mika-stage" id="mika-stage">
@@ -776,6 +904,10 @@ body.has3d .hero.room .sky { opacity: .55; }
           <div class="mika-ia">Mika est une IA 💚</div>
         </div>
           <div class="cmp" id="cmp">
+            <div class="care" id="care">
+              <button type="button" data-act="feed"><span>🍙</span>Nourrir</button><button type="button" data-act="nap"><span>😴</span>Sieste</button><button type="button" data-act="hug"><span>🤗</span>Câlin</button><button type="button" data-act="play"><span>🎈</span>Jouer</button>
+            </div>
+            <div class="quests" id="quests"></div>
             <div class="mood-row" id="mood-row" hidden>
               <span class="mr-q">Ton humeur ?</span>
               <button type="button" data-m="1" aria-label="Au plus bas">😞</button><button type="button" data-m="2" aria-label="Bof">😕</button><button type="button" data-m="3" aria-label="Neutre">😐</button><button type="button" data-m="4" aria-label="Bien">🙂</button><button type="button" data-m="5" aria-label="Rayonnant·e">🤩</button>
@@ -792,6 +924,11 @@ body.has3d .hero.room .sky { opacity: .55; }
       </div>
 
       <div id="pane-salon" class="tabpane" data-pane="salon" hidden>
+        <section class="plaza" id="plaza" aria-label="La Place" hidden>
+          <div class="plaza-stage" id="plaza-stage"></div>
+          <div class="plaza-bar"><span class="pc" id="plaza-count"></span><div class="em" id="plaza-emotes"><button type="button" data-k="wave" aria-label="Saluer">👋</button><button type="button" data-k="heart" aria-label="Cœur">💗</button><button type="button" data-k="happy" aria-label="Content">😄</button><button type="button" data-k="dance" aria-label="Danser">💃</button><button type="button" data-k="wow" aria-label="Wow">😮</button></div></div>
+          <p class="plaza-hint">Touche le sol pour te déplacer, touche un avatar pour le saluer. Sur la Place, on se voit et on se fait coucou : pour discuter, lance un thème ci-dessous 💬</p>
+        </section>
         <section class="salon-head" aria-label="Commencer une discussion">
           <h2>Le Salon</h2>
           <p class="sub">Un thème, et quelqu’un te rejoint. Ton avatar papote avec le sien.</p>
@@ -859,6 +996,34 @@ body.has3d .hero.room .sky { opacity: .55; }
       <p class="foot">Talkie est réservé aux 18 ans et plus. Ton pays est deviné grâce à ton fuseau horaire pour choisir les thèmes. C’est un espace pour discuter, pas un service d’aide : si ça ne va vraiment pas, le 3114 répond jour et nuit, gratuitement (France).<span id="foot-ai" hidden> Mika est une IA : la modération automatique lit les messages pour protéger tout le monde. Quand tu lui écris, ou quand tu cherches des idées de thèmes, le texte est envoyé à Anthropic pour produire la réponse.</span><span id="foot-gif" hidden> Les GIF viennent de GIPHY : en les cherchant, ta recherche leur est transmise.</span></p>
       </div>
 
+      <div id="pane-bobby" class="tabpane" data-pane="bobby" hidden>
+        <div class="bob-top"><h2>Classe de Bobby</h2>
+          <div class="bob-sel"><select id="bob-lang" aria-label="Langue"></select><select id="bob-lvl" aria-label="Niveau"><option>A1</option><option>A2</option><option>B1</option><option>B2</option></select></div></div>
+        <div class="bob-stage" id="bob-stage"></div>
+        <div class="bob-scenes" id="bob-scenes"></div>
+        <div class="bob-prog" id="bob-prog"></div>
+        <div class="bob-log" id="bob-log" aria-live="polite"></div>
+        <div class="bob-chips" id="bob-chips"></div>
+        <form class="bob-form" id="bob-form" autocomplete="off">
+          <button type="button" id="bob-mic" aria-label="Parler">🎤</button>
+          <input type="text" id="bob-in" maxlength="300" placeholder="Écris ou parle à Bobby…" aria-label="Message à Bobby" enterkeyhint="send">
+          <button type="submit" class="primary" id="bob-send" aria-label="Envoyer" disabled>➤</button>
+        </form>
+        <div class="bob-tools"><button type="button" class="ghost" id="bob-book">📒 Mon carnet</button><button type="button" class="ghost" id="bob-new">🔄 Nouvelle leçon</button></div>
+        <p class="bob-note" id="bob-note">Bobby parle uniquement dans la langue choisie. Mika corrige tes phrases et t’explique en français. Ce sont des IA : elles peuvent se tromper.</p>
+      </div>
+
+      <div id="pane-boutique" class="tabpane" data-pane="boutique" hidden>
+        <section class="shop-hero">
+          <div class="shop-prev" id="shop-prev"></div>
+          <div class="shop-top"><h2>Boutique</h2><span class="petal-bal">🌸 <b id="petals3">0</b></span></div>
+          <div class="shop-act" id="shop-act"></div>
+        </section>
+        <div class="seg shop-seg" id="shop-seg" role="tablist"><button type="button" data-seg="outfit" class="on">👗 Tenues</button><button type="button" data-seg="decor">🛋️ Maison</button><button type="button" data-seg="bobby">🎓 Bobby</button><button type="button" data-seg="premium">💎 Premium</button></div>
+        <div class="wardrobe" id="shop-grid"></div>
+        <p class="me-hint" id="shop-hint">Gagne des pétales 🌸 en prenant soin de ton Mika. Tout s’obtient en jouant : rien n’est jamais obligatoire.</p>
+      </div>
+
       <div id="pane-moi" class="tabpane" data-pane="moi" hidden>
         <section class="me-card" aria-label="Mon avatar">
           <div class="me-av" id="me-av"></div>
@@ -867,13 +1032,14 @@ body.has3d .hero.room .sky { opacity: .55; }
         </section>
         <section class="me-sec"><h3>Mon humeur</h3><div class="mood-chart" id="mood-chart"></div><p class="me-hint" id="mood-hint">Dis-moi chaque jour comment tu te sens : Mika s’en souvient et veille sur toi 💚</p></section>
         <section class="me-sec"><h3>Ce que Mika sait de moi</h3><ul class="facts" id="facts"></ul><p class="me-hint">Tout reste sur ton téléphone. Tu peux supprimer chaque souvenir.</p><button type="button" class="ghost danger" id="btn-forget">🗑️ Effacer toute la mémoire</button></section>
-        <section class="me-sec"><div class="sec-head"><h3>Garde-robe de Mika</h3><span class="soon">Bientôt</span></div><div class="wardrobe" id="wardrobe"></div><p class="me-hint">Maquette : les tenues premium arriveront plus tard. Rien n’est payant aujourd’hui.</p></section>
         <section class="me-sec"><button type="button" class="ghost" id="btn-me-settings">⚙️ Réglages (voix, thème, notifications)</button></section>
       </div>
     </main>
     <nav class="tabbar" id="tabbar" aria-label="Navigation">
-      <button type="button" data-tab="chambre" aria-current="page"><span class="ti">🏠</span><span>Mika</span></button>
-      <button type="button" data-tab="salon"><span class="ti">💬</span><span>Salon</span></button>
+      <button type="button" data-tab="chambre" aria-current="page"><span class="ti">🏠</span><span>Chambre</span></button>
+      <button type="button" data-tab="salon"><span class="ti">🌍</span><span>Monde</span></button>
+      <button type="button" data-tab="bobby"><span class="ti">🎓</span><span>Bobby</span></button>
+      <button type="button" data-tab="boutique"><span class="ti">🛍️</span><span>Boutique</span></button>
       <button type="button" data-tab="moi"><span class="ti">🫧</span><span>Moi</span></button>
     </nav>
 
@@ -989,18 +1155,29 @@ body.has3d .hero.room .sky { opacity: .55; }
     </div>
   </div>
 
+  <div id="sheet-food" class="scrim" hidden>
+    <div class="sheet" role="dialog" aria-modal="true" aria-labelledby="sheet-food-h">
+      <div class="grab"></div>
+      <h3 id="sheet-food-h">Le garde-manger</h3>
+      <p>Qu’est-ce que ton Mika va grignoter ? L’onigiri est toujours gratuit.</p>
+      <div class="foods" id="foods"></div>
+      <div class="stack"><button type="button" class="ghost" id="food-close">Fermer</button></div>
+    </div>
+  </div>
+
   <div id="sheet-av" class="scrim" hidden>
     <div class="sheet" role="dialog" aria-modal="true" aria-labelledby="sheet-av-h">
       <div class="grab"></div>
-      <h3 id="sheet-av-h">Crée ton avatar</h3>
-      <p>Il te représente dans le Salon, face aux autres. Tu peux le changer quand tu veux.</p>
+      <h3 id="sheet-av-h">Crée ton Mika</h3>
+      <p id="av-intro">C’est toi, version mochi. Prends soin de lui : il prendra soin de toi 💚</p>
       <div class="avcreator">
+        <div class="avrow"><span class="lbl">Prénom</span><input type="text" id="av-name" maxlength="20" autocomplete="off" placeholder="Comment il s’appelle ?" aria-label="Prénom de ton Mika"></div>
         <div class="avprev" id="avprev"></div>
         <div class="avrow"><span class="lbl">Couleur</span><span id="av-colors"></span></div>
         <div class="avrow"><span class="lbl">Oreilles</span><span id="av-ears"></span></div>
         <div class="avrow"><span class="lbl">Regard</span><span id="av-face"></span></div>
         <div class="avrow"><span class="lbl">Style</span><span id="av-acc"></span></div>
-        <div class="stack"><button type="button" class="primary" id="av-save">C’est moi !</button><button type="button" class="ghost" id="av-rand">🎲 Au hasard</button></div>
+        <div class="stack"><button type="button" class="primary" id="av-save">Faire sa connaissance 💚</button><button type="button" class="ghost" id="av-rand">🎲 Au hasard</button></div>
       </div>
     </div>
   </div>
@@ -1053,7 +1230,7 @@ body.has3d .hero.room .sky { opacity: .55; }
   </div>
 </div>
 <div id="toast" role="status" aria-live="polite" hidden></div>
-<script src="/scene3d.js?v=14" defer></script>
-<script src="/app.js?v=14" defer></script>
+<script src="/scene3d.js?v=17b" defer></script>
+<script src="/app.js?v=17b" defer></script>
 </body>
 </html>

@@ -23,6 +23,7 @@ function s(x, n) { return String(x == null ? '' : x).replace(/[\u0000-\u001f\u00
 function describe(c) {
   const lines = [];
   const bits = [];
+  if (c.pet) bits.push('C’est elle qui t’a créé·e et t’a appelé·e « ' + c.pet + ' » : tu es SON petit Mika à elle, le mochi qui lui ressemble ; tu dis « ' + c.pet + ' » quand tu parles de toi si ça te plaît (sinon Mika).');
   if (c.name) bits.push('Prénom / pseudo : ' + c.name + '.');
   if (c.visits) bits.push('Nombre de jours où elle est venue : ' + c.visits + '.');
   if (c.streak > 1) bits.push('Jours consécutifs : ' + c.streak + '.');
@@ -34,6 +35,8 @@ function describe(c) {
   if (c.awayH != null) lines.push('ABSENCE : dernière visite il y a ' + (c.awayH < 2 ? 'moins de 2 heures' : c.awayH < 48 ? Math.round(c.awayH) + ' heures' : Math.round(c.awayH / 24) + ' jours') + '.');
   if (c.moods.length) lines.push('HUMEURS RÉCENTES (1 = au plus bas, 5 = rayonnante, de la plus ancienne à la plus récente) : ' + c.moods.join(', ') + '.');
   lines.push('MÉMOIRE : ' + (c.facts.length ? c.facts.map((f) => '- ' + f).join(' ') : 'rien pour l’instant.'));
+  if (c.needs) lines.push('TON ÉTAT DE MOCHI (elle prend soin de toi) : ' + c.needs + '. Si une jauge est basse (< 30 %), tu peux le dire une fois avec légèreté et tendresse (« mon ventre fait gloup »), jamais en reproche ; ton affection ne dépend JAMAIS de ce qu’elle te donne ni de ce qu’elle dépense.');
+  if (c.quests) lines.push('QUÊTES DU JOUR (petits gestes d’auto-soin que tu lui proposes) : ' + c.quests + '. Félicite-la sincèrement si elle en a fait ; ne la presse jamais pour les autres.');
   if (c.follow) lines.push('À DEMANDER : tu avais noté de lui redemander « ' + c.follow + ' ».');
   return lines.join('\n');
 }
@@ -56,6 +59,9 @@ function normalizeIn(b) {
     moods: (Array.isArray(o.moods) ? o.moods : []).slice(-7).map((x) => parseInt(x, 10)).filter((x) => x >= 1 && x <= 5),
     facts: (Array.isArray(o.facts) ? o.facts : []).slice(-14).map((x) => s(x, 90)).filter(Boolean),
     follow: s(o.follow, 100),
+    quests: s(o.quests, 220),
+    pet: s(o.pet, 20),
+    needs: s(o.needs, 120),
     mood: parseInt(o.mood, 10) >= 1 && parseInt(o.mood, 10) <= 5 ? parseInt(o.mood, 10) : null,
     messages: msgs
   };
