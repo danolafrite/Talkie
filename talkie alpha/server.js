@@ -30,6 +30,7 @@ const place = require('./lib/place');
 const mod = require('./lib/moderation');
 const trends = require('./lib/trends');
 const mika = require('./lib/mika');
+const companion = require('./lib/companion');
 const branches = require('./lib/branches');
 const stats = require('./lib/stats').create(DATA_DIR);
 const ADMIN_KEY = process.env.ADMIN_KEY || '';
@@ -116,7 +117,7 @@ function saveSubs() {
 /* ---------- État ---------- */
 const clients = new Map();  // ws -> { cid, pid, nick, visible, blocked:Set, roomId, ip, lastMsg:[], lastInvite }
 const byCid = new Map();    // cid -> ws
-const rooms = new Map();    // id -> { id, theme, max, hostPid, hostNick, members: Map<cid, {pid, nick, ws, timer}>, log: [] }
+const rooms = new Map();    // id -> { id, theme, max, hostPid, hostNick, members: Map<cid, {pid, nick, av, ws, timer}>, log: [] }
 const blocksOf = new Map(); // pid -> Set<pid> (ceux que cette personne a bloqués)
 
 const pidOf = (cid) => crypto.createHash('sha256').update('tablee:' + cid).digest('hex').slice(0, 12);
@@ -126,6 +127,16 @@ function clean(s, n) {
     .replace(/[\u0000-\u001f\u007f-\u009f​-‏‪-‮⁠-⁯﻿]/g, ' ')
     .replace(/\s+/g, ' ').trim().slice(0, n);
 }
+const rateHits = new Map();
+function rateOk(key, max, windowMs) {
+  const now = Date.now();
+  const arr = (rateHits.get(key) || []).filter((t) => now - t < windowMs);
+  if (arr.length >= max) { rateHits.set(key, arr); return false; }
+  arr.push(now); rateHits.set(key, arr);
+  if (rateHits.size > 5000) rateHits.clear();
+  return true;
+}
+function avOf(x) { const v = String(x == null ? '' : x); return /^[a-z0-9]{3,12}$/.test(v) ? v : ''; }
 function send(ws, obj) {
   if (ws && ws.readyState === 1) { try { ws.send(JSON.stringify(obj)); } catch (e) { /* ignore */ } }
 }
@@ -133,7 +144,7 @@ function blockedEitherWay(a, b) {
   return (blocksOf.get(a) && blocksOf.get(a).has(b)) || (blocksOf.get(b) && blocksOf.get(b).has(a));
 }
 function roomMemberList(room) {
-  return Array.from(room.members.values()).map((m) => ({ pid: m.pid, nick: m.nick, online: !!m.ws }));
+  return Array.from(room.members.values()).map((m) => ({ pid: m.pid, nick: m.nick, av: m.av || '', online: !!m.ws }));
 }
 function humansOnline(room) {
   let n = 0;
@@ -178,7 +189,8 @@ function broadcastLobby() {
       let hidden = false;
       r.members.forEach((m) => { if (blockedEitherWay(c.pid, m.pid)) hidden = true; });
       if (hidden) return;
-      invites.push({ id: r.id, theme: r.theme, max: r.max, here: r.members.size, nick: r.hostNick, ts: r.createdAt });
+      let hostAv = ''; r.members.forEach((m) => { if (m.pid === r.hostPid) hostAv = m.av || ''; });
+      invites.push({ id: r.id, theme: r.theme, max: r.max, here: r.members.size, nick: r.hostNick, av: hostAv, ts: r.createdAt });
     });
     send(ws, { t: 'lobby', online, invites });
   });
@@ -250,6 +262,7 @@ function attach(ws, room) {
   m.timer = null;
   m.ws = ws;
   m.nick = c.nick;
+  m.av = c.av;
   c.roomId = room.id;
   send(ws, { t: 'joined', room: roomView(room), log: room.log.filter((e) => !blockedEitherWay(c.pid, e.pid)) });
   sendRoom(room, { t: 'room', room: roomView(room) }, c.pid);
@@ -466,6 +479,7 @@ function handle(ws, msg) {
     c.cid = cid;
     c.pid = pidOf(cid);
     c.nick = clean(msg.nick, 20) || 'Anonyme';
+    c.av = avOf(msg.av);
     c.blocked = new Set((Array.isArray(msg.blocked) ? msg.blocked : []).slice(0, 200).map((x) => clean(x, 12)).filter(Boolean));
     blocksOf.set(c.pid, c.blocked);
     c.visible = msg.visible !== false;
@@ -486,10 +500,11 @@ function handle(ws, msg) {
       const n = clean(msg.nick, 20);
       if (!n) return;
       c.nick = n;
+      if (msg.av !== undefined) c.av = avOf(msg.av);
       if (c.roomId) {
         const room = rooms.get(c.roomId);
         const m = room && room.members.get(c.cid);
-        if (m) { m.nick = n; if (room.hostPid === c.pid) room.hostNick = n; sendRoom(room, { t: 'room', room: roomView(room) }); }
+        if (m) { m.nick = n; m.av = c.av; if (room.hostPid === c.pid) room.hostNick = n; sendRoom(room, { t: 'room', room: roomView(room) }); }
       }
       scheduleLobby();
       return;
@@ -522,7 +537,7 @@ function handle(ws, msg) {
         id, theme, max, hostPid: c.pid, hostNick: c.nick, createdAt: now, convoStart: null,
         members: new Map(), log: [], companion: { replies: 0, busy: false, spoke: false }
       };
-      room.members.set(c.cid, { pid: c.pid, nick: c.nick, ws: null, timer: null });
+      room.members.set(c.cid, { pid: c.pid, nick: c.nick, av: c.av, ws: null, timer: null });
       rooms.set(id, room);
       stats.invite();
       attach(ws, room);
@@ -544,7 +559,7 @@ function handle(ws, msg) {
       let blocked = false;
       room.members.forEach((m) => { if (blockedEitherWay(c.pid, m.pid)) blocked = true; });
       if (blocked) { send(ws, { t: 'error', text: 'Cette invitation n’est plus disponible.' }); return; }
-      room.members.set(c.cid, { pid: c.pid, nick: c.nick, ws: null, timer: null });
+      room.members.set(c.cid, { pid: c.pid, nick: c.nick, av: c.av, ws: null, timer: null });
       stats.join();
       if (room.members.size === 2 && !room.convoStart) { room.convoStart = Date.now(); stats.convoStart(); }
       attach(ws, room);
@@ -583,7 +598,7 @@ function handle(ws, msg) {
         send(ws, { t: 'error', text: (why === 'coordonnées' ? 'Pour ta sécurité, les liens et coordonnées (e-mail, téléphone) ne sont pas autorisés ici.' : 'Ce message ne respecte pas les règles de respect de Talkie.') + (st.n >= 2 ? ' Avertissement ' + st.n + '.' : '') });
       };
       const deliver = () => {
-        const entry = { t: 'chat', pid: c.pid, nick: c.nick, text, ts: Date.now() };
+        const entry = { t: 'chat', pid: c.pid, nick: c.nick, av: c.av, text, ts: Date.now() };
         if (gif) entry.gif = gif;
         room.log.push(entry);
         if (room.log.length > MAX_ROOM_LOG) room.log.shift();
@@ -782,6 +797,22 @@ const server = http.createServer(async (req, res) => {
     return;
   }
 
+  if (url.pathname === '/api/companion' && req.method === 'POST') {
+    const ip = String(req.headers['x-forwarded-for'] || req.socket.remoteAddress || '').split(',')[0].trim();
+    try {
+      if (!rateOk('cmp:' + ip, 30, 60000)) { json(res, 429, { error: 'trop vite' }); return; }
+      const body = JSON.parse((await readBody(req, 12000)) || '{}');
+      const last = Array.isArray(body.messages) && body.messages.length ? body.messages[body.messages.length - 1] : null;
+      if (body.kind === 'reply' && last && last.r === 'u' && mod.analyse(last.t).level === 'care') {
+        json(res, 200, { say: mika.CARE_TEXT, e: 'worried', chips: ['🫂 Merci Mika', '📞 Le 3114'], remember: [], follow: '', salon: false, mood: 1, care: true });
+        return;
+      }
+      if (!ai.enabled()) { json(res, 200, companion.fallback(body)); return; }
+      try { json(res, 200, await companion.turn(body)); }
+      catch (e) { console.warn('[talkie] compagnon indisponible :', e.message); json(res, 200, companion.fallback(body)); }
+    } catch (e) { json(res, 400, { error: 'requête invalide' }); }
+    return;
+  }
   if (url.pathname === '/api/config' && req.method === 'GET') {
     json(res, 200, { turnstile: TURNSTILE_SITE && TURNSTILE_SECRET ? TURNSTILE_SITE : null, tts: tts.enabled(), ttsRate: tts.PITCH });
     return;

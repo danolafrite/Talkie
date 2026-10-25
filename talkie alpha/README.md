@@ -55,3 +55,8 @@ Sans réglage, Mika « gazouille » (voix synthétisée dans le navigateur, grat
 |---|---|
 | `SPONT_DELAY_MS` / `SPONT_GAP_MS` | délai avant qu'il réagisse spontanément (3,5 s) et écart minimal entre deux interventions (50 s) |
 | `GEOCODE_URL` | service de recherche de villes (Open-Meteo par défaut, gratuit, sans clé) |
+
+## Mika compagnon (v13)
+
+L'onglet « Mika » est la chambre de Mika : il accueille, pose des questions, se souvient, s'inquiète. Il utilise la même clé `ANTHROPIC_API_KEY` (endpoint `/api/companion`, limité à 30 messages/minute/IP, compté dans `AI_DAILY_CAP`). La mémoire (souvenirs, humeurs, discussion) est stockée **sur le téléphone** (`localStorage`) et envoyée à chaque message ; rien n'est gardé sur le serveur. Les messages de détresse déclenchent une réponse fixe (3114) sans appel à l'IA.
+Onglets : Mika (chambre), Salon (le salon Talkie d'avant), Moi (avatar, humeurs, souvenirs, garde-robe en maquette).

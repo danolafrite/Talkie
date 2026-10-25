@@ -117,7 +117,7 @@
     ws.onopen = function () {
       if (ws !== mine) return;
       open = true; retry = 0;
-      send({ t: 'hello', cid: cid, nick: nick, blocked: blocked, visible: document.visibilityState !== 'hidden', adult: store('talkie.adult') === '1' });
+      send({ t: 'hello', cid: cid, nick: nick, av: myAv, blocked: blocked, visible: document.visibilityState !== 'hidden', adult: store('talkie.adult') === '1' });
       renderLobby();
       if (room) renderConvState();
     };
@@ -166,7 +166,7 @@
         replaying = false;
         break;
       case 'room':
-        if (room && m.room && m.room.id === room.id) { room = m.room; renderConvState(); }
+        if (room && m.room && m.room.id === room.id) { room = m.room; renderConvState(); renderStage(); }
         break;
       case 'chat': addChat(m); break;
       case 'typing': setTyping(!!m.on); break;
@@ -235,37 +235,56 @@
   }
 
   /* ---------- Mika (dessin kawaii) ---------- */
-  function accClasses() {
-    var v = (mem && mem.visits) || 0;
-    return (v >= 3 ? ' has-scarf' : '') + (v >= 6 ? ' has-bow' : '') + (v >= 12 ? ' has-crown' : '');
+  var WARD = [
+    { id: 'scarf', label: 'Écharpe', need: 3 }, { id: 'bow', label: 'Nœud', need: 6 }, { id: 'crown', label: 'Couronne', need: 12 },
+    { id: 'glasses', label: 'Lunettes', premium: '1,49 €' }, { id: 'hat', label: 'Sorcier', premium: '1,99 €' },
+    { id: 'wings', label: 'Ailes', premium: '2,49 €' }, { id: 'pj', label: 'Bonnet dodo', premium: '1,49 €' }
+  ];
+  var equip = (function () { try { var e = JSON.parse(store('talkie.equip') || 'null'); if (Array.isArray(e)) return e.slice(0, 8); } catch (er) { /* ignore */ } return null; })();
+  function unlocked(w) { return !w.premium && ((mem && mem.visits) || 0) >= w.need; }
+  function accClasses(force) {
+    var out = '';
+    WARD.forEach(function (w) {
+      var on = force ? force === w.id : (equip ? equip.indexOf(w.id) >= 0 && unlocked(w) : unlocked(w));
+      if (on) out += ' has-' + w.id;
+    });
+    return out;
   }
-  function mikaSvg() {
+  function mikaSvg(force) {
     var eye = function (cx) {
-      return '<g><ellipse cx="' + cx + '" cy="46" rx="5.2" ry="6.6" fill="#2A1B5E"/><g class="pupil"><circle cx="' + (cx + 1.8) + '" cy="43.4" r="2.5" fill="#fff"/><circle cx="' + (cx - 1.7) + '" cy="48.8" r="1.2" fill="#fff"/></g></g>';
+      return '<g><ellipse cx="' + cx + '" cy="46" rx="6" ry="7.4" fill="#2A1B5E"/><g class="pupil"><circle cx="' + (cx + 2) + '" cy="43" r="2.9" fill="#fff"/><circle cx="' + (cx - 2) + '" cy="49.6" r="1.4" fill="#fff"/></g></g>';
     };
-    return '<svg class="mk' + accClasses() + '" viewBox="0 0 80 80" aria-hidden="true">' +
-      '<g class="ear ear-l"><path d="M15 33 C11 19 16 9 24 13 C29 16 31 22 31 26Z" fill="#5DE3B4"/><path d="M18.5 27 C17 20 19.5 16.5 23 18.5 C25.5 20 26.5 23 26.5 25Z" fill="#FFB3D1"/></g>' +
-      '<g class="ear ear-r"><path d="M65 33 C69 19 64 9 56 13 C51 16 49 22 49 26Z" fill="#5DE3B4"/><path d="M61.5 27 C63 20 60.5 16.5 57 18.5 C54.5 20 53.5 23 53.5 25Z" fill="#FFB3D1"/></g>' +
-      '<ellipse cx="29" cy="74" rx="7.5" ry="4" fill="#3FC79A"/><ellipse cx="51" cy="74" rx="7.5" ry="4" fill="#3FC79A"/>' +
-      '<g class="body"><path d="M7 51 C7 30 21 18 40 18 C59 18 73 30 73 51 C73 67 58 76 40 76 C22 76 7 67 7 51Z" fill="#5DE3B4"/>' +
-      '<ellipse cx="40" cy="63" rx="16" ry="9" fill="#9CF5D4" opacity=".55"/>' +
-      '<ellipse cx="25" cy="31" rx="9" ry="4.5" fill="#fff" opacity=".42" transform="rotate(-25 25 31)"/></g>' +
-      '<path d="M40 19 Q40.5 12 42 9" stroke="#3FC79A" stroke-width="2.6" fill="none" stroke-linecap="round"/>' +
-      '<g class="leaf leaf-r"><path d="M42 10 C48 3 57 4 59 8 C55 13 47 14 42 10Z" fill="#FFCF3F"/></g>' +
-      '<g class="mk-arm-l"><ellipse cx="8.5" cy="55" rx="6" ry="3.8" fill="#44CFA0" transform="rotate(-35 8.5 55)"/></g>' +
-      '<ellipse cx="71.5" cy="56" rx="6" ry="3.8" fill="#44CFA0" transform="rotate(35 71.5 56)"/>' +
-      '<ellipse cx="19.5" cy="56" rx="5.6" ry="3.5" fill="#FF8FC0" opacity=".8"/><ellipse cx="60.5" cy="56" rx="5.6" ry="3.5" fill="#FF8FC0" opacity=".8"/>' +
-      '<g class="eo">' + eye(28) + eye(52) + '</g>' +
-      '<g class="eh" fill="none" stroke="#2A1B5E" stroke-width="3" stroke-linecap="round"><path d="M22.5 48.5 Q28 40.5 33.5 48.5"/><path d="M46.5 48.5 Q52 40.5 57.5 48.5"/></g>' +
-      '<g class="ec" fill="none" stroke="#2A1B5E" stroke-width="3" stroke-linecap="round"><path d="M22.5 46 Q28 51.5 33.5 46"/><path d="M46.5 46 Q52 51.5 57.5 46"/></g>' +
-      '<g class="ht" fill="#FF4F9A"><path d="M28 51 C21 46 23 40 28 43.5 C33 40 35 46 28 51Z"/><path d="M52 51 C45 46 47 40 52 43.5 C57 40 59 46 52 51Z"/></g>' +
-      '<path class="ms" d="M35.5 57 Q37.8 60.6 40 57 Q42.2 60.6 44.5 57" stroke="#2A1B5E" stroke-width="2.4" fill="none" stroke-linecap="round" stroke-linejoin="round"/>' +
-      '<g class="mw"><path d="M33.5 55 Q40 68 46.5 55Z" fill="#7A2252"/><ellipse cx="40" cy="61.6" rx="3.4" ry="2" fill="#FF8FA3"/></g>' +
-      '<ellipse class="mo" cx="40" cy="59.5" rx="3" ry="3.7" fill="#7A2252"/>' +
-      '<ellipse class="mt" cx="40" cy="59" rx="4.2" ry="3" fill="#7A2252"/>' +
-      '<g class="acc acc-scarf"><path d="M16 66 Q40 78 64 66 L62 72 Q40 84 18 72Z" fill="#FF8FC0"/><path d="M52 74 l3 9 l5 -3 l-3 -8z" fill="#FF6FAE"/></g>' +
-      '<g class="acc acc-bow"><path d="M20 18 l-9 -5 v11z M20 18 l9 -5 v11z" fill="#FF6FAE"/><circle cx="20" cy="18" r="3" fill="#FFB3D1"/></g>' +
+    return '<svg class="mk' + accClasses(force) + '" viewBox="0 0 80 80" aria-hidden="true">' +
+      '<g class="ear ear-l"><circle cx="19" cy="24" r="12.5" fill="#5DE3B4"/><circle cx="19.5" cy="25" r="6.8" fill="#D9CCFF"/></g>' +
+      '<g class="ear ear-r"><circle cx="61" cy="24" r="12.5" fill="#5DE3B4"/><circle cx="60.5" cy="25" r="6.8" fill="#D9CCFF"/></g>' +
+      '<ellipse cx="28" cy="75" rx="8" ry="4" fill="#3FC79A"/><ellipse cx="52" cy="75" rx="8" ry="4" fill="#3FC79A"/>' +
+      '<g class="body"><path d="M5 52 C5 30 20 17 40 17 C60 17 75 30 75 52 C75 68 59 77 40 77 C21 77 5 68 5 52Z" fill="#5DE3B4"/>' +
+      '<ellipse cx="40" cy="64" rx="19" ry="10" fill="#C9FBE8" opacity=".8"/>' +
+      '<ellipse cx="24" cy="30" rx="9" ry="4.5" fill="#fff" opacity=".5" transform="rotate(-25 24 30)"/></g>' +
+      '<g class="leaf pom"><circle cx="35.5" cy="15" r="5" fill="#C7B8FF"/><circle cx="44.5" cy="15" r="5" fill="#C7B8FF"/><circle cx="40" cy="11" r="6" fill="#B3A2FF"/><circle cx="38.4" cy="9.4" r="1.8" fill="#fff" opacity=".7"/></g>' +
+      '<g class="mk-arm-l"><ellipse cx="7.5" cy="57" rx="6" ry="4" fill="#44CFA0" transform="rotate(-35 7.5 57)"/></g>' +
+      '<ellipse cx="72.5" cy="58" rx="6" ry="4" fill="#44CFA0" transform="rotate(35 72.5 58)"/>' +
+      '<g class="ck"><ellipse cx="17.5" cy="57" rx="6" ry="3.8" fill="#FF8FC0" opacity=".85"/></g><g class="ck"><ellipse cx="62.5" cy="57" rx="6" ry="3.8" fill="#FF8FC0" opacity=".85"/></g>' +
+      '<g class="eo">' + eye(27) + eye(53) + '</g>' +
+      '<g class="eh" fill="none" stroke="#2A1B5E" stroke-width="3.2" stroke-linecap="round"><path d="M21 48.5 Q27 40 33 48.5"/><path d="M47 48.5 Q53 40 59 48.5"/></g>' +
+      '<g class="ec" fill="none" stroke="#2A1B5E" stroke-width="3.2" stroke-linecap="round"><path d="M21 46 Q27 52 33 46"/><path d="M47 46 Q53 52 59 46"/></g>' +
+      '<g class="ht" fill="#FF4F9A"><path d="M27 52 C20 47 22 40 27 44 C32 40 34 47 27 52Z"/><path d="M53 52 C46 47 48 40 53 44 C58 40 60 47 53 52Z"/></g>' +
+      '<g class="bw" fill="none" stroke="#2A1B5E" stroke-width="2.6" stroke-linecap="round"><path d="M20.5 38.5 L33 34.5"/><path d="M47 34.5 L59.5 38.5"/></g>' +
+      '<path class="ms" d="M35.5 58 Q37.8 61.6 40 58 Q42.2 61.6 44.5 58" stroke="#2A1B5E" stroke-width="2.4" fill="none" stroke-linecap="round" stroke-linejoin="round"/>' +
+      '<path class="mf" d="M35 62 Q40 56.5 45 62" stroke="#2A1B5E" stroke-width="2.6" fill="none" stroke-linecap="round"/>' +
+      '<g class="mw"><path d="M33.5 56 Q40 69 46.5 56Z" fill="#7A2252"/><ellipse cx="40" cy="62.6" rx="3.4" ry="2" fill="#FF8FA3"/></g>' +
+      '<ellipse class="mo" cx="40" cy="60" rx="3" ry="3.7" fill="#7A2252"/>' +
+      '<ellipse class="mt" cx="40" cy="59.5" rx="4.2" ry="3" fill="#7A2252"/>' +
+      '<path class="tr" d="M20 53 C17.5 57.5 17.5 60 20 60 C22.5 60 22.5 57.5 20 53Z" fill="#8EDBFF"/>' +
+      '<path class="sw2" d="M66 30 C63.5 34.5 63.5 37 66 37 C68.5 37 68.5 34.5 66 30Z" fill="#8EDBFF"/>' +
+      '<g class="sp" fill="#FFCF3F"><path d="M66 18 l1.6 4.4 l4.4 1.6 l-4.4 1.6 l-1.6 4.4 l-1.6 -4.4 l-4.4 -1.6 l4.4 -1.6z"/><path d="M12 14 l1.1 3 l3 1.1 l-3 1.1 l-1.1 3 l-1.1 -3 l-3 -1.1 l3 -1.1z"/></g>' +
+      '<g class="acc acc-scarf"><path d="M16 67 Q40 79 64 67 L62 73 Q40 85 18 73Z" fill="#FF8FC0"/><path d="M52 75 l3 9 l5 -3 l-3 -8z" fill="#FF6FAE"/></g>' +
+      '<g class="acc acc-bow"><path d="M19 12 l-9 -5 v11z M19 12 l9 -5 v11z" fill="#FF6FAE"/><circle cx="19" cy="12" r="3" fill="#FFB3D1"/></g>' +
       '<g class="acc acc-crown"><path d="M31 20 l2.5 -9 l5 5 l1.5 -8 l1.5 8 l5 -5 l2.5 9z" fill="#FFCF3F" stroke="#E5A800" stroke-width="1"/></g>' +
+      '<g class="acc acc-glasses" fill="none" stroke="#2A1B5E" stroke-width="2.4"><circle cx="27" cy="46" r="9.5"/><circle cx="53" cy="46" r="9.5"/><path d="M36.5 46 H43.5"/></g>' +
+      '<g class="acc acc-hat"><path d="M22 22 L40 -6 L58 22Z" fill="#7C5CFF"/><ellipse cx="40" cy="22" rx="22" ry="5" fill="#5B3FD6"/><circle cx="40" cy="2" r="2.4" fill="#FFCF3F"/></g>' +
+      '<g class="acc acc-wings"><path d="M6 44 C-8 34 -6 52 8 56Z" fill="#fff" stroke="#D9CCFF" stroke-width="1.5"/><path d="M74 44 C88 34 86 52 72 56Z" fill="#fff" stroke="#D9CCFF" stroke-width="1.5"/></g>' +
+      '<g class="acc acc-pj"><path d="M24 24 Q40 8 56 24 Q50 20 40 20 Q30 20 24 24Z" fill="#8EA2FF"/><circle cx="57" cy="24" r="4" fill="#fff"/></g>' +
       '<g class="zz" fill="#7C5CFF" font-family="sans-serif" font-weight="900"><text x="60" y="26" font-size="11">z</text><text x="67" y="16" font-size="8">z</text></g></svg>';
   }
   function fillMika() {
@@ -493,10 +512,11 @@
     var on = talkFlags.t || talkFlags.v;
     Array.prototype.forEach.call(document.querySelectorAll('#mika-av, #fab-orb'), function (n) { n.classList.toggle('talking', on); });
   }
+  var ST = ['st-happy', 'st-wow', 'st-sleep', 'st-love', 'st-sad', 'st-worry', 'st-proud', 'st-shy'];
   var moodT = null;
   function mood(name, ms) {
     var a = $('mika-av');
-    ['st-happy', 'st-wow', 'st-sleep', 'st-love'].forEach(function (c) { a.classList.remove(c); });
+    ST.forEach(function (c) { a.classList.remove(c); });
     clearTimeout(moodT);
     if (name) { a.classList.add('st-' + name); if (ms) moodT = setTimeout(function () { mood(null); }, ms); }
   }
@@ -614,21 +634,13 @@
   function asleep() { return $('mika-av').classList.contains('st-sleep'); }
   function bumpIdle() {
     clearTimeout(idleT); clearTimeout(sleepT);
-    idleT = setTimeout(nudge, 22000);
+    idleT = setTimeout(nudge, 40000);
     sleepT = setTimeout(function () {
       if (room || document.hidden) return;
       mood('sleep'); $('mika-say').classList.remove('thinking');
       $('mika-say').textContent = 'Zzz… 💤 (touche-moi pour me réveiller)';
       stopSpeaking();
-    }, 70000);
-  }
-  function nudge() {
-    if (room || document.hidden || asleep()) return;
-    var items = todayThemes();
-    var x = items.length ? items[dir.i % items.length] : null;
-    mikaSay(pick(['Hihi, tu réfléchis ? Je peux choisir pour toi 🎲', 'Pssst… je suis toujours là, hein 🌸', x ? 'Je repense à « ' + x.text + ' »… ça te dit ? 👀' : 'Un petit thème et je m’occupe du reste ✨']), false, 'wow');
-    anim('shy');
-    mainOffer();
+    }, 150000);
   }
   function publishNow() {
     var b = $('btn-publish');
@@ -695,17 +707,9 @@
     dir.engaged = true;
     if (pet.mode !== 'home') { callHome(); pet.mode = 'home'; anim('jump'); burst(['💚', '✨']); mikaSay(pick(['Tu m’as trouvé ! 🌸', 'Cache-cache gagné… hihi 💚', 'Coucou, me revoilà ! ✨']), false, 'happy'); bumpIdle(); return; }
     bumpIdle();
-    if (asleep()) { mood('wow', 1800); anim('shy'); mikaSay(pick(['Oh ! Je ne dormais pas, je méditais… 😳', 'Mmh ? Ah, tu es là ! Bonjour 🌸']), false, 'wow'); mainOffer(); return; }
+    if (asleep()) { mood('wow', 1800); anim('shy'); mikaSay(pick(['Oh ! Je ne dormais pas, je méditais… 😳', 'Mmh ? Ah, tu es là ! Bonjour 🌸']), false, 'wow'); if (cmpTouch) cmpTouch(); return; }
     anim('jump'); burst(['💚', '✨', '🌸']);
     mikaSay(pick(TAPS), false, 'happy');
-  });
-  $('theme').addEventListener('input', function () {
-    if (!dir.typed && $('theme').value.trim().length >= 4 && !room) {
-      dir.typed = true; dir.engaged = true;
-      mikaSay('Ooh, j’aime déjà ! Appuie sur Publier 🥹', true, 'happy');
-      burst(['✨']);
-      readyToPublish();
-    }
   });
   ['pointerdown', 'keydown'].forEach(function (ev) { document.addEventListener(ev, function () { if (!room) bumpIdle(); }, { passive: true }); });
 
@@ -782,7 +786,7 @@
     requestAnimationFrame(petLoop);
     var actor = $('mika-actor'), shadow = $('mika-shadow');
     if (document.hidden) { pet.last = 0; return; }
-    if (room || $('lobby').hidden) { actor.style.display = 'none'; shadow.style.display = 'none'; pet.last = 0; return; }
+    if (room || $('lobby').hidden || curTab !== 'chambre') { actor.style.display = 'none'; shadow.style.display = 'none'; pet.last = 0; return; }
     actor.style.display = ''; shadow.style.display = '';
     var sr = $('mika-stage').getBoundingClientRect();
     var vw = window.innerWidth, vh = window.innerHeight;
@@ -884,7 +888,7 @@
   var perch = { x: -50, tx: 0.5, next: 0, last: 0, lastAct: Date.now(), asleep: false, nextThought: 0, moodT: null, entered: false };
   function perchMood(name, ms) {
     var a = $('perch-mika');
-    ['st-happy', 'st-wow', 'st-sleep', 'st-love'].forEach(function (c) { a.classList.remove(c); });
+    ST.forEach(function (c) { a.classList.remove(c); });
     clearTimeout(perch.moodT);
     if (name) { a.classList.add('st-' + name); if (ms) perch.moodT = setTimeout(function () { if (!perch.asleep) perchMood(null); }, ms); }
   }
@@ -921,7 +925,7 @@
     else { perchLook(0, 1.6); }
   }
   function perchEnter() {
-    perch.x = -50; perch.tx = 0.35; perch.next = performance.now() + 4000; perch.lastAct = Date.now(); perch.asleep = false;
+    perch.x = 120; perch.tx = 0.35; perch.next = performance.now() + 4000; perch.lastAct = Date.now(); perch.asleep = false;
     perchMood('happy', 2200);
     setTimeout(function () { if (room) perchThought('👋'); }, 900);
   }
@@ -932,10 +936,11 @@
     if (!w) return;
     var dt = perch.last ? Math.min(0.05, (ts - perch.last) / 1000) : 0.016;
     perch.last = ts;
-    var range = Math.max(0, w - 50 - 8);
+    var lo = 56, hi = w - 56 * Math.max(1, perch.others || 1) - 46;
+    var range = Math.max(0, hi - lo);
     if (!perch.asleep && Date.now() - perch.lastAct > 75000) { perch.asleep = true; perchMood('sleep'); }
     if (!perch.asleep && !reduceMotion && ts > perch.next) { perch.tx = Math.random(); perch.next = ts + 2600 + Math.random() * 4600; }
-    var target = 4 + perch.tx * range;
+    var target = lo + perch.tx * range;
     var before = perch.x;
     if (!perch.asleep) perch.x += (target - perch.x) * Math.min(1, dt * 0.9);
     var moving = Math.abs(perch.x - before) / Math.max(dt, 0.001) > 8;
@@ -1171,7 +1176,7 @@
 
   /* Mika flottant : toujours à portée quand l'accueil défile */
   var heroOut = false;
-  function updateFab() { $('mika-fab').hidden = !(heroOut && !$('lobby').hidden); }
+  function updateFab() { $('mika-fab').hidden = !(curTab === 'salon' && !$('lobby').hidden); }
   function openMikaSheet() {
     var list = $('mika-sheet-list');
     list.textContent = '';
@@ -1223,7 +1228,7 @@
     cp.textContent = String(invites.length);
     shown.forEach(function (inv) {
       var li = el('li', 'invite');
-      li.appendChild(el('div', 'avatar ' + tint(inv.nick), animal(inv.nick)));
+      var iav = el('div', 'avatar av-slot'); iav.innerHTML = avatarSvg(inv.av || defaultAv(inv.nick)); li.appendChild(iav);
       var main = el('div', 'invite-main');
       main.appendChild(el('div', 'invite-theme', inv.theme));
       var meta = el('div', 'invite-meta');
@@ -1279,6 +1284,7 @@
     $('msg').value = '';
     $('conv-theme').textContent = room.theme;
     perchEnter();
+    renderStage();
     var av = $('conv-av');
     av.className = 'avatar ' + tint(room.theme);
     av.textContent = '💬';
@@ -1498,6 +1504,7 @@
     var ai = !!m.ai;
     var mine = !ai && m.pid === myPid;
     perchReact(ai ? 'ai' : (mine ? 'me' : 'human'));
+    stageSay(m);
     if (ai) { typingOn = false; if (!replaying) speak(text); }
     removeTypingNode();
     ensureDay();
@@ -1976,7 +1983,7 @@
     if (!v) return;
     nick = v;
     store('tablee.nick', nick);
-    send({ t: 'nick', nick: nick });
+    send({ t: 'nick', nick: nick, av: myAv });
   });
   nickInput.addEventListener('blur', function () { nickInput.value = nick; });
 
@@ -1988,16 +1995,352 @@
   });
   window.addEventListener('online', function () { if (!replaced && (!ws || ws.readyState > 1)) { retry = 0; connect(); } });
 
+  /* ---------- Avatar de l'utilisateur ---------- */
+  var AV_COLORS = ['#5DE3B4', '#B9A6FF', '#FFB89A', '#8EDBFF', '#FFE27A', '#FFA8CF', '#A8E86B', '#E0E4F2'];
+  var AV_EARS = ['Chat', 'Ours', 'Lapin', 'Aucune'];
+  var AV_FACE = ['Rond', 'Content', 'Étoiles'];
+  var AV_ACC = ['Rien', 'Nœud', 'Lunettes', 'Bonnet', 'Fleur'];
+  function hash(str) { var h = 0; str = String(str); for (var i = 0; i < str.length; i++) h = (h * 31 + str.charCodeAt(i)) | 0; return Math.abs(h); }
+  function defaultAv(seed) { var h = hash(seed); return '' + (h % 8) + (Math.floor(h / 8) % 4) + (Math.floor(h / 32) % 3) + (Math.floor(h / 96) % 5); }
+  function avatarSvg(code) {
+    code = /^[0-7][0-3][0-2][0-4]$/.test(code || '') ? code : defaultAv(code || 'x');
+    var c = AV_COLORS[+code[0]], ear = +code[1], face = +code[2], acc = +code[3];
+    var ink = '#2A1B5E', g = '';
+    if (ear === 0) g += '<path d="M12 36 L14 8 L32 22Z" fill="' + c + '"/><path d="M68 36 L66 8 L48 22Z" fill="' + c + '"/><path d="M16 28 L17 15 L26 22Z" fill="#FFB3D1"/><path d="M64 28 L63 15 L54 22Z" fill="#FFB3D1"/>';
+    else if (ear === 1) g += '<circle cx="17" cy="21" r="10" fill="' + c + '"/><circle cx="63" cy="21" r="10" fill="' + c + '"/><circle cx="17" cy="21" r="5" fill="#FFB3D1"/><circle cx="63" cy="21" r="5" fill="#FFB3D1"/>';
+    else if (ear === 2) g += '<ellipse cx="26" cy="12" rx="7" ry="16" fill="' + c + '" transform="rotate(-8 26 12)"/><ellipse cx="54" cy="12" rx="7" ry="16" fill="' + c + '" transform="rotate(8 54 12)"/><ellipse cx="26" cy="13" rx="3.4" ry="10" fill="#FFB3D1" transform="rotate(-8 26 13)"/><ellipse cx="54" cy="13" rx="3.4" ry="10" fill="#FFB3D1" transform="rotate(8 54 13)"/>';
+    else g += '<circle cx="40" cy="14" r="6" fill="' + c + '"/><circle cx="40" cy="14" r="2.6" fill="#fff" opacity=".6"/>';
+    g += '<ellipse cx="40" cy="48" rx="31" ry="28" fill="' + c + '"/><ellipse cx="29" cy="30" rx="8" ry="4" fill="#fff" opacity=".4" transform="rotate(-25 29 30)"/>';
+    g += '<ellipse cx="19" cy="55" rx="5.5" ry="3.4" fill="#FF8FC0" opacity=".8"/><ellipse cx="61" cy="55" rx="5.5" ry="3.4" fill="#FF8FC0" opacity=".8"/>';
+    if (face === 0) g += '<ellipse cx="29" cy="47" rx="4.6" ry="5.8" fill="' + ink + '"/><ellipse cx="51" cy="47" rx="4.6" ry="5.8" fill="' + ink + '"/><circle cx="30.4" cy="44.8" r="1.8" fill="#fff"/><circle cx="52.4" cy="44.8" r="1.8" fill="#fff"/>';
+    else if (face === 1) g += '<g fill="none" stroke="' + ink + '" stroke-width="3" stroke-linecap="round"><path d="M23.5 49 Q29 41 34.5 49"/><path d="M45.5 49 Q51 41 56.5 49"/></g>';
+    else g += '<ellipse cx="29" cy="47" rx="6" ry="7" fill="' + ink + '"/><ellipse cx="51" cy="47" rx="6" ry="7" fill="' + ink + '"/><circle cx="31" cy="44" r="2.5" fill="#fff"/><circle cx="27" cy="50" r="1.2" fill="#fff"/><circle cx="53" cy="44" r="2.5" fill="#fff"/><circle cx="49" cy="50" r="1.2" fill="#fff"/>';
+    g += '<path d="M35.5 57 Q40 62 44.5 57" stroke="' + ink + '" stroke-width="2.6" fill="none" stroke-linecap="round"/>';
+    if (acc === 1) g += '<path d="M54 20 l10 -6 v13z M54 20 l-10 -6 v13z" fill="#FF6FAE"/><circle cx="54" cy="20" r="3.2" fill="#FFB3D1"/>';
+    else if (acc === 2) g += '<g fill="none" stroke="' + ink + '" stroke-width="2.4"><circle cx="29" cy="47" r="9"/><circle cx="51" cy="47" r="9"/><path d="M38 47 H42"/></g>';
+    else if (acc === 3) g += '<path d="M14 28 Q40 -2 66 28 Q40 20 14 28Z" fill="#FF6F8E"/><circle cx="40" cy="6" r="4.5" fill="#fff"/>';
+    else if (acc === 4) g += '<g transform="translate(58 18)"><circle r="3" fill="#FFCF3F"/><g fill="#FFB3D1"><circle cx="0" cy="-6" r="3.6"/><circle cx="6" cy="0" r="3.6"/><circle cx="0" cy="6" r="3.6"/><circle cx="-6" cy="0" r="3.6"/></g><circle r="3" fill="#FFCF3F"/></g>';
+    return '<svg viewBox="0 0 80 80" aria-hidden="true">' + g + '</svg>';
+  }
+  var myAv = (function () { var v = store('talkie.av'); return /^[0-7][0-3][0-2][0-4]$/.test(v || '') ? v : defaultAv(cid); })();
+  var avDraft = myAv;
+  function renderAvEditor() {
+    $('avprev').innerHTML = avatarSvg(avDraft);
+    function row(id, labels, idx, swatch) {
+      var box = $(id); box.textContent = '';
+      labels.forEach(function (l, i) {
+        var b = el('button', (swatch ? 'sw ' : '') + (+avDraft[idx] === i ? 'on' : ''), swatch ? '' : l);
+        b.type = 'button';
+        if (swatch) { b.style.background = l; b.setAttribute('aria-label', 'Couleur ' + (i + 1)); }
+        b.addEventListener('click', function () { var a = avDraft.split(''); a[idx] = String(i); avDraft = a.join(''); renderAvEditor(); });
+        box.appendChild(b);
+      });
+    }
+    row('av-colors', AV_COLORS, 0, true); row('av-ears', AV_EARS, 1); row('av-face', AV_FACE, 2); row('av-acc', AV_ACC, 3);
+  }
+  function openAvEditor() { closeSheets(); avDraft = myAv; renderAvEditor(); $('sheet-av').hidden = false; }
+  function saveAv() {
+    myAv = avDraft; store('talkie.av', myAv); store('talkie.avset', '1');
+    send({ t: 'nick', nick: nick, av: myAv });
+    $('sheet-av').hidden = true; renderMoi(); toast('Avatar enregistré ✨');
+  }
+  $('btn-edit-av').addEventListener('click', openAvEditor);
+  $('me-av').addEventListener('click', openAvEditor);
+  $('av-save').addEventListener('click', saveAv);
+  $('av-rand').addEventListener('click', function () { avDraft = '' + Math.floor(Math.random() * 8) + Math.floor(Math.random() * 4) + Math.floor(Math.random() * 3) + Math.floor(Math.random() * 5); renderAvEditor(); });
+  $('sheet-av').addEventListener('click', function (ev) { if (ev.target === $('sheet-av')) $('sheet-av').hidden = true; });
+
+  /* ---------- Onglets ---------- */
+  var curTab = 'chambre';
+  function setTab(name) {
+    curTab = name;
+    ['chambre', 'salon', 'moi'].forEach(function (t) {
+      $('pane-' + t).hidden = t !== name;
+      document.body.classList.toggle('tab-' + t, t === name);
+    });
+    Array.prototype.forEach.call(document.querySelectorAll('#tabbar button'), function (b) {
+      if (b.getAttribute('data-tab') === name) b.setAttribute('aria-current', 'page'); else b.removeAttribute('aria-current');
+    });
+    updateFab();
+    if (name === 'moi') renderMoi();
+    if (name === 'chambre' && !cmpOpened) cmpOpen();
+    window.scrollTo(0, 0);
+  }
+  Array.prototype.forEach.call(document.querySelectorAll('#tabbar button'), function (b) {
+    b.addEventListener('click', function () { setTab(b.getAttribute('data-tab')); });
+  });
+
+  /* ---------- Mika compagnon : mémoire (sur le téléphone), conversation, émotions ---------- */
+  var cmp = (function () {
+    var d = { facts: [], follow: '', moods: [], thread: [], bond: 0 };
+    try {
+      var j = JSON.parse(store('talkie.cmp') || '{}');
+      d.facts = (Array.isArray(j.facts) ? j.facts : []).map(function (x) { return clean(x, 90); }).filter(Boolean).slice(-20);
+      d.follow = clean(j.follow, 100);
+      d.moods = (Array.isArray(j.moods) ? j.moods : []).filter(function (x) { return x && /^\d{4}-\d\d-\d\d$/.test(x.d) && x.m >= 1 && x.m <= 5; }).slice(-30);
+      d.thread = (Array.isArray(j.thread) ? j.thread : []).filter(function (x) { return x && (x.r === 'u' || x.r === 'm') && x.t; }).map(function (x) { return { r: x.r, t: clean(x.t, 400), ts: Number(x.ts) || 0 }; }).slice(-40);
+      d.bond = Math.max(0, Number(j.bond) || 0);
+    } catch (e) { /* mémoire illisible : on repart de zéro */ }
+    return d;
+  })();
+  function saveCmp() { store('talkie.cmp', JSON.stringify(cmp)); }
+  function todayKey() { return new Date().toLocaleDateString('sv-SE'); }
+  function recordMood(m) {
+    var d = todayKey();
+    cmp.moods = cmp.moods.filter(function (x) { return x.d !== d; });
+    cmp.moods.push({ d: d, m: m });
+    cmp.moods = cmp.moods.slice(-30);
+    saveCmp();
+  }
+  function moodToday() { var d = todayKey(); for (var i = 0; i < cmp.moods.length; i++) if (cmp.moods[i].d === d) return cmp.moods[i].m; return 0; }
+  function level() {
+    var xp = cmp.bond + (mem.visits || 0) * 3, lv = 1, need = 12, acc = 0;
+    while (xp >= acc + need) { acc += need; lv++; need = Math.round(need * 1.5); }
+    return { lv: lv, pct: Math.round((xp - acc) / need * 100) };
+  }
+  function renderBond() { var l = level(); $('bond-lv').textContent = 'Niv. ' + l.lv; $('bond-fill').style.width = Math.max(6, l.pct) + '%'; }
+
+  var EMO = { happy: 'happy', love: 'love', wow: 'wow', sad: 'sad', worried: 'worry', sleepy: 'sleep', proud: 'proud', shy: 'shy', silly: 'happy', cheer: 'happy' };
+  function feel(e) {
+    mood(EMO[e] || 'happy', (e === 'sad' || e === 'worried') ? 9000 : 3600);
+    if (e === 'cheer' || e === 'proud') { anim('jump'); burst(['🎉', '✨', '💚']); }
+    else if (e === 'love') { anim('jump'); burst(['💖', '💚', '🌸']); }
+    else if (e === 'shy') anim('shy');
+    else if (e === 'worried' || e === 'sad') burst(['💧']);
+  }
+  var pendingM = '';
+  function pushDom(r, t) {
+    var box = $('thread');
+    box.appendChild(el('div', 'tmsg ' + r, t));
+    while (box.children.length > 30) box.removeChild(box.firstChild);
+    box.scrollTop = box.scrollHeight;
+  }
+  function addThread(r, t) {
+    cmp.thread.push({ r: r, t: t, ts: Date.now() });
+    cmp.thread = cmp.thread.slice(-40);
+    saveCmp();
+    // la dernière phrase de Mika est dans sa bulle ; elle rejoint l'historique quand on lui répond
+    if (r === 'm') { if (pendingM) pushDom('m', pendingM); pendingM = t; }
+    else { if (pendingM) { pushDom('m', pendingM); pendingM = ''; } pushDom('u', t); }
+  }
+  var cmpBusy = false, cmpOpened = false, cmpNudges = 0, lastUserAt = 0, cmpTok = 0;
+  function ctx(kind) {
+    var last = prevVisit.last ? (Date.now() - prevVisit.last) / 3600000 : null;
+    return {
+      kind: kind, name: nick, hour: new Date().getHours(), day: new Date().toLocaleDateString('fr-FR', { weekday: 'long' }),
+      awayH: kind === 'open' ? last : null, visits: mem.visits, streak: mem.streak, bond: cmp.bond,
+      moods: cmp.moods.slice(-5).map(function (x) { return x.m; }), facts: cmp.facts, follow: cmp.follow,
+      messages: cmp.thread.slice(-12).map(function (x) { return { r: x.r, t: x.t }; })
+    };
+  }
+  function think(on) {
+    var b = $('mika-say');
+    if (on) { b.classList.add('thinking'); b.textContent = ''; for (var d = 0; d < 3; d++) b.appendChild(document.createElement('i')); look(0, 1.6); mood('wow', 1500); }
+  }
+  function localFallback(kind) {
+    return { say: kind === 'open' ? 'Coucou, te voilà ! 💚 Comment tu te sens aujourd’hui ?' : 'Oh, je perds le fil… ma connexion de mochi capricieuse 🥹 Redis-moi ça dans un instant ?', e: 'shy', chips: ['😄 Ça va bien', '😮‍💨 Bof'], remember: [], follow: '', salon: false, mood: null };
+  }
+  function callCompanion(kind, extra) {
+    var tok = ++cmpTok;
+    cmpBusy = true;
+    think(true);
+    var body = ctx(kind);
+    if (extra) for (var k in extra) body[k] = extra[k];
+    var ctrl = window.AbortController ? new AbortController() : null;
+    var to = setTimeout(function () { if (ctrl) ctrl.abort(); }, 25000);
+    return fetch('/api/companion', { method: 'POST', headers: { 'content-type': 'application/json' }, body: JSON.stringify(body), signal: ctrl ? ctrl.signal : undefined })
+      .then(function (r) { if (!r.ok) throw new Error('http'); return r.json(); })
+      .catch(function () { return localFallback(kind); })
+      .then(function (r) {
+        clearTimeout(to);
+        if (tok !== cmpTok) return;
+        cmpBusy = false;
+        applyReply(r, kind);
+      });
+  }
+  function applyReply(r, kind) {
+    var say = clean(r.say, 320);
+    if (!say) return;
+    addThread('m', say);
+    feel(r.e);
+    mikaSay(say, false, false);
+    if (r.mood && kind === 'reply' && !moodToday()) recordMood(r.mood);
+    (r.remember || []).forEach(function (f) {
+      f = clean(f, 90);
+      if (f && cmp.facts.every(function (x) { return x.toLowerCase() !== f.toLowerCase(); })) cmp.facts.push(f);
+    });
+    cmp.facts = cmp.facts.slice(-20);
+    if (kind !== 'nudge') cmp.follow = clean(r.follow, 100);
+    saveCmp();
+    var chips = (r.chips || []).slice(0, 3);
+    var qr = [];
+    chips.forEach(function (c) { qr.push([c, function () { cmpSend(c); }]); });
+    if (r.care) qr = [['🫂 Merci Mika', function () { cmpSend('Merci Mika'); }], ['📞 Le 3114', function () { mikaSay('Le 3114 : gratuit, 24 h sur 24, en France. Tu peux les appeler ou leur écrire, ils sont là 💚', false, 'love'); }]];
+    if (r.salon) qr.push(['💬 Aller au Salon', function () { setTab('salon'); }, 'yes']);
+    if (!moodToday() && kind === 'open') $('mood-row').hidden = false;
+    setQr(qr);
+    renderBond();
+    bumpIdle();
+  }
+  function cmpOpen() {
+    cmpOpened = true;
+    $('thread').textContent = '';
+    pendingM = '';
+    cmp.thread.slice(-6).forEach(function (x) { $('thread').appendChild(el('div', 'tmsg ' + x.r, x.t)); });
+    $('thread').scrollTop = $('thread').scrollHeight;
+    renderBond();
+    if (!store('talkie.avset')) setTimeout(function () { if (curTab === 'chambre') { var q = $('mika-qr'); var b = el('button', null, '🎨 Crée ton avatar'); b.type = 'button'; b.addEventListener('click', openAvEditor); q.appendChild(b); } }, 6000);
+    setTimeout(function () { if (!reduceMotion) { mood('love', 1600); anim('jump'); } callCompanion('open'); }, reduceMotion ? 0 : 700);
+  }
+  function cmpSend(text) {
+    text = clean(text, 400);
+    if (!text || cmpBusy) return;
+    lastUserAt = Date.now();
+    dir.engaged = true; cmpNudges = 0;
+    addThread('u', text);
+    cmp.bond++;
+    saveCmp();
+    $('mood-row').hidden = true;
+    setQr([]);
+    callCompanion('reply');
+  }
+  function cmpTouch() { if (!cmpBusy) callCompanion('nudge'); }
+  $('cmp-in').addEventListener('input', function () { $('cmp-send').disabled = !clean($('cmp-in').value, 400); lastUserAt = Date.now(); });
+  $('cmp-form').addEventListener('submit', function (ev) {
+    ev.preventDefault();
+    var v = $('cmp-in').value;
+    $('cmp-in').value = ''; $('cmp-send').disabled = true;
+    cmpSend(v);
+  });
+  Array.prototype.forEach.call(document.querySelectorAll('#mood-row button'), function (b) {
+    b.addEventListener('click', function () {
+      var m = Number(b.getAttribute('data-m'));
+      recordMood(m);
+      $('mood-row').hidden = true;
+      addThread('u', b.textContent + ' ' + ['Au plus bas', 'Bof', 'Bof, ça va', 'Plutôt bien', 'Au top'][m - 1]);
+      cmp.bond++; saveCmp();
+      callCompanion('mood', { mood: m });
+    });
+  });
+  $('cmp-help').addEventListener('click', function () { mikaSay(CARE_LOCAL, false, 'worry'); });
+  var CARE_LOCAL = 'Si ça ne va vraiment pas : le 3114 répond jour et nuit, gratuitement (France). Je suis une IA et je reste là, mais une vraie personne peut mieux t’aider 💚';
+  function nudge() {
+    if (room || document.hidden || curTab !== 'chambre' || cmpBusy || asleep()) return;
+    if (cmpNudges >= 2 || !cmpOpened || !cmp.thread.length || cmp.thread[cmp.thread.length - 1].r !== 'm') return;
+    cmpNudges++;
+    callCompanion('nudge');
+  }
+
+  /* ---------- Moi ---------- */
+  function renderMoi() {
+    $('me-av').innerHTML = avatarSvg(myAv);
+    if (document.activeElement !== $('me-nick')) $('me-nick').value = nick;
+    var l = level();
+    $('me-sub').textContent = 'Niveau ' + l.lv + ' avec Mika · ' + (mem.streak || 1) + ' jour' + ((mem.streak || 1) > 1 ? 's' : '') + ' de suite';
+    var chart = $('mood-chart'); chart.textContent = '';
+    for (var i = 6; i >= 0; i--) {
+      var d = new Date(Date.now() - i * 86400000), k = d.toLocaleDateString('sv-SE'), v = 0;
+      cmp.moods.forEach(function (x) { if (x.d === k) v = x.m; });
+      var c = el('div', 'mc' + (v ? '' : ' none'));
+      c.appendChild(el('span', null, v ? ['😞', '😕', '😐', '🙂', '🤩'][v - 1] : ''));
+      var bar = el('i'); bar.style.height = (v ? 10 + v * 11 : 6) + 'px'; c.appendChild(bar);
+      c.appendChild(el('span', null, d.toLocaleDateString('fr-FR', { weekday: 'narrow' })));
+      chart.appendChild(c);
+    }
+    var ul = $('facts'); ul.textContent = '';
+    if (!cmp.facts.length) ul.appendChild(el('li', 'none', 'Mika ne sait encore rien de toi. Raconte-lui ta journée 💚'));
+    cmp.facts.forEach(function (f, idx) {
+      var li = el('li'); li.appendChild(el('span', null, '💭 ' + f));
+      var x = el('button', null, '✕'); x.type = 'button'; x.setAttribute('aria-label', 'Oublier ce souvenir');
+      x.addEventListener('click', function () { cmp.facts.splice(idx, 1); saveCmp(); renderMoi(); });
+      li.appendChild(x); ul.appendChild(li);
+    });
+    var w = $('wardrobe'); w.textContent = '';
+    WARD.forEach(function (it) {
+      var on = it.premium ? false : (equip ? equip.indexOf(it.id) >= 0 : unlocked(it));
+      var ok = !it.premium && unlocked(it);
+      var b = el('button', 'ward' + (on && ok ? ' on' : '') + (ok ? '' : ' locked')); b.type = 'button';
+      b.innerHTML = mikaSvg(it.id).replace('class="mk', 'class="mk mini-m');
+      b.appendChild(el('span', null, it.label));
+      b.appendChild(el('span', 'px', it.premium ? '💎 ' + it.premium : (ok ? (on ? 'Portée' : 'Disponible') : '🔒 ' + it.need + ' jours')));
+      if (!ok) b.appendChild(el('span', 'lk', '🔒'));
+      b.addEventListener('click', function () {
+        if (it.premium) { toast('💎 Tenue premium : bientôt disponible !'); return; }
+        if (!ok) { toast('Débloquée après ' + it.need + ' jours avec Mika 🌸'); return; }
+        var cur = equip || WARD.filter(unlocked).map(function (x) { return x.id; });
+        var i2 = cur.indexOf(it.id);
+        if (i2 >= 0) cur.splice(i2, 1); else cur.push(it.id);
+        equip = cur; store('talkie.equip', JSON.stringify(equip));
+        fillMika(); renderMoi(); burst(['✨', '💚']);
+      });
+      w.appendChild(b);
+    });
+  }
+  $('me-nick').addEventListener('input', function () {
+    var v = clean($('me-nick').value, 20);
+    if (!v) return;
+    nick = v; store('tablee.nick', nick); $('nick').value = nick;
+    send({ t: 'nick', nick: nick, av: myAv });
+  });
+  $('me-nick').addEventListener('blur', function () { $('me-nick').value = nick; });
+  $('btn-forget').addEventListener('click', function () {
+    if (!window.confirm('Effacer tout ce que Mika sait de toi (souvenirs, humeurs, discussion) ?')) return;
+    cmp.facts = []; cmp.follow = ''; cmp.moods = []; cmp.thread = []; cmp.bond = 0; saveCmp();
+    $('thread').textContent = ''; pendingM = ''; renderMoi(); renderBond(); toast('Mémoire effacée 🫧');
+  });
+  $('btn-me-settings').addEventListener('click', function () { $('btn-settings').click(); });
+
+  /* ---------- Scène d'avatars dans la conversation ---------- */
+  var stageNodes = {};
+  function stageMembers() {
+    if (!room) return [];
+    return room.members.filter(function (p) { return p.online || p.pid === myPid; });
+  }
+  function renderStage() {
+    var box = $('perch');
+    Object.keys(stageNodes).forEach(function (k) { if (stageNodes[k].parentNode) stageNodes[k].parentNode.removeChild(stageNodes[k]); });
+    stageNodes = {};
+    var list = stageMembers(), others = 0;
+    list.sort(function (a, b) { return (a.pid === myPid ? -1 : 0) - (b.pid === myPid ? -1 : 0); });
+    list.forEach(function (p) {
+      var n = el('div', 'sa idle');
+      var av = el('div', 'av'); av.innerHTML = avatarSvg(p.pid === myPid ? myAv : (p.av || defaultAv(p.nick)));
+      n.appendChild(av);
+      n.appendChild(el('span', 'sa-n', p.pid === myPid ? 'Moi' : clean(p.nick, 14)));
+      if (p.pid === myPid) n.style.left = '6px'; else { n.style.right = (6 + others * 50) + 'px'; others++; }
+      box.appendChild(n);
+      stageNodes[p.pid] = n;
+    });
+    perch.others = others;
+  }
+  function stageSay(m) {
+    if (replaying || !room) return;
+    var box = $('perch'), n = m.ai ? null : stageNodes[m.pid];
+    var text = chatClean(m.text, 80) || (m.gif ? 'GIF' : '');
+    if (!text) return;
+    if (n) { n.classList.remove('hop'); void n.offsetWidth; n.classList.add('hop'); }
+    var old = box.querySelector('.sa-b[data-k="' + (m.ai ? 'ai' : m.pid) + '"]');
+    if (old) old.parentNode.removeChild(old);
+    var b = el('div', 'sa-b' + (m.ai ? ' mk-b' : ''), text); b.setAttribute('data-k', m.ai ? 'ai' : m.pid);
+    var mine = !m.ai && m.pid === myPid;
+    if (m.ai) b.style.left = Math.max(8, Math.min(box.clientWidth * 0.45, perch.x - 10)) + 'px';
+    else if (mine) b.style.left = '4px';
+    else { b.classList.add('r'); b.style.right = (n && n.style.right) || '4px'; }
+    box.appendChild(b);
+    setTimeout(function () { if (b.parentNode) b.parentNode.removeChild(b); }, Math.min(6500, 2600 + text.length * 55));
+  }
+
   /* ---------- Démarrage ---------- */
   if ('serviceWorker' in navigator) {
     window.addEventListener('load', function () { navigator.serviceWorker.register('/sw.js').catch(function () {}); });
   }
-  renderChips(); renderMika(); renderTrends(); renderLook(); watchHero(); fillMika(); renderVoice();
+  renderChips(); fillMika(); renderTrends(); renderLook(); watchHero(); fillMika(); renderVoice();
   renderTrends();
   loadThemes();
   setInterval(loadThemes, 30 * 60 * 1000);
   setInterval(function () { if (!room) renderLobby(); }, 30000);
   renderLobby();
   renderNotif();
+  setTab('chambre');
   connect();
 })();
