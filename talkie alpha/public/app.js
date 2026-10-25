@@ -526,6 +526,7 @@
     setTimeout(function () { a.classList.remove(cls); }, 900);
   }
   function burst(list) {
+    if (m3d) { var j = list.join(''); m3d.emit(/[💖💚🌸💛]/.test(j) ? 'heart' : /💧/.test(j) ? 'drop' : 'star', 6); }
     var fx = $('mika-fx');
     if (!fx || reduceMotion) return;
     for (var i = 0; i < 7; i++) {
@@ -538,6 +539,7 @@
     }
   }
   function look(dx, dy) {
+    if (m3d) m3d.look(dx / 2.4, dy / 1.8);
     var sv = $('mika-av').querySelector('.mk');
     if (!sv) return;
     sv.style.setProperty('--lx', dx.toFixed(1) + 'px');
@@ -786,7 +788,7 @@
     requestAnimationFrame(petLoop);
     var actor = $('mika-actor'), shadow = $('mika-shadow');
     if (document.hidden) { pet.last = 0; return; }
-    if (room || $('lobby').hidden || curTab !== 'chambre') { actor.style.display = 'none'; shadow.style.display = 'none'; pet.last = 0; return; }
+    if (room || $('lobby').hidden || curTab !== 'chambre' || m3d) { actor.style.display = 'none'; shadow.style.display = 'none'; pet.last = 0; return; }
     actor.style.display = ''; shadow.style.display = '';
     var sr = $('mika-stage').getBoundingClientRect();
     var vw = window.innerWidth, vh = window.innerHeight;
@@ -2330,10 +2332,49 @@
     setTimeout(function () { if (b.parentNode) b.parentNode.removeChild(b); }, Math.min(6500, 2600 + text.length * 55));
   }
 
+
+  /* ---------- Mika en 3D : la chambre (si l'appareil sait faire de la 3D, sinon on garde le 2D) ---------- */
+  var m3d = null, m3dPrev = { emo: '', jump: false, talk: false, acc: '' };
+  var ROOM_LINES = {
+    lamp: ['Clic ! La lumière douce, c’est mon petit câlin du soir 💡', 'Oh, tu règles mon ambiance ? Merci, c’est parfait ✨'],
+    plant: ['Ma plante s’appelle Basilic. Elle ne dit rien, mais je sens qu’elle m’aime 🌱', 'Chut, Basilic fait sa sieste 🌿'],
+    fries: ['Hé ! C’est ma peluche frites, on ne la mange pas ! 🍟', 'Mon trésor… la seule frite qui ne refroidit jamais 🥹']
+  };
+  function syncMika3d() {
+    if (!m3d) return;
+    var c = $('mika-av').classList, emo = 'neutral';
+    ['happy', 'wow', 'sleep', 'love', 'sad', 'worry', 'proud', 'shy'].forEach(function (k) { if (c.contains('st-' + k)) emo = k; });
+    if (c.contains('shy') && emo === 'neutral') emo = 'shy';
+    if (emo !== m3dPrev.emo) { m3d.setEmotion(emo); m3dPrev.emo = emo; }
+    var j = c.contains('jump'); if (j && !m3dPrev.jump) m3d.hop(4.4); m3dPrev.jump = j;
+    var t = c.contains('talking'); if (t !== m3dPrev.talk) { m3d.talking(t); m3dPrev.talk = t; }
+    var svg = $('mika-av').querySelector('.mk'), acc = [];
+    if (svg) WARD.forEach(function (w) { if (svg.classList.contains('has-' + w.id)) acc.push(w.id); });
+    var key = acc.join(',');
+    if (key !== m3dPrev.acc) { m3d.setAccessories(acc); m3dPrev.acc = key; }
+  }
+  function init3d() {
+    if (!window.Mika3DMod || /[?&]no3d/.test(location.search)) return;
+    try { m3d = Mika3DMod.init($('mika-stage'), { preserve: /[?&]shot/.test(location.search) }); } catch (e) { m3d = null; }
+    if (!m3d) return;
+    document.body.classList.add('has3d');
+    new MutationObserver(syncMika3d).observe($('mika-av'), { attributes: true, childList: true, subtree: true, attributeFilter: ['class'] });
+    syncMika3d();
+    $('mika-stage').addEventListener('mika3d', function (ev) {
+      var n = ev.detail && ev.detail.name;
+      dir.engaged = true; bumpIdle();
+      if (n === 'mika') { $('mika-av').click(); return; }
+      if (ROOM_LINES[n]) { mood('happy', 2200); mikaSay(pick(ROOM_LINES[n]), false, false); }
+    });
+    var busyT = null;
+    $('cmp-in').addEventListener('input', function () { m3d.busy(true); clearTimeout(busyT); busyT = setTimeout(function () { m3d.busy(false); }, 4000); });
+  }
+
   /* ---------- Démarrage ---------- */
   if ('serviceWorker' in navigator) {
     window.addEventListener('load', function () { navigator.serviceWorker.register('/sw.js').catch(function () {}); });
   }
+  init3d();
   renderChips(); fillMika(); renderTrends(); renderLook(); watchHero(); fillMika(); renderVoice();
   renderTrends();
   loadThemes();

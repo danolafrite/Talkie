@@ -60,3 +60,7 @@ Sans réglage, Mika « gazouille » (voix synthétisée dans le navigateur, grat
 
 L'onglet « Mika » est la chambre de Mika : il accueille, pose des questions, se souvient, s'inquiète. Il utilise la même clé `ANTHROPIC_API_KEY` (endpoint `/api/companion`, limité à 30 messages/minute/IP, compté dans `AI_DAILY_CAP`). La mémoire (souvenirs, humeurs, discussion) est stockée **sur le téléphone** (`localStorage`) et envoyée à chaque message ; rien n'est gardé sur le serveur. Les messages de détresse déclenchent une réponse fixe (3114) sans appel à l'IA.
 Onglets : Mika (chambre), Salon (le salon Talkie d'avant), Moi (avatar, humeurs, souvenirs, garde-robe en maquette).
+
+## Chambre 3D (v14)
+
+La chambre et Mika sont en 3D (three.js). Le code source est dans `src3d/scene3d.js` ; le fichier servi est `public/scene3d.js` (déjà généré, rien à faire pour déployer). Pour le modifier : `npm i three esbuild` dans un dossier à part, puis `esbuild scene3d.js --bundle --minify --format=iife --global-name=Mika3DMod --outfile=public/scene3d.js`. Si l'appareil ne sait pas faire de 3D, l'app garde le Mika en 2D. Ajoute `?no3d` à l'adresse pour tester ce mode.

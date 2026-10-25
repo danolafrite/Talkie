@@ -621,7 +621,7 @@ body.tab-chambre #mika-fab, body.tab-moi #mika-fab { display: none; }
 .cmp { position: relative; z-index: 2; margin-top: 10px; display: flex; flex-direction: column; gap: 8px; }
 .cmp .mika-qr { margin: 0 -18px; }
 .mood-row { display: flex; align-items: center; gap: 4px; background: rgba(255,255,255,.72); border-radius: 18px; padding: 6px 10px; animation: mpop .4s both; }
-.mood-row .mr-q { flex: 1; font-size: 14px; font-weight: 800; color: var(--ink); }
+.mood-row .mr-q { flex: 1; white-space: nowrap; font-size: 14px; font-weight: 800; color: var(--ink); }
 .mood-row button { border: 0; background: none; font-size: 26px; padding: 2px 4px; cursor: pointer; border-radius: 12px; transition: transform .15s cubic-bezier(.2,.9,.3,1.6); }
 .mood-row button:hover, .mood-row button:focus-visible { transform: scale(1.25) rotate(-6deg); }
 .thread { display: flex; flex-direction: column; gap: 6px; max-height: 240px; overflow-y: auto; padding: 2px 2px 2px; scrollbar-width: none; mask-image: linear-gradient(180deg, transparent 0, #000 14px); -webkit-mask-image: linear-gradient(180deg, transparent 0, #000 14px); }
@@ -721,6 +721,14 @@ body.tab-chambre #mika-fab, body.tab-moi #mika-fab { display: none; }
 .mk .sp, .mk .tr, .mk .sw2 { transform-box: fill-box; transform-origin: center; }
 .mk .pom { transform-box: fill-box; transform-origin: 50% 100%; }
 .mika-av .mk .pom { animation: sway 3.2s ease-in-out infinite; }
+
+/* ===== v14 : chambre 3D ===== */
+body.has3d .mika-stage { height: min(78vw, 400px); min-height: 300px; border-radius: 26px; overflow: hidden; margin: 6px 0 0; box-shadow: 0 6px 0 rgba(124,92,255,.16), 0 18px 34px -14px rgba(90,60,170,.5); background: #f3e6ff; }
+body.has3d .mika-stage .scene3d { position: absolute; inset: 0; width: 100%; height: 100%; display: block; }
+body.has3d .mika-stage .vbtn { z-index: 3; }
+body.has3d #mika-actor, body.has3d #mika-shadow { display: none !important; }
+body.has3d .mika-bubble { margin-top: -22px; position: relative; z-index: 3; margin-left: 8px; max-width: calc(100% - 16px); }
+body.has3d .hero.room .sky { opacity: .55; }
 </style>
 </head>
 <body>
@@ -769,7 +777,7 @@ body.tab-chambre #mika-fab, body.tab-moi #mika-fab { display: none; }
         </div>
           <div class="cmp" id="cmp">
             <div class="mood-row" id="mood-row" hidden>
-              <span class="mr-q">Ton humeur, là ?</span>
+              <span class="mr-q">Ton humeur ?</span>
               <button type="button" data-m="1" aria-label="Au plus bas">😞</button><button type="button" data-m="2" aria-label="Bof">😕</button><button type="button" data-m="3" aria-label="Neutre">😐</button><button type="button" data-m="4" aria-label="Bien">🙂</button><button type="button" data-m="5" aria-label="Rayonnant·e">🤩</button>
             </div>
             <div class="mika-qr" id="mika-qr"></div>
@@ -1045,6 +1053,7 @@ body.tab-chambre #mika-fab, body.tab-moi #mika-fab { display: none; }
   </div>
 </div>
 <div id="toast" role="status" aria-live="polite" hidden></div>
-<script src="/app.js?v=13"></script>
+<script src="/scene3d.js?v=14" defer></script>
+<script src="/app.js?v=14" defer></script>
 </body>
 </html>
