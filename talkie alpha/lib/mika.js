@@ -13,6 +13,7 @@ const PERSONA = [
 ].join(' ');
 
 const CARE_TEXT = 'Hey… je sens que ça pèse un peu en ce moment, et je suis là pour t’écouter 💚 Si tu penses à te faire du mal, parle à quelqu’un de confiance ou appelle le 3114 (gratuit, 24 h sur 24, France). Tu comptes, vraiment.';
+const CARE_TEXT_EN = 'Hey… I can feel things are heavy right now, and I’m here to listen 💚 If you’re thinking about hurting yourself, please talk to someone you trust or call your local emergency line (in France: 3114, free, 24/7). You matter, really.';
 const WELCOME_HUMAN = 'Kyaa, quelqu’un arrive ! 🎉 Je vous laisse papoter. Une idée ou un coup de main ? Tape @Mika 🌸';
 
-module.exports = { PERSONA, CARE_TEXT, WELCOME_HUMAN };
+module.exports = { PERSONA, CARE_TEXT, CARE_TEXT_EN, WELCOME_HUMAN };

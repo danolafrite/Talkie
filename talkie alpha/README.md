@@ -78,3 +78,13 @@ La chambre et Mika sont en 3D (three.js). Le code source est dans `src3d/scene3d
 - **Boutique › 🎓 Bobby** : packs de scénarios, Prononciation+, carnet, niveaux B1/B2, langues, tenues de Bobby (toque, blouse). Payés en pétales 🌸 (gagnés en jouant). Les 💎 restent une maquette.
 - **Monde 3D** : une Place (fontaine, sakuras) partagée par shards de 12. Messages WebSocket `plaza`, `wpos`, `emote` (+ `pj`/`pl`/`pm`/`pe` en retour). **Aucun texte libre** sur la Place : positions + 5 emotes seulement, majeurs uniquement, blocages respectés, limitations de débit. Mika se balade aussi sur la Place.
 - Build 3D : `scene3d.js` (≈620 Ko) à remplacer en entier, comme `app.js`, `index.html`, `server.js` et le dossier `lib/`.
+
+## v18 — retours de Steph
+
+- **iPhone** : zoom par pincement / double-tap bloqué (gestes + `touch-action`), champs à 16 px, barre d'onglets masquée quand le clavier est ouvert, champ défilé dans la vue.
+- **Langue** (FR/EN) : `public/i18n.js` (dictionnaire à compléter). Choix à l'écran d'âge, à la création de l'avatar et dans Réglages. Mika et Bobby répondent dans la langue de l'interface, et dans celle de l'utilisateur s'il écrit autrement.
+- **Voix au choix** (Douce / Pétillante / Calme / Grave) à la création et dans Réglages ; `GET /api/tts?...&v=<voix>&l=<fr|en>`.
+- **Tutoriel** guidé au premier lancement (rejouable dans Moi). Onglet « Bobby » renommé **Classe**.
+- **Monde** : compteur sur l'onglet, amis (💛, stockés sur le téléphone), bâtiments cliquables (Chambre, Classe, Boba, Boutique, grande roue + bonus quotidien), fenêtre avatar (saluer / inviter / ami).
+- **Visites** : invitation → visite de la chambre en 3D à deux, bulles courtes modérées (`hinv/hacc/hpos/hemo/hsay/hleave`).
+- **Boutique** : aperçu en 3D du décor et des tenues de Bobby avant achat, 12 articles de décor.

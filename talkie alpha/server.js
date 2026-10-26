@@ -193,7 +193,13 @@ function broadcastLobby() {
       let hostAv = ''; r.members.forEach((m) => { if (m.pid === r.hostPid) hostAv = m.av || ''; });
       invites.push({ id: r.id, theme: r.theme, max: r.max, here: r.members.size, nick: r.hostNick, av: hostAv, ts: r.createdAt });
     });
-    send(ws, { t: 'lobby', online, invites });
+    const friendsOn = [];
+    if (c.friends && c.friends.size) {
+      const inPlaza = new Set(); plazas.forEach((sh) => sh.forEach((m) => inPlaza.add(m.pid)));
+      clients.forEach((o) => { if (o.cid && o.pid && c.friends.has(o.pid) && !blockedEitherWay(c.pid, o.pid)) friendsOn.push({ pid: o.pid, nick: o.nick, plaza: inPlaza.has(o.pid) }); });
+    }
+    let plazaN = 0; plazas.forEach((sh) => { plazaN += sh.size; });
+    send(ws, { t: 'lobby', online, invites, plaza: plazaN, friends: friendsOn.slice(0, 20) });
   });
 }
 
@@ -483,6 +489,7 @@ function plazaLeave(ws) {
   const m = sh.get(ws); sh.delete(ws);
   if (m) sh.forEach((_x, w) => send(w, { t: 'pl', pid: m.pid }));
   const i = plazas.indexOf(sh); if (!sh.size && i >= 0) plazas.splice(i, 1);
+  scheduleLobby();
 }
 function plazaJoin(ws, c) {
   if (plazaOf(ws)) return;
@@ -493,8 +500,33 @@ function plazaJoin(ws, c) {
   sh.forEach((m, w) => { const oc = clients.get(w); if (oc && !blockedEitherWay(oc.pid, c.pid)) list.push({ pid: m.pid, nick: m.nick, av: m.av, x: m.x, z: m.z }); });
   sh.set(ws, me);
   send(ws, { t: 'plaza', me: { pid: me.pid, x: me.x, z: me.z }, list });
+  scheduleLobby();
   plazaSend(sh, ws, { t: 'pj', p: { pid: me.pid, nick: me.nick, av: me.av, x: me.x, z: me.z } });
 }
+
+/* ---------- Visites : inviter quelqu'un dans sa chambre et la parcourir à deux (positions, emotes, petits messages modérés) ---------- */
+const HOME_MAX_GUESTS = 3;
+const homes = new Map(); // pid de l'hôte -> { ws, pid, nick, av, decor, acc, x, z, guests: Map(pid -> {ws,pid,nick,av,x,z}) }
+function wsOfPid(pid) { let f = null; clients.forEach((c, w) => { if (c.cid && c.pid === pid) f = w; }); return f; }
+function idList(a, n) { return (Array.isArray(a) ? a : []).slice(0, n).map((x) => String(x)).filter((x) => /^[a-z0-9_]{1,16}$/.test(x)); }
+function homeOf(ws) {
+  const c = clients.get(ws); if (!c) return null;
+  if (homes.has(c.pid) && homes.get(c.pid).ws === ws) return { h: homes.get(c.pid), me: homes.get(c.pid), host: true };
+  let f = null; homes.forEach((h) => { const g = h.guests.get(c.pid); if (g && g.ws === ws) f = { h, me: g, host: false }; });
+  return f;
+}
+function homeSendAll(h, except, obj, fromPid) {
+  const ok = (pid) => !fromPid || pid === fromPid || !blockedEitherWay(pid, fromPid);
+  if (h.ws !== except && ok(h.pid)) send(h.ws, obj);
+  h.guests.forEach((g) => { if (g.ws !== except && ok(g.pid)) send(g.ws, obj); });
+}
+function homeLeave(ws) {
+  const r = homeOf(ws); if (!r) return;
+  const { h } = r;
+  if (r.host) { h.guests.forEach((g) => send(g.ws, { t: 'hend', pid: h.pid })); homes.delete(h.pid); }
+  else { h.guests.delete(r.me.pid); homeSendAll(h, ws, { t: 'hg-', pid: r.me.pid }); }
+}
+const HOME_EMOTES = ['wave', 'heart', 'happy', 'dance', 'wow'];
 
 function handle(ws, msg) {
   const c = clients.get(ws);
@@ -511,6 +543,7 @@ function handle(ws, msg) {
     c.av = avOf(msg.av);
     c.blocked = new Set((Array.isArray(msg.blocked) ? msg.blocked : []).slice(0, 200).map((x) => clean(x, 12)).filter(Boolean));
     blocksOf.set(c.pid, c.blocked);
+    c.friends = new Set((Array.isArray(msg.friends) ? msg.friends : []).slice(0, 100).map((x) => clean(x, 12)).filter(Boolean));
     c.visible = msg.visible !== false;
     c.adult = msg.adult === true;
     byCid.set(cid, ws);
@@ -525,6 +558,66 @@ function handle(ws, msg) {
   if (!c.cid) return;
 
   switch (msg.t) {
+    case 'friends': {
+      c.friends = new Set((Array.isArray(msg.list) ? msg.list : []).slice(0, 100).map((x) => clean(x, 12)).filter(Boolean));
+      scheduleLobby();
+      return;
+    }
+    case 'hinv': {
+      if (!c.adult) return;
+      const to = clean(msg.to, 12), tw = wsOfPid(to), tc = tw && clients.get(tw);
+      const now = Date.now();
+      if (!tc || to === c.pid || blockedEitherWay(c.pid, to)) { send(ws, { t: 'error', text: 'Cette personne n’est plus là.' }); return; }
+      if (c.lastHinv && now - c.lastHinv < 8000) { send(ws, { t: 'error', text: 'Doucement : une invitation à la fois 💚' }); return; }
+      c.lastHinv = now;
+      let h = homes.get(c.pid);
+      if (!h) { h = { ws, pid: c.pid, nick: c.nick, av: c.av || '', decor: [], acc: [], x: 0.2, z: 1.2, guests: new Map() }; homes.set(c.pid, h); }
+      h.ws = ws; h.nick = c.nick; h.av = c.av || ''; h.decor = idList(msg.decor, 20); h.acc = idList(msg.acc, 8);
+      send(tw, { t: 'hinv', from: { pid: c.pid, nick: c.nick, av: c.av || '' } });
+      send(ws, { t: 'hsent', to: tc.nick });
+      return;
+    }
+    case 'hacc': {
+      if (!c.adult) return;
+      const h = homes.get(clean(msg.host, 12));
+      if (!h || !h.ws || blockedEitherWay(c.pid, h.pid)) { send(ws, { t: 'error', text: 'La visite est terminée.' }); return; }
+      if (h.guests.size >= HOME_MAX_GUESTS) { send(ws, { t: 'error', text: 'La chambre est pleine pour le moment.' }); return; }
+      homeLeave(ws);
+      const g = { ws, pid: c.pid, nick: c.nick, av: c.av || '', x: -1 + Math.random() * 2, z: 2 + Math.random() };
+      const others = [];
+      h.guests.forEach((o) => { if (!blockedEitherWay(c.pid, o.pid)) others.push({ pid: o.pid, nick: o.nick, av: o.av, x: o.x, z: o.z }); });
+      h.guests.set(c.pid, g);
+      send(ws, { t: 'hjoin', host: { pid: h.pid, nick: h.nick, av: h.av, decor: h.decor, acc: h.acc, x: h.x, z: h.z }, me: { x: g.x, z: g.z }, others });
+      send(h.ws, { t: 'hg+', p: { pid: g.pid, nick: g.nick, av: g.av, x: g.x, z: g.z } });
+      h.guests.forEach((o) => { if (o.ws !== ws && !blockedEitherWay(c.pid, o.pid)) send(o.ws, { t: 'hg+', p: { pid: g.pid, nick: g.nick, av: g.av, x: g.x, z: g.z } }); });
+      return;
+    }
+    case 'hpos': {
+      const r = homeOf(ws); if (!r) return;
+      const now = Date.now(); if (now - (r.me.last || 0) < 90) return; r.me.last = now;
+      const x = Number(msg.x), z = Number(msg.z); if (!isFinite(x) || !isFinite(z)) return;
+      r.me.x = Math.max(-6.6, Math.min(6.6, x)); r.me.z = Math.max(-3.4, Math.min(3.6, z));
+      homeSendAll(r.h, ws, { t: 'hp', pid: r.me.pid, x: r.me.x, z: r.me.z }, r.me.pid);
+      return;
+    }
+    case 'hemo': {
+      const r = homeOf(ws); if (!r || HOME_EMOTES.indexOf(msg.k) < 0) return;
+      const now = Date.now(); if (now - (r.me.lastE || 0) < 900) return; r.me.lastE = now;
+      homeSendAll(r.h, ws, { t: 'he', pid: r.me.pid, k: msg.k }, r.me.pid);
+      return;
+    }
+    case 'hsay': {
+      const r = homeOf(ws); if (!r) return;
+      const text = clean(msg.text, 80); if (!text) return;
+      const now = Date.now(); if (now - (r.me.lastS || 0) < 1200) return; r.me.lastS = now;
+      const a = mod.analyse(text);
+      if (a.level === 'care') { send(ws, { t: 'error', text: 'Je suis là si tu as besoin de parler 💚 Le 3114 (gratuit, 24 h sur 24) peut aussi t’écouter.' }); return; }
+      if (a.level === 'block' || (a.level === 'suspect' && a.hard)) { send(ws, { t: 'error', text: a.msg || 'Ce message ne peut pas être envoyé ici.' }); return; }
+      if (mod.botLike(c.cid, text)) return;
+      homeSendAll(r.h, null, { t: 'hs', pid: r.me.pid, text, nick: c.nick }, r.me.pid);
+      return;
+    }
+    case 'hleave': { homeLeave(ws); return; }
     case 'plaza': {
       if (!msg.on) { plazaLeave(ws); return; }
       if (!c.adult) { send(ws, { t: 'error', code: 'adult', text: 'Talkie est réservé aux personnes majeures (18 ans et plus).' }); return; }
@@ -715,6 +808,7 @@ function handle(ws, msg) {
 
 function onClose(ws) {
   plazaLeave(ws);
+  homeLeave(ws);
   const c = clients.get(ws);
   clients.delete(ws);
   if (!c || !c.cid) return;
@@ -859,7 +953,7 @@ const server = http.createServer(async (req, res) => {
       const body = JSON.parse((await readBody(req, 12000)) || '{}');
       const last = Array.isArray(body.messages) && body.messages.length ? body.messages[body.messages.length - 1] : null;
       if (body.kind === 'reply' && last && last.r === 'u' && mod.analyse(last.t).level === 'care') {
-        json(res, 200, { say: mika.CARE_TEXT, e: 'worried', chips: ['🫂 Merci Mika', '📞 Le 3114'], remember: [], follow: '', salon: false, mood: 1, care: true });
+        json(res, 200, { say: body.ui === 'en' ? mika.CARE_TEXT_EN : mika.CARE_TEXT, e: 'worried', chips: body.ui === 'en' ? ['🫂 Thanks', '📞 3114 (France)'] : ['🫂 Merci Mika', '📞 Le 3114'], remember: [], follow: '', salon: false, mood: 1, care: true });
         return;
       }
       if (!ai.enabled()) { json(res, 200, companion.fallback(body)); return; }
@@ -876,7 +970,7 @@ const server = http.createServer(async (req, res) => {
       const last = Array.isArray(body.messages) && body.messages.length ? body.messages[body.messages.length - 1] : null;
       if (body.kind !== 'start' && last && last.r === 'u') {
         const a = mod.analyse(last.t);
-        if (a.level === 'care') { json(res, 200, Object.assign(bobby.blocked(body, mika.CARE_TEXT), { care: true, e: 'worried' })); return; }
+        if (a.level === 'care') { json(res, 200, Object.assign(bobby.blocked(body, body.ui === 'en' ? mika.CARE_TEXT_EN : mika.CARE_TEXT), { care: true, e: 'worried' })); return; }
         if (a.level === 'block' || (a.level === 'suspect' && a.hard)) { json(res, 200, bobby.blocked(body, a.msg)); return; }
       }
       if (!ai.enabled()) { json(res, 200, bobby.fallback(body)); return; }
@@ -886,12 +980,12 @@ const server = http.createServer(async (req, res) => {
     return;
   }
   if (url.pathname === '/api/config' && req.method === 'GET') {
-    json(res, 200, { turnstile: TURNSTILE_SITE && TURNSTILE_SECRET ? TURNSTILE_SITE : null, tts: tts.enabled(), ttsRate: tts.PITCH });
+    json(res, 200, { turnstile: TURNSTILE_SITE && TURNSTILE_SECRET ? TURNSTILE_SITE : null, tts: tts.enabled(), ttsRate: tts.PITCH, ttsVoices: tts.VOICES });
     return;
   }
   if (url.pathname === '/api/tts' && req.method === 'GET') {
     try {
-      const buf = await tts.synth(url.searchParams.get('t') || '', String(req.headers['x-forwarded-for'] || req.socket.remoteAddress || '').split(',')[0].trim());
+      const buf = await tts.synth(url.searchParams.get('t') || '', String(req.headers['x-forwarded-for'] || req.socket.remoteAddress || '').split(',')[0].trim(), { voice: url.searchParams.get('v') || '', lang: url.searchParams.get('l') || '' });
       res.writeHead(200, { 'content-type': 'audio/mpeg', 'content-length': buf.length, 'cache-control': 'public, max-age=86400' });
       res.end(buf);
     } catch (e) {

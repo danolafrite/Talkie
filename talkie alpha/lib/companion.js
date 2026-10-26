@@ -20,6 +20,10 @@ const SYSTEM = [
 
 function s(x, n) { return String(x == null ? '' : x).replace(/[\u0000-\u001f\u007f-\u009f]/g, ' ').replace(/\s+/g, ' ').trim().slice(0, n); }
 
+function langNote(c) {
+  return 'LANGUE : la langue de l’interface de la personne est ' + (c.ui === 'en' ? 'l’anglais' : 'le français') + '. Parle dans cette langue par défaut (et écris « say », « chips », « remember » et « follow » dans cette langue). Si son dernier message est écrit dans une autre langue, réponds dans SA langue, sans le lui faire remarquer. Garde exactement le même caractère mignon et les mêmes règles de sécurité quelle que soit la langue.';
+}
+
 function describe(c) {
   const lines = [];
   const bits = [];
@@ -48,6 +52,7 @@ function normalizeIn(b) {
     role: m && m.r === 'u' ? 'user' : 'assistant', content: s(m && m.t, 500)
   })).filter((m) => m.content);
   return {
+    ui: o.ui === 'en' ? 'en' : 'fr',
     kind: ['open', 'reply', 'nudge', 'mood'].indexOf(o.kind) >= 0 ? o.kind : 'reply',
     name: s(o.name, 20),
     hour: Number.isFinite(hour) ? hour : 12,
@@ -94,7 +99,7 @@ function parse(raw) {
 
 async function turn(body) {
   const c = normalizeIn(body);
-  const system = SYSTEM + '\n\n' + describe(c) + '\n\nCONSIGNE DU TOUR : ' + kindNote(c);
+  const system = SYSTEM + '\n\n' + langNote(c) + '\n\n' + describe(c) + '\n\nCONSIGNE DU TOUR : ' + kindNote(c);
   const first = c.kind === 'reply' ? '(Elle vient de te répondre.)' : '(Elle est là.)';
   const messages = ai.normalize(c.messages, first);
   if (messages[messages.length - 1].role !== 'user') messages.push({ role: 'user', content: first });
@@ -105,10 +110,11 @@ async function turn(body) {
 /* Si l'IA est indisponible, Mika reste douce et honnête plutôt que de se taire. */
 function fallback(body) {
   const c = normalizeIn(body);
+  const en = c.ui === 'en';
   const lines = c.kind === 'open'
-    ? ['Coucou, te voilà ! 💚 J’ai la tête un peu dans les nuages aujourd’hui… et toi, comment tu te sens ?']
-    : ['Oh, je perds un peu le fil, mon petit cerveau de mochi bugue 🥹 Redis-moi ça dans une minute ? Je suis là.'];
-  return { say: lines[0], e: 'shy', chips: ['😄 Ça va bien', '😮‍💨 Bof', '💬 Parlons'], remember: [], follow: '', salon: false, mood: null, degraded: true };
+    ? [en ? 'Hi, you’re here! 💚 My head is a bit in the clouds today… how are you feeling?' : 'Coucou, te voilà ! 💚 J’ai la tête un peu dans les nuages aujourd’hui… et toi, comment tu te sens ?']
+    : [en ? 'Oh, I’m losing the thread, my little mochi brain is glitching 🥹 Tell me again in a minute? I’m here.' : 'Oh, je perds un peu le fil, mon petit cerveau de mochi bugue 🥹 Redis-moi ça dans une minute ? Je suis là.'];
+  return { say: lines[0], e: 'shy', chips: en ? ['😄 I’m fine', '😮‍💨 Meh', '💬 Let’s talk'] : ['😄 Ça va bien', '😮‍💨 Bof', '💬 Parlons'], remember: [], follow: '', salon: false, mood: null, degraded: true };
 }
 
 module.exports = { turn, fallback, EMOTIONS };

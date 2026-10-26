@@ -2,7 +2,7 @@
 <html lang="fr">
 <head>
 <meta charset="utf-8">
-<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, user-scalable=no, viewport-fit=cover">
 <title>Talkie</title>
 <meta name="description" content="Parle de ce que tu veux, avec quelqu’un qui est là maintenant.">
 <meta name="theme-color" content="#FFF8EE">
@@ -856,6 +856,82 @@ body.has3d .hero.room .sky { opacity: .55; }
 .plaza-bar .em button { border: 1px solid var(--line); background: var(--bg); border-radius: 999px; width: 40px; height: 40px; font-size: 20px; cursor: pointer; }
 .plaza-bar .em button:active { transform: scale(.9); }
 .plaza-hint { font-size: 12px; color: var(--muted, #7a6c9b); margin: 4px 4px 0; }
+
+/* v18 · anti-zoom iPhone + clavier */
+html { -webkit-text-size-adjust: 100%; text-size-adjust: 100%; touch-action: manipulation; }
+body { touch-action: manipulation; -webkit-tap-highlight-color: transparent; }
+button, .tabbar, .tabbar *, [role=button] { touch-action: manipulation; -webkit-touch-callout: none; }
+canvas, .scene3d, .bob-stage, .plaza-stage, .room-stage { touch-action: none; -webkit-user-select: none; user-select: none; -webkit-touch-callout: none; }
+input, select, textarea { font-size: 16px !important; }
+#mika-stage .st3-b { max-width: 72%; -webkit-line-clamp: 5; font-size: 13px; }
+#mika-stage .st3-b.ub { left: auto; right: 10px; bottom: 10px; top: auto; transform: none; max-width: 60%; background: #E7DDFF; animation: none; }
+.care-hint { margin: 2px 6px 6px; font-size: 12px; color: rgba(255,255,255,.75); text-align: center; }
+
+/* v18 · amis, visites, bâtiments */
+.tabbar button .tbadge { position: absolute; top: 0; right: 18%; min-width: 18px; height: 18px; padding: 0 5px; border-radius: 999px; background: #ff5fa8; color: #fff; font-size: 11px; font-weight: 800; line-height: 18px; text-align: center; box-shadow: 0 0 0 2px var(--bg, #fff); }
+.tabbar button .tbadge.fr { background: #ffb300; color: #3b2a00; animation: tbpulse 1.4s infinite; }
+@keyframes tbpulse { 50% { transform: scale(1.18); } }
+.friends-bar { display: flex; gap: 6px; flex-wrap: wrap; margin: 8px 2px 0; }
+.friends-bar:empty { display: none; }
+.friends-bar button { border: 0; background: #FFF1B8; color: #3b2a00; font: inherit; font-size: 13px; font-weight: 800; padding: 6px 12px; border-radius: 999px; cursor: pointer; }
+.plaza-pop { position: absolute; left: 50%; bottom: 12px; transform: translateX(-50%); z-index: 3; display: flex; gap: 6px; align-items: center; background: rgba(255,255,255,.95); border-radius: 999px; padding: 6px 8px 6px 14px; box-shadow: 0 4px 16px rgba(60,30,120,.25); max-width: 96%; flex-wrap: wrap; justify-content: center; }
+.plaza-pop b { font-size: 13px; color: #2A1B5E; max-width: 90px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.plaza-pop button { border: 0; background: #E7DDFF; color: #2A1B5E; font: inherit; font-size: 12.5px; font-weight: 800; padding: 6px 10px; border-radius: 999px; cursor: pointer; }
+.plaza-pop button.pr { background: #7C5CFF; color: #fff; }
+.hinv { position: fixed; left: 12px; right: 12px; top: calc(10px + env(safe-area-inset-top, 0px)); z-index: 30; background: #fff; color: #2A1B5E; border-radius: 22px; padding: 12px 14px; box-shadow: 0 8px 28px rgba(60,30,120,.35); display: flex; gap: 10px; align-items: center; max-width: 520px; margin: 0 auto; }
+.hinv[hidden] { display: none; }
+.hinv span { flex: 1; font-weight: 800; font-size: 14px; }
+.hinv button { border: 0; border-radius: 999px; padding: 8px 14px; font: inherit; font-weight: 800; cursor: pointer; background: #E7DDFF; color: #2A1B5E; }
+.hinv button.go { background: #5DE3B4; color: #05382A; }
+#visit { position: fixed; inset: 0; z-index: 40; background: linear-gradient(170deg, #E7DDFF, #FFE3F1); display: flex; flex-direction: column; }
+#visit[hidden] { display: none; }
+#visit .vh { display: flex; align-items: center; justify-content: space-between; padding: calc(10px + env(safe-area-inset-top, 0px)) 14px 8px; font-weight: 800; color: #2A1B5E; }
+#visit .vh button { border: 0; background: #fff; border-radius: 999px; padding: 8px 14px; font: inherit; font-weight: 800; cursor: pointer; color: #2A1B5E; }
+#visit-stage { position: relative; flex: 1; min-height: 0; margin: 0 10px; border-radius: 26px; overflow: hidden; background: #f3e6ff; touch-action: none; }
+#visit-stage .scene3d { position: absolute; inset: 0; width: 100%; height: 100%; display: block; }
+#visit .vemo { display: flex; gap: 6px; justify-content: center; padding: 8px 10px 0; }
+#visit .vemo button { border: 0; background: #fff; border-radius: 999px; width: 42px; height: 42px; font-size: 20px; cursor: pointer; }
+#visit form { display: flex; gap: 8px; padding: 8px 10px calc(10px + env(safe-area-inset-bottom, 0px)); }
+#visit form input { flex: 1; min-width: 0; font: inherit; font-size: 16px; padding: 12px 14px; border-radius: 999px; border: 1px solid var(--line); background: #fff; color: #2A1B5E; }
+#visit form button { width: 46px; height: 46px; border-radius: 50%; border: 0; font-size: 20px; cursor: pointer; }
+.vhint { text-align: center; font-size: 12px; color: #6c5a95; padding: 4px 12px 0; }
+.tuto { position: fixed; inset: 0; z-index: 50; }
+.tuto[hidden] { display: none; }
+.tuto .veil { position: absolute; inset: 0; background: rgba(30,15,70,.62); }
+.tuto .ring { position: absolute; border-radius: 22px; box-shadow: 0 0 0 9999px rgba(30,15,70,.62), 0 0 0 4px #FFE27A; pointer-events: none; transition: all .3s; }
+.tuto .card { position: absolute; left: 14px; right: 14px; background: #fff; color: #2A1B5E; border-radius: 24px; padding: 16px; box-shadow: 0 10px 34px rgba(0,0,0,.35); max-width: 460px; margin: 0 auto; }
+.tuto .card h3 { margin: 0 0 6px; font-size: 19px; }
+.tuto .card p { margin: 0 0 12px; font-size: 14.5px; line-height: 1.4; font-weight: 600; }
+.tuto .card .row { display: flex; align-items: center; justify-content: space-between; gap: 8px; }
+.tuto .card .dots { font-size: 12px; opacity: .6; font-weight: 800; }
+.tuto .card button { border: 0; border-radius: 999px; padding: 9px 16px; font: inherit; font-weight: 800; cursor: pointer; background: #E7DDFF; color: #2A1B5E; }
+.tuto .card button.go { background: #7C5CFF; color: #fff; }
+.langsel { display: flex; gap: 6px; flex-wrap: wrap; margin: 6px 0; }
+.langsel button { border: 1px solid var(--line); background: var(--bg); color: inherit; font: inherit; font-weight: 800; font-size: 13px; padding: 7px 13px; border-radius: 999px; cursor: pointer; }
+.langsel button.on { background: var(--violet, #7C5CFF); color: #fff; border-color: transparent; }
+.voices { display: flex; gap: 6px; flex-wrap: wrap; margin: 6px 0; }
+.voices button { border: 1px solid var(--line); background: var(--bg); color: inherit; font: inherit; font-size: 13px; font-weight: 800; padding: 7px 12px; border-radius: 999px; cursor: pointer; }
+.voices button.on { background: #FFE27A; color: #3b2a00; border-color: transparent; }
+body.kb .tabbar { display: none; }
+body.kb #pane-chambre, body.kb .tabpane { padding-bottom: 40vh; }
+body.kb #mika-fab { display: none; }
+
+/* v18b */
+.langseg button[aria-pressed="true"] { background: var(--mint, #5DE3B4); color: #05382A; }
+body.kb .tabbar, body.kb #mika-fab { display: none; }
+body.in-visit { overflow: hidden; }
+#visit { top: 0; left: 0; right: 0; bottom: auto; height: var(--vvh, 100%); }
+.hostbar { position: relative; background: linear-gradient(120deg, #E7DDFF, #FFE3F1); border-radius: 22px; padding: 10px 12px; margin: 6px 0 8px; display: grid; gap: 8px; box-shadow: var(--shadow); }
+.hostbar[hidden] { display: none; }
+.hostbar .hb-t { font-weight: 800; font-size: 14px; color: #2A1B5E; }
+.hostbar .hb-e { display: flex; gap: 6px; }
+.hostbar .hb-e button { border: 0; background: #fff; border-radius: 999px; width: 40px; height: 40px; font-size: 20px; cursor: pointer; }
+.hostbar .hb-f { display: flex; gap: 8px; }
+.hostbar .hb-f input { flex: 1; min-width: 0; font: inherit; padding: 10px 14px; border-radius: 999px; border: 1px solid var(--line); background: #fff; color: #2A1B5E; }
+.hostbar .hb-f button { width: 42px; height: 42px; border-radius: 50%; border: 0; cursor: pointer; }
+.hostbar .hb-x { border: 0; background: #fff; color: #c2285b; font: inherit; font-weight: 800; border-radius: 999px; padding: 8px 14px; cursor: pointer; justify-self: start; }
+.voxchip { border: 1px solid var(--line); background: var(--bg); color: inherit; font: inherit; font-size: 13px; font-weight: 800; border-radius: 999px; padding: 5px 11px; cursor: pointer; margin: 2px; }
+.voxchip[aria-pressed="true"] { background: var(--violet, #7C5CFF); color: #fff; border-color: transparent; }
 </style>
 </head>
 <body>
@@ -907,6 +983,7 @@ body.has3d .hero.room .sky { opacity: .55; }
             <div class="care" id="care">
               <button type="button" data-act="feed"><span>🍙</span>Nourrir</button><button type="button" data-act="nap"><span>😴</span>Sieste</button><button type="button" data-act="hug"><span>🤗</span>Câlin</button><button type="button" data-act="play"><span>🎈</span>Jouer</button>
             </div>
+            <p class="care-hint" id="care-hint">Touche le frigo 🍙, les plantes 🌱, le bain 🛁, la porte 🚪 ou l’ordi 💻 : Mika y va tout seul.</p>
             <div class="quests" id="quests"></div>
             <div class="mood-row" id="mood-row" hidden>
               <span class="mr-q">Ton humeur ?</span>
@@ -997,7 +1074,7 @@ body.has3d .hero.room .sky { opacity: .55; }
       </div>
 
       <div id="pane-bobby" class="tabpane" data-pane="bobby" hidden>
-        <div class="bob-top"><h2>Classe de Bobby</h2>
+        <div class="bob-top"><h2>Classe</h2>
           <div class="bob-sel"><select id="bob-lang" aria-label="Langue"></select><select id="bob-lvl" aria-label="Niveau"><option>A1</option><option>A2</option><option>B1</option><option>B2</option></select></div></div>
         <div class="bob-stage" id="bob-stage"></div>
         <div class="bob-scenes" id="bob-scenes"></div>
@@ -1019,7 +1096,7 @@ body.has3d .hero.room .sky { opacity: .55; }
           <div class="shop-top"><h2>Boutique</h2><span class="petal-bal">🌸 <b id="petals3">0</b></span></div>
           <div class="shop-act" id="shop-act"></div>
         </section>
-        <div class="seg shop-seg" id="shop-seg" role="tablist"><button type="button" data-seg="outfit" class="on">👗 Tenues</button><button type="button" data-seg="decor">🛋️ Maison</button><button type="button" data-seg="bobby">🎓 Bobby</button><button type="button" data-seg="premium">💎 Premium</button></div>
+        <div class="seg shop-seg" id="shop-seg" role="tablist"><button type="button" data-seg="outfit" class="on">👗 Tenues</button><button type="button" data-seg="decor">🛋️ Maison</button><button type="button" data-seg="bobby">🎓 Classe</button><button type="button" data-seg="premium">💎 Premium</button></div>
         <div class="wardrobe" id="shop-grid"></div>
         <p class="me-hint" id="shop-hint">Gagne des pétales 🌸 en prenant soin de ton Mika. Tout s’obtient en jouant : rien n’est jamais obligatoire.</p>
       </div>
@@ -1038,7 +1115,7 @@ body.has3d .hero.room .sky { opacity: .55; }
     <nav class="tabbar" id="tabbar" aria-label="Navigation">
       <button type="button" data-tab="chambre" aria-current="page"><span class="ti">🏠</span><span>Chambre</span></button>
       <button type="button" data-tab="salon"><span class="ti">🌍</span><span>Monde</span></button>
-      <button type="button" data-tab="bobby"><span class="ti">🎓</span><span>Bobby</span></button>
+      <button type="button" data-tab="bobby"><span class="ti">🎓</span><span>Classe</span></button>
       <button type="button" data-tab="boutique"><span class="ti">🛍️</span><span>Boutique</span></button>
       <button type="button" data-tab="moi"><span class="ti">🫧</span><span>Moi</span></button>
     </nav>
@@ -1049,6 +1126,15 @@ body.has3d .hero.room .sky { opacity: .55; }
     </button>
   </div>
 
+  <div class="hinv" id="hinv" hidden><span id="hinv-t"></span><button type="button" class="go" id="hinv-go">Visiter</button><button type="button" id="hinv-no">Plus tard</button></div>
+  <section id="visit" hidden aria-label="Visite">
+    <div class="vh"><span id="visit-t">Visite</span><button type="button" id="visit-x">Quitter</button></div>
+    <div id="visit-stage"></div>
+    <p class="vhint" id="visit-hint">Touche le sol pour marcher. Les messages restent courts et polis 💚</p>
+    <div class="vemo" id="visit-emo"><button type="button" data-k="wave" aria-label="Saluer">👋</button><button type="button" data-k="heart" aria-label="Cœur">💗</button><button type="button" data-k="happy" aria-label="Content">😄</button><button type="button" data-k="dance" aria-label="Danser">💃</button><button type="button" data-k="wow" aria-label="Wow">😮</button></div>
+    <form id="visit-form" autocomplete="off"><input type="text" id="visit-in" maxlength="80" placeholder="Dis quelque chose…" aria-label="Message"><button type="submit" class="primary" id="visit-send" aria-label="Envoyer" disabled>➤</button></form>
+  </section>
+  <section class="tuto" id="tuto" hidden aria-label="Visite guidée"><div class="ring" id="tuto-ring"></div><div class="card" id="tuto-card"><h3 id="tuto-h"></h3><p id="tuto-p"></p><div class="row"><span class="dots" id="tuto-d"></span><span><button type="button" id="tuto-skip">Passer</button> <button type="button" class="go" id="tuto-next">Suivant</button></span></div></div></section>
   <section id="conv" hidden>
     <header class="chead">
       <div class="in">
@@ -1131,6 +1217,7 @@ body.has3d .hero.room .sky { opacity: .55; }
   <div id="sheet-age" class="scrim" hidden>
     <div class="sheet" role="dialog" aria-modal="true" aria-labelledby="sheet-age-h">
       <div class="grab"></div>
+      <div class="optrow" style="justify-content:flex-end"><span class="seg langseg" role="group" aria-label="Langue"><button type="button" class="js-lang" data-l="fr" aria-pressed="false">Français</button><button type="button" class="js-lang" data-l="en" aria-pressed="false">English</button></span></div>
       <h3 id="sheet-age-h">Bienvenue sur Talkie</h3>
       <p>Talkie met en relation des inconnus : il est réservé aux personnes de <strong>18 ans et plus</strong>. En continuant, tu acceptes que la modération automatique de Mika lit les messages pour protéger tout le monde. Les messages ne sont pas conservés.</p>
       <p id="age-no" class="hint" hidden>Désolé, Talkie n’est pas accessible aux mineurs. Reviens à tes 18 ans !</p>
@@ -1177,6 +1264,8 @@ body.has3d .hero.room .sky { opacity: .55; }
         <div class="avrow"><span class="lbl">Oreilles</span><span id="av-ears"></span></div>
         <div class="avrow"><span class="lbl">Regard</span><span id="av-face"></span></div>
         <div class="avrow"><span class="lbl">Style</span><span id="av-acc"></span></div>
+        <div class="avrow"><span class="lbl">Langue</span><span class="seg langseg" role="group" aria-label="Langue"><button type="button" class="js-lang" data-l="fr" aria-pressed="false">Français</button><button type="button" class="js-lang" data-l="en" aria-pressed="false">English</button></span></div>
+        <div class="avrow"><span class="lbl">Voix</span><span id="av-vox"></span></div>
         <div class="stack"><button type="button" class="primary" id="av-save">Faire sa connaissance 💚</button><button type="button" class="ghost" id="av-rand">🎲 Au hasard</button></div>
       </div>
     </div>
@@ -1192,6 +1281,8 @@ body.has3d .hero.room .sky { opacity: .55; }
         </span>
       </div>
       <div class="optrow js-voicerow" hidden><span>Voix de Mika</span><button type="button" class="js-voice" aria-pressed="false">Coupée</button></div>
+      <div class="optrow"><span>Langue</span><span class="seg langseg" role="group" aria-label="Langue"><button type="button" class="js-lang" data-l="fr" aria-pressed="false">Français</button><button type="button" class="js-lang" data-l="en" aria-pressed="false">English</button></span></div>
+      <div class="optrow js-voxrow"><span>Voix</span><span id="vox-set"></span></div>
       <div class="optrow"><span>Sons</span><button type="button" class="js-sound" aria-pressed="true">Activés</button></div>
       <div class="optrow"><span>Ma ville</span><button type="button" id="btn-settings-place">Changer</button></div>
       <div class="stack"><button type="button" class="ghost" id="btn-settings-close">Fermer</button></div>
@@ -1230,7 +1321,8 @@ body.has3d .hero.room .sky { opacity: .55; }
   </div>
 </div>
 <div id="toast" role="status" aria-live="polite" hidden></div>
-<script src="/scene3d.js?v=17b" defer></script>
-<script src="/app.js?v=17b" defer></script>
+<script src="/i18n.js?v=18"></script>
+  <script src="/scene3d.js?v=18" defer></script>
+<script src="/app.js?v=18" defer></script>
 </body>
 </html>

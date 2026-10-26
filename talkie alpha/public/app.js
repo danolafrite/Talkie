@@ -117,7 +117,7 @@
     ws.onopen = function () {
       if (ws !== mine) return;
       open = true; retry = 0;
-      send({ t: 'hello', cid: cid, nick: nick, av: myAv, blocked: blocked, visible: document.visibilityState !== 'hidden', adult: store('talkie.adult') === '1' });
+      send({ t: 'hello', cid: cid, nick: nick, av: myAv, blocked: blocked, friends: friends.map(function (f) { return f.pid; }), visible: document.visibilityState !== 'hidden', adult: store('talkie.adult') === '1' });
       renderLobby();
       if (room) renderConvState();
     };
@@ -142,6 +142,7 @@
 
   function onMessage(m) {
     if (m.t === 'plaza' || m.t === 'pj' || m.t === 'pl' || m.t === 'pm' || m.t === 'pe') { plazaMsg(m); return; }
+    if (/^(hsent|hinv|hjoin|hg\+|hg-|hend|hp|he|hs)$/.test(m.t)) { homeMsg(m); return; }
     switch (m.t) {
       case 'welcome':
         myPid = m.pid;
@@ -158,6 +159,7 @@
         online = m.online || 0;
         invites = Array.isArray(m.invites) ? m.invites : [];
         renderLobby();
+        renderSocial(m);
         break;
       case 'joined':
         progressQuest('salon'); bump('s', 5);
@@ -245,7 +247,12 @@
     { id: 'hat', label: 'Sorcier', premium: '1,99 €' }, { id: 'wings', label: 'Ailes', premium: '2,49 €' }
   ];
   var HEAD = ['crown', 'hat', 'pj'];
-  var DECOR = [{ id: 'plushbear', label: 'Ours en peluche', e: '🧸', price: 60 }, { id: 'neon', label: 'Néon cœur', e: '💗', price: 120 }];
+  var DECOR = [
+    { id: 'plushbear', label: 'Ours en peluche', e: '🧸', price: 60 }, { id: 'starrug', label: 'Tapis étoile', e: '⭐', price: 80 }, { id: 'poster', label: 'Affiche', e: '🖼️', price: 50 },
+    { id: 'beanbag', label: 'Pouf', e: '🛋️', price: 90 }, { id: 'neon', label: 'Néon cœur', e: '💗', price: 120 }, { id: 'catbed', label: 'Panier du chat', e: '🐱', price: 110 },
+    { id: 'cloud', label: 'Nuage', e: '☁️', price: 130 }, { id: 'bookshelf', label: 'Bibliothèque', e: '📚', price: 140 }, { id: 'disco', label: 'Boule disco', e: '🪩', price: 160 },
+    { id: 'aquarium', label: 'Aquarium', e: '🐠', price: 220 }, { id: 'piano', label: 'Piano', e: '🎹', price: 260 }, { id: 'arcade', label: 'Borne d’arcade', e: '🕹️', price: 300 }
+  ];
   var equip = (function () { try { var e = JSON.parse(store('talkie.equip') || 'null'); if (Array.isArray(e)) return e.slice(0, 8); } catch (er) { /* ignore */ } return null; })();
   var game = (function () {
     var g = { petals: 0, q: { d: '', ids: [], done: [] }, owned: [], decorOwn: [], decorOn: [], bown: [], bobOn: [] };
@@ -585,6 +592,7 @@
     clearInterval(sayTimer);
     stopSpeaking();
     pet.lastSpoke = Date.now();
+    if (m3d && m3d.say && curTab === 'chambre') m3d.say(clean(text, 220), 'mk');
     if (pet.mode === 'roam') callHome();
     bub.setAttribute('aria-label', text);
     if (state !== false) mood(state || 'happy', 2600);
@@ -1011,6 +1019,13 @@
   var canTTS = 'speechSynthesis' in window && typeof SpeechSynthesisUtterance !== 'undefined';
   var canSpeak = !!AC || canTTS;
   var voiceOn = canSpeak && store('talkie.voice') === '1';
+  var VOX = [
+    { id: 'douce', fr: 'Douce', en: 'Soft', tts: 'shimmer', pitch: 1.45, rate: 1.02, cr: 1.0 },
+    { id: 'petillante', fr: 'Pétillante', en: 'Bubbly', tts: 'nova', pitch: 1.75, rate: 1.1, cr: 1.07 },
+    { id: 'calme', fr: 'Calme', en: 'Calm', tts: 'alloy', pitch: 1.15, rate: 0.96, cr: 0.95 },
+    { id: 'grave', fr: 'Grave', en: 'Deep', tts: 'onyx', pitch: 0.85, rate: 0.95, cr: 0.86 }
+  ];
+  function vox() { var id = store('talkie.vx'); for (var i = 0; i < VOX.length; i++) if (VOX[i].id === id) return VOX[i]; return VOX[0]; }
   var cloudTts = false, cloudRate = 1.12;
   var gesture = false;
   var actx = null, seq = null;
@@ -1047,7 +1062,8 @@
   var frVoice = null;
   function pickVoice() {
     if (!canTTS) return;
-    var vs = speechSynthesis.getVoices().filter(function (v) { return /^fr/i.test(v.lang); });
+    var wantEn = window.I18N && I18N.lang === 'en';
+    var vs = speechSynthesis.getVoices().filter(function (v) { return (wantEn ? /^en/i : /^fr/i).test(v.lang); });
     if (!vs.length) return;
     function score(v) {
       var n = v.name + ' ' + (v.voiceURI || '');
@@ -1069,7 +1085,7 @@
     try {
       speechSynthesis.cancel();
       var u = new SpeechSynthesisUtterance(speakable(text));
-      u.lang = frVoice.lang || 'fr-FR'; u.voice = frVoice; u.pitch = 1.45; u.rate = 1.04; u.volume = 1;
+      u.lang = frVoice.lang || 'fr-FR'; u.voice = frVoice; u.pitch = vox().pitch; u.rate = vox().rate; u.volume = 1;
       u.onstart = function () { setTalking(true); };
       u.onend = u.onerror = function () { setTalking(false); };
       speechSynthesis.speak(u);
@@ -1136,8 +1152,8 @@
       a.addEventListener('error', ko);
       a.onended = function () { setTalking(false); };
       // Un peu plus aigu et pétillant : la hauteur suit la vitesse, comme une petite voix d'anime.
-      try { a.preservesPitch = false; a.mozPreservesPitch = false; a.webkitPreservesPitch = false; a.defaultPlaybackRate = cloudRate; a.playbackRate = cloudRate; } catch (e) { /* ignore */ }
-      a.src = '/api/tts?t=' + encodeURIComponent(speakable(text));
+      try { a.preservesPitch = false; a.mozPreservesPitch = false; a.webkitPreservesPitch = false; a.defaultPlaybackRate = cloudRate * vox().cr; a.playbackRate = cloudRate * vox().cr; } catch (e) { /* ignore */ }
+      a.src = '/api/tts?t=' + encodeURIComponent(speakable(text)) + '&v=' + vox().tts + '&l=' + (window.I18N && I18N.lang === 'en' ? 'en' : 'fr');
       try { a.load(); } catch (e) { finish(e); }
     });
   }
@@ -2078,7 +2094,7 @@
     send({ t: 'nick', nick: nick, av: myAv });
     closeAvSheet(); renderMoi();
     if (m3d) { m3d.setLook(Mika3DMod.avatarOpts(myAv)); m3d.emit('heart', 8); }
-    if (first) { toast('Bienvenue, ' + nick + ' ! 💚'); setTab('chambre'); cmpOpen(); } else toast('Mika a changé de look ✨');
+    if (first) { toast('Bienvenue, ' + nick + ' ! 💚'); setTab('chambre'); cmpOpen(); setTimeout(maybeTuto, 2500); } else toast('Mika a changé de look ✨');
   }
   $('btn-edit-av').addEventListener('click', openAvEditor);
   $('me-av').addEventListener('click', openAvEditor);
@@ -2102,12 +2118,37 @@
     if (name === 'boutique') openShop(); else closeShopPreview();
     if (name === 'bobby') openBobby(); else closeBobby();
     if (name === 'salon') openPlaza(); else closePlaza();
+    if (name === 'chambre') renderHostBar();
     if (name === 'chambre' && !cmpOpened) cmpOpen();
     window.scrollTo(0, 0);
   }
   Array.prototype.forEach.call(document.querySelectorAll('#tabbar button'), function (b) {
     b.addEventListener('click', function () { setTab(b.getAttribute('data-tab')); });
   });
+
+
+  /* ---------- iPhone : pas de zoom involontaire, clavier propre ---------- */
+  (function () {
+    ['gesturestart', 'gesturechange', 'gestureend'].forEach(function (n) { document.addEventListener(n, function (e) { e.preventDefault(); }, { passive: false }); });
+    var lastT = 0;
+    document.addEventListener('touchend', function (e) {
+      var now = Date.now();
+      if (now - lastT < 320 && !/^(INPUT|TEXTAREA|SELECT)$/.test((e.target && e.target.tagName) || '')) e.preventDefault();
+      lastT = now;
+    }, { passive: false });
+    document.addEventListener('touchmove', function (e) { if (e.touches && e.touches.length > 1) e.preventDefault(); }, { passive: false });
+    var vv = window.visualViewport;
+    function kbState() {
+      var open = vv ? window.innerHeight - vv.height > 140 : false;
+      document.body.classList.toggle('kb', open && /^(INPUT|TEXTAREA)$/.test((document.activeElement || {}).tagName || ''));
+    }
+    if (vv) { vv.addEventListener('resize', kbState); vv.addEventListener('scroll', kbState); }
+    document.addEventListener('focusin', function (e) {
+      if (!/^(INPUT|TEXTAREA)$/.test(e.target.tagName)) return;
+      setTimeout(function () { kbState(); try { e.target.scrollIntoView({ block: 'center', behavior: 'smooth' }); } catch (er) { /* ignore */ } }, 320);
+    });
+    document.addEventListener('focusout', function () { setTimeout(function () { kbState(); if (!document.body.classList.contains('kb')) window.scrollTo(window.scrollX, window.scrollY); }, 120); });
+  })();
 
   /* ---------- Mika compagnon : mémoire (sur le téléphone), conversation, émotions ---------- */
   var cmp = (function () {
@@ -2166,7 +2207,7 @@
   function ctx(kind) {
     var last = prevVisit.last ? (Date.now() - prevVisit.last) / 3600000 : null;
     return {
-      kind: kind, name: nick, hour: new Date().getHours(), day: new Date().toLocaleDateString('fr-FR', { weekday: 'long' }),
+      kind: kind, ui: (window.I18N && I18N.lang === 'en') ? 'en' : 'fr', name: nick, hour: new Date().getHours(), day: new Date().toLocaleDateString(uiLang() === 'en' ? 'en-GB' : 'fr-FR', { weekday: 'long' }),
       awayH: kind === 'open' ? last : null, visits: mem.visits, streak: mem.streak, bond: cmp.bond,
       moods: cmp.moods.slice(-5).map(function (x) { return x.m; }), facts: cmp.facts, follow: cmp.follow, quests: questSummary(), pet: nick, needs: needsText(),
       messages: cmp.thread.slice(-12).map(function (x) { return { r: x.r, t: x.t }; })
@@ -2242,11 +2283,18 @@
     lastUserAt = Date.now();
     dir.engaged = true; cmpNudges = 0; bump('s', 2);
     addThread('u', text);
+    userBubble(text);
     cmp.bond++;
     saveCmp();
     $('mood-row').hidden = true;
     setQr([]);
     callCompanion('reply');
+  }
+  function userBubble(text) {
+    var host = $('mika-stage'); if (!host || !document.body.classList.contains('has3d')) return;
+    var old = host.querySelector('.ub'); if (old) old.remove();
+    var b = el('div', 'st3-b me ub', clean(text, 90)); host.appendChild(b);
+    setTimeout(function () { if (b.parentNode) b.remove(); }, Math.min(6000, 2500 + text.length * 50));
   }
   function cmpTouch() { if (!cmpBusy) callCompanion('nudge'); }
   $('cmp-in').addEventListener('input', function () { $('cmp-send').disabled = !clean($('cmp-in').value, 400); lastUserAt = Date.now(); });
@@ -2281,12 +2329,12 @@
   var QPOOL = {
     mood: { t: 'Dire à ton Mika comment tu te sens', e: '🫶', auto: true }, salon: { t: 'Retrouver du monde dans le Monde', e: '🌍', auto: true },
     feed: { t: 'Nourrir ton Mika', e: '🍙', need: 2 }, nap: { t: 'Lui faire faire une sieste', e: '😴' }, hug: { t: 'Lui faire un câlin', e: '🤗' },
-    play: { t: 'Jouer ensemble', e: '🎈' }, wave: { t: 'Dire coucou à quelqu’un', e: '👋', auto: true }, bobby: { t: 'Papoter avec Professeur Bobby', e: '🎓', auto: true }
+    play: { t: 'Jouer ensemble', e: '🎈' }, wave: { t: 'Dire coucou à quelqu’un', e: '👋', auto: true }, bobby: { t: 'Papoter avec Professeur Bobby', e: '🎓', auto: true }, wash: { t: 'Lui faire prendre un bain', e: '🛁' }, water: { t: 'Arroser les plantes', e: '🌱' }
   };
   function ensureQuests() {
     var d = todayKey();
     if (game.q.d === d && game.q.ids.length) return;
-    var pool = ['feed', 'nap', 'hug', 'play', 'salon', 'wave', 'bobby'], h = hash(d + cid), ids = ['mood'];
+    var pool = ['feed', 'nap', 'hug', 'play', 'salon', 'wave', 'bobby', 'wash', 'water'], h = hash(d + cid), ids = ['mood'];
     var i = h % pool.length; ids.push(pool[i]);
     var j = (h >> 3) % (pool.length - 1); if (j >= i) j++; ids.push(pool[j]);
     game.q = { d: d, ids: ids, done: [], prog: {} };
@@ -2312,7 +2360,7 @@
         if (id === 'mood') { mikaSay('Choisis un visage juste en dessous, je veux savoir comment tu vas 🫶', false, 'happy'); if (!moodToday()) $('mood-row').hidden = false; return; }
         if (id === 'salon' || id === 'wave') { mikaSay('Va faire un tour dans le Monde : mes copains mochis t’y attendent 🌍', false, 'happy'); return; }
         if (id === 'bobby') { setTab('bobby'); return; }
-        var act = { feed: openFood, nap: doNap, hug: doHug, play: doPlay }[id]; if (act) act();
+        var act = { feed: openFood, nap: doNap, hug: doHug, play: doPlay, wash: doWash, water: function () { doWater(0); } }[id]; if (act) act();
       });
       box.appendChild(b);
     });
@@ -2349,27 +2397,28 @@
 
   /* ---------- Soins : faim, énergie, compagnie (jamais punitifs : une jauge basse, c'est juste un câlin à demander) ---------- */
   var care = (function () {
-    var c = { h: 70, e: 80, s: 60, t: Date.now() };
-    try { var j = JSON.parse(store('talkie.care') || '{}'); ['h', 'e', 's'].forEach(function (k) { if (isFinite(j[k])) c[k] = Math.max(0, Math.min(100, Number(j[k]))); }); if (j.t > 0) c.t = Number(j.t); } catch (e) { /* ignore */ }
+    var c = { h: 70, e: 80, s: 60, p: 78, pl: 70, t: Date.now() };
+    try { var j = JSON.parse(store('talkie.care') || '{}'); ['h', 'e', 's', 'p', 'pl'].forEach(function (k) { if (isFinite(j[k])) c[k] = Math.max(0, Math.min(100, Number(j[k]))); }); if (j.t > 0) c.t = Number(j.t); } catch (e) { /* ignore */ }
     return c;
   })();
   function decayCare() {
     var now = Date.now(), hrs = Math.max(0, Math.min(48, (now - care.t) / 3600000));
     care.t = now;
-    care.h = Math.max(12, care.h - 5 * hrs); care.e = Math.max(12, care.e - 3 * hrs); care.s = Math.max(12, care.s - 4 * hrs);
+    care.h = Math.max(12, care.h - 5 * hrs); care.e = Math.max(12, care.e - 3 * hrs); care.s = Math.max(12, care.s - 4 * hrs); care.p = Math.max(15, care.p - 3 * hrs); care.pl = Math.max(8, care.pl - 4 * hrs);
     store('talkie.care', JSON.stringify(care));
   }
   function bump(k, n) { decayCare(); care[k] = Math.max(0, Math.min(100, care[k] + n)); store('talkie.care', JSON.stringify(care)); renderNeeds(); }
   function renderNeeds() {
     var box = $('needs'); box.textContent = '';
-    [['h', '🍙', 'Faim'], ['e', '⚡', 'Énergie'], ['s', '💞', 'Compagnie']].forEach(function (x) {
+    [['h', '🍙', 'Faim'], ['e', '⚡', 'Énergie'], ['s', '💞', 'Compagnie'], ['p', '🫧', 'Propreté']].forEach(function (x) {
       var d = el('div', 'nd' + (care[x[0]] < 30 ? ' low' : '')); d.title = x[2] + ' : ' + Math.round(care[x[0]]) + '%';
       d.appendChild(el('span', null, x[1]));
       var bar = el('i'); var b = el('b'); b.style.width = Math.round(care[x[0]]) + '%'; bar.appendChild(b); d.appendChild(bar);
       box.appendChild(d);
     });
+    if (m3d && m3d.setPlants) m3d.setPlants(care.pl / 100);
   }
-  function needsText() { return 'faim ' + Math.round(care.h) + '%, énergie ' + Math.round(care.e) + '%, compagnie ' + Math.round(care.s) + '%'; }
+  function needsText() { return 'faim ' + Math.round(care.h) + '%, énergie ' + Math.round(care.e) + '%, compagnie ' + Math.round(care.s) + '%, propreté ' + Math.round(care.p) + '%'; }
   var FOODS = [
     { id: 'onigiri', e: '🍙', t: 'Onigiri', d: 'Le classique, toujours gratuit', price: 0, gain: 25 },
     { id: 'mochi', e: '🍡', t: 'Mochi', d: 'Petit et moelleux', price: 10, gain: 22 },
@@ -2435,6 +2484,39 @@
     earn(2); progressQuest('play');
     setTimeout(function () { setCareBusy(false); }, 3600);
   }
+  var jobDone = {};
+  function runJob(kind, ms, extra, fin, fbMs) {
+    if (!m3d) { setTimeout(fin, 1800); return; }
+    jobDone[kind] = fin; m3d.act(kind, ms, extra);
+    setTimeout(function () { if (jobDone[kind] === fin) { jobDone[kind] = null; fin(); } }, fbMs || 16000);
+  }
+  function doWash() {
+    decayCare();
+    if (careBusy) return;
+    if (care.p >= 90) { mikaSay('Je suis déjà tout propre, je sens la fleur de cerisier 🌸', false, 'happy'); return; }
+    setCareBusy(true);
+    mikaSay(pick(['Splash ! Un bon bain moussant 🫧', 'Oh oui, des bulles ! Tu es adorable 🛁']), true, 'happy');
+    runJob('wash', null, null, function () { bump('p', 60); setCareBusy(false); progressQuest('wash'); mood('love', 2600); mikaSay('Tout propre, tout doux ! ✨ Merci de prendre soin de moi.', false, false); });
+  }
+  function doToilet() {
+    if (careBusy) return;
+    setCareBusy(true);
+    mikaSay('Euh… j’ai un petit besoin, ne regarde pas 🙈', true, 'shy');
+    runJob('toilet', null, null, function () { setCareBusy(false); bump('p', -4); mood('happy', 2200); mikaSay('Ouf, ça va mieux ! Merci de m’avoir laissé de l’intimité 🚽💚', false, false); }, 9000);
+  }
+  function doWater(idx) {
+    decayCare();
+    if (careBusy) return;
+    if (care.pl >= 85) { mikaSay('Mes plantes sont toutes contentes, regarde comme elles brillent 🌱', false, 'happy'); return; }
+    setCareBusy(true);
+    mikaSay(pick(['Allez Basilic, à boire ! 🌱💧', 'Glou glou… elles ont soif, les petites 🌿']), true, 'happy');
+    runJob('water', null, { idx: idx || 0 }, function () { bump('pl', 55); setCareBusy(false); progressQuest('water'); mood('happy', 2600); mikaSay('Elles se redressent ! 🌿✨ Merci, tu as la main verte.', false, false); });
+  }
+  function goMonde() { mikaSay('Allons voir qui est là ! 🌍', false, 'happy'); setTimeout(function () { setTab('salon'); }, 700); }
+  var OBJ = {
+    fridge: function () { openFood(); }, bath: doWash, toilet: doToilet, bed: doNap, pc: goMonde, door: goMonde,
+    plant: function (d) { doWater(d && d.idx); }
+  };
   Array.prototype.forEach.call(document.querySelectorAll('#care button'), function (b) {
     b.addEventListener('click', function () { dir.engaged = true; bumpIdle(); ({ feed: openFood, nap: doNap, hug: doHug, play: doPlay })[b.getAttribute('data-act')](); });
   });
@@ -2457,6 +2539,11 @@
   /* ---------- Boutique : tenues, maison, premium (maquette) ---------- */
   var shopSeg = 'outfit', shopSel = null, shopPrev = null;
   function shopLook() {
+    if (shopSel && (shopSel.kind === 'bout' || shopSel.kind === 'bfeat')) {
+      var bl = ['glasses', 'bowtie'].concat(game.bobOn.filter(function (x) { return !(shopSel.kind === 'bout' && x === shopSel.id); }));
+      if (shopSel.kind === 'bout' && !(game.bobOn.indexOf(shopSel.id) >= 0 && shopSel.own)) bl.push(shopSel.id);
+      return { mika: true, color: 0xf2b27a, ears: 'bear', eyes: 'dot', acc: bl };
+    }
     var o = Mika3DMod.avatarOpts(myAv), list = accList().slice();
     if (shopSel && shopSel.kind === 'outfit') { if (HEAD.indexOf(shopSel.id) >= 0) list = list.filter(function (x) { return HEAD.indexOf(x) < 0; }); if (list.indexOf(shopSel.id) < 0) list.push(shopSel.id); }
     o.acc = list; return o;
@@ -2491,7 +2578,7 @@
       b.appendChild(el('span', null, it.label));
       b.appendChild(el('span', 'px', it.premium ? '💎 ' + it.premium : it.own ? (it.on ? 'Actif' : 'Dans l’armoire') : (it.need ? '🌸 ' + it.price + ' · ' + it.need + ' j' : '🌸 ' + it.price)));
       if (!it.own) b.appendChild(el('span', 'lk', it.premium ? '💎' : '🔒'));
-      b.addEventListener('click', function () { shopSel = it; if (shopPrev && it.kind === 'outfit') shopPrev.rebuild(); renderShop(); });
+      b.addEventListener('click', function () { shopSel = it; if (shopPrev) { shopPrev.setDecor(it.kind === 'decor' ? it.id : null); shopPrev.rebuild(); } renderShop(); });
       g.appendChild(b);
     });
     renderShopAct();
@@ -2514,7 +2601,7 @@
       game.petals -= it.price;
       if (it.kind === 'decor') { game.decorOwn.push(it.id); game.decorOn.push(it.id); if (m3d) m3d.setDecor(game.decorOn); }
       else { game.owned.push(it.id); equip = accList().filter(function (x) { return HEAD.indexOf(it.id) < 0 || HEAD.indexOf(x) < 0; }).concat(it.id); store('talkie.equip', JSON.stringify(equip)); fillMika(); }
-      saveGame(); toast('Acheté ! ' + it.label + ' 🎉'); shopSel = null; if (shopPrev) shopPrev.rebuild(); renderShop(); return;
+      saveGame(); toast('Acheté ! ' + it.label + ' 🎉'); shopSel = null; if (shopPrev) { shopPrev.setDecor(null); shopPrev.rebuild(); } renderShop(); return;
     }
     if (it.kind === 'decor') { var k = game.decorOn.indexOf(it.id); if (k >= 0) game.decorOn.splice(k, 1); else game.decorOn.push(it.id); saveGame(); if (m3d) m3d.setDecor(game.decorOn); }
     else {
@@ -2522,9 +2609,9 @@
       if (i2 >= 0) cur.splice(i2, 1); else { if (HEAD.indexOf(it.id) >= 0) cur = cur.filter(function (x) { return HEAD.indexOf(x) < 0; }); cur.push(it.id); }
       equip = cur; store('talkie.equip', JSON.stringify(equip)); fillMika();
     }
-    shopSel = null; if (shopPrev) shopPrev.rebuild(); renderShop();
+    shopSel = null; if (shopPrev) { shopPrev.setDecor(null); shopPrev.rebuild(); } renderShop();
   }
-  Array.prototype.forEach.call(document.querySelectorAll('#shop-seg button'), function (b) { b.addEventListener('click', function () { shopSeg = b.getAttribute('data-seg'); shopSel = null; if (shopPrev) shopPrev.rebuild(); renderShop(); }); });
+  Array.prototype.forEach.call(document.querySelectorAll('#shop-seg button'), function (b) { b.addEventListener('click', function () { shopSeg = b.getAttribute('data-seg'); shopSel = null; if (shopPrev) { shopPrev.setDecor(null); shopPrev.rebuild(); } renderShop(); }); });
 
 
   /* ---------- La Place (monde 3D partagé) ---------- */
@@ -2544,8 +2631,10 @@
         if (d.kind === 'walk' && plazaMe) { plazaScene.moveTo(plazaMe, d.x, d.z); send({ t: 'wpos', x: d.x, z: d.z }); }
         else if (d.kind === 'tap') {
           if (d.me) { plazaScene.emote(plazaMe, 'happy'); return; }
-          plazaEmote('wave'); toast('👋 Tu as salué ' + (plazaNames[d.pid] || 'quelqu’un'));
+          if (d.pid === 'mika') { plazaScene.emote('mika', 'happy'); toast(uiLang() === 'en' ? '💚 Your buddy wanders around the Square' : '💚 Ton Mika se promène sur la Place'); return; }
+          plazaPop(d.pid);
         }
+        else if (d.kind === 'building') plazaBuilding(d.id);
       });
       Array.prototype.forEach.call(document.querySelectorAll('#plaza-emotes button'), function (b) { b.addEventListener('click', function () { plazaEmote(b.getAttribute('data-k')); }); });
     }
@@ -2644,9 +2733,9 @@
   }
   function bobAddBobby(r) {
     var m = el('div', 'bm b', r.bobby);
-    if (r.fr) { var tr = el('small', null, '🇫🇷 ' + r.fr); tr.hidden = true; m.appendChild(tr);
-      var tools = el('div', 'tools'); var b1 = el('button', null, '🔊 Écouter'); b1.type = 'button'; b1.addEventListener('click', function () { bobSpeakText(r.bobby); });
-      var b2 = el('button', null, '🇫🇷 Traduire'); b2.type = 'button'; b2.addEventListener('click', function () { tr.hidden = !tr.hidden; });
+    if (r.fr) { var tr = el('small', null, (uiLang() === 'en' ? '🇬🇧 ' : '🇫🇷 ') + r.fr); tr.hidden = true; m.appendChild(tr);
+      var tools = el('div', 'tools'); var b1 = el('button', null, uiLang() === 'en' ? '🔊 Listen' : '🔊 Écouter'); b1.type = 'button'; b1.addEventListener('click', function () { bobSpeakText(r.bobby); });
+      var b2 = el('button', null, uiLang() === 'en' ? '🌐 Translate' : '🇫🇷 Traduire'); b2.type = 'button'; b2.addEventListener('click', function () { tr.hidden = !tr.hidden; });
       tools.appendChild(b1); tools.appendChild(b2); m.appendChild(tools); }
     bobLog(m);
   }
@@ -2697,7 +2786,7 @@
   function bobCall(kind, spoken) {
     var tok = ++bobTok; bobBusy = true; $('bob-send').disabled = true;
     if (bobStage) bobStage.thinking(true);
-    var body = { kind: kind, lang: bob.lang, level: bob.lvl, scen: bob.scen, name: nick, pron: bHas('pron'), spoken: !!spoken, messages: bobThread };
+    var body = { kind: kind, ui: uiLang(), lang: bob.lang, level: bob.lvl, scen: bob.scen, name: nick, pron: bHas('pron'), spoken: !!spoken, messages: bobThread };
     var ctrl = window.AbortController ? new AbortController() : null; var to = setTimeout(function () { if (ctrl) ctrl.abort(); }, 30000);
     fetch('/api/bobby', { method: 'POST', headers: { 'content-type': 'application/json' }, body: JSON.stringify(body), signal: ctrl ? ctrl.signal : undefined })
       .then(function (r) { if (!r.ok) throw new Error('http'); return r.json(); })
@@ -2764,9 +2853,9 @@
       if (game.petals < it.price) { toast('Il te manque ' + (it.price - game.petals) + ' 🌸 : prends soin de ton Mika et papote avec Bobby !'); return; }
       game.petals -= it.price;
       if (it.kind === 'bout') { game.bown.push(it.id); game.bobOn.push(it.id); } else game.bown.push(it.id);
-      saveGame(); toast('Acheté ! ' + it.label + ' 🎉'); shopSel = null; renderShop(); return;
+      saveGame(); toast('Acheté ! ' + it.label + ' 🎉'); shopSel = null; if (shopPrev) { shopPrev.setDecor(null); shopPrev.rebuild(); } renderShop(); return;
     }
-    if (it.kind === 'bout') { var k = game.bobOn.indexOf(it.id); if (k >= 0) game.bobOn.splice(k, 1); else game.bobOn.push(it.id); saveGame(); shopSel = null; renderShop(); return; }
+    if (it.kind === 'bout') { var k = game.bobOn.indexOf(it.id); if (k >= 0) game.bobOn.splice(k, 1); else game.bobOn.push(it.id); saveGame(); shopSel = null; if (shopPrev) { shopPrev.setDecor(null); shopPrev.rebuild(); } renderShop(); return; }
     setTab('bobby');
   }
 
@@ -2909,14 +2998,232 @@
       var n = ev.detail && ev.detail.name;
       dir.engaged = true; bumpIdle();
       if (n === 'done-nap') { if (napDone) { var f = napDone; napDone = null; f(); } return; }
-      if (n && n.indexOf('done-') === 0) return;
+      if (n && n.indexOf('done-') === 0) { var k2 = n.slice(5); if (jobDone[k2]) { var f2 = jobDone[k2]; jobDone[k2] = null; f2(); } return; }
       if (n === 'mika') { $('mika-av').click(); return; }
+      if (n === 'walk') return;
+      if (OBJ[n]) { OBJ[n](ev.detail); return; }
       if (ROOM_LINES[n]) { mood('happy', 2200); mikaSay(pick(ROOM_LINES[n]), false, false); }
     });
     var busyT = null;
     $('cmp-in').addEventListener('input', function () { m3d.busy(true); clearTimeout(busyT); busyT = setTimeout(function () { m3d.busy(false); }, 4000); });
   }
 
+  /* ---------- v18 · iPhone (zoom), clavier, langue, amis, visites, tutoriel ---------- */
+  var I = window.I18N || { lang: 'fr', t: function (x) { return x; }, set: function () {}, chosen: function () { return true; } };
+  (function antiZoom() {
+    ['gesturestart', 'gesturechange', 'gestureend'].forEach(function (ev) { document.addEventListener(ev, function (e) { e.preventDefault(); }, { passive: false }); });
+    document.addEventListener('touchmove', function (e) { if (e.touches && e.touches.length > 1) e.preventDefault(); }, { passive: false });
+    var lt = { t: 0, x: 0, y: 0 };
+    document.addEventListener('touchend', function (e) {
+      var tg = e.target && e.target.tagName, c = e.changedTouches && e.changedTouches[0]; if (!c) return;
+      var now = Date.now(), near = Math.abs(c.clientX - lt.x) < 30 && Math.abs(c.clientY - lt.y) < 30;
+      if (now - lt.t < 320 && near && !/^(INPUT|TEXTAREA|SELECT)$/.test(tg || '')) e.preventDefault();
+      lt = { t: now, x: c.clientX, y: c.clientY };
+    }, { passive: false });
+    document.addEventListener('dblclick', function (e) { if (!/^(INPUT|TEXTAREA|SELECT)$/.test((e.target && e.target.tagName) || '')) e.preventDefault(); });
+  })();
+  (function keyboard() {
+    var vv = window.visualViewport, isIn = function (n) { return n && /^(INPUT|TEXTAREA)$/.test(n.tagName); };
+    function vh() { document.documentElement.style.setProperty('--vvh', (vv ? vv.height : window.innerHeight) + 'px'); }
+    vh();
+    if (vv) { vv.addEventListener('resize', function () { vh(); document.body.classList.toggle('kb', window.innerHeight - vv.height > 120 || isIn(document.activeElement)); if (!isIn(document.activeElement)) window.scrollTo(0, 0); }); vv.addEventListener('scroll', function () { if ($('visit') && !$('visit').hidden) window.scrollTo(0, 0); }); }
+    document.addEventListener('focusin', function (e) {
+      if (!isIn(e.target)) return;
+      document.body.classList.add('kb');
+      setTimeout(function () { try { e.target.scrollIntoView({ block: 'center', behavior: 'smooth' }); } catch (er) { /* ignore */ } }, 320);
+    });
+    document.addEventListener('focusout', function () { setTimeout(function () { if (!isIn(document.activeElement)) { document.body.classList.remove('kb'); vh(); } }, 150); });
+  })();
+
+  /* langue de l'interface */
+  function uiLang() { return I.lang === 'en' ? 'en' : 'fr'; }
+  function syncLangButtons() { Array.prototype.forEach.call(document.querySelectorAll('.js-lang'), function (b) { b.setAttribute('aria-pressed', String(b.getAttribute('data-l') === uiLang())); }); }
+  Array.prototype.forEach.call(document.querySelectorAll('.js-lang'), function (b) { b.addEventListener('click', function () { I.set(b.getAttribute('data-l')); syncLangButtons(); renderQuests(); if (curTab === 'boutique') renderShop(); if (curTab === 'bobby') bobRenderHead(); renderNeeds(); }); });
+  syncLangButtons();
+
+  /* amis (stockés sur le téléphone) et compteur du Monde */
+  var friends = (function () { try { var a = JSON.parse(store('talkie.friends') || '[]'); return (Array.isArray(a) ? a : []).filter(function (f) { return f && /^[A-Za-z0-9_-]{1,12}$/.test(f.pid); }).map(function (f) { return { pid: f.pid, nick: clean(f.nick, 14) }; }).slice(0, 100); } catch (e) { return []; } })();
+  function saveFriends() { store('talkie.friends', JSON.stringify(friends)); send({ t: 'friends', list: friends.map(function (f) { return f.pid; }) }); }
+  function isFriend(pid) { return friends.some(function (f) { return f.pid === pid; }); }
+  function toggleFriend(pid, name) {
+    if (isFriend(pid)) friends = friends.filter(function (f) { return f.pid !== pid; }); else friends.push({ pid: pid, nick: clean(name, 14) });
+    saveFriends(); toast(isFriend(pid) ? '💛 ' + clean(name, 14) + (uiLang() === 'en' ? ' is now a friend' : ' est maintenant ton ami·e') : (uiLang() === 'en' ? 'Removed from friends' : 'Retiré de tes amis'));
+  }
+  var social = { plaza: 0, friends: [], seen: {} };
+  function renderSocial(d) {
+    social.plaza = Math.max(0, Number(d.plaza) || 0); var fr = Array.isArray(d.friends) ? d.friends : [];
+    var btn = document.querySelector('#tabbar [data-tab=salon]'), bd = btn && btn.querySelector('.tbadge');
+    if (btn) {
+      var n = social.plaza - (plazaScene ? 1 : 0);
+      if (!bd && (n > 0 || fr.length)) { bd = el('span', 'tbadge'); btn.appendChild(bd); }
+      if (bd) { bd.hidden = !(n > 0 || fr.length); bd.textContent = fr.length ? '💛' + (n > 0 ? n : '') : String(n); bd.classList.toggle('fr', !!fr.length); }
+    }
+    fr.forEach(function (f) { if (!social.seen[f.pid] && curTab !== 'salon') toast('💛 ' + clean(f.nick, 14) + (uiLang() === 'en' ? (f.plaza ? ' is on the Square' : ' is online') : (f.plaza ? ' est sur la Place' : ' est en ligne'))); social.seen[f.pid] = 1; });
+    Object.keys(social.seen).forEach(function (k) { if (!fr.some(function (f) { return f.pid === k; })) delete social.seen[k]; });
+    social.friends = fr;
+    var bar = $('friends-bar');
+    if (!bar && $('plaza')) { bar = el('div', 'friends-bar'); bar.id = 'friends-bar'; $('plaza').appendChild(bar); }
+    if (bar) { bar.textContent = ''; fr.forEach(function (f) { var b = el('button', null, '💛 ' + clean(f.nick, 14) + (uiLang() === 'en' ? (f.plaza ? ' is on the Square' : ' is online') : (f.plaza ? ' est sur la Place' : ' est en ligne'))); b.type = 'button'; b.addEventListener('click', function () { if (curTab !== 'salon') setTab('salon'); }); bar.appendChild(b); }); }
+    plazaCount();
+  }
+
+  /* fenêtre « quelqu'un sur la Place » : saluer, inviter, ami */
+  function plazaPop(pid) {
+    var host = $('plaza-stage'), old = host.querySelector('.plaza-pop'); if (old) old.remove();
+    var nm = plazaNames[pid] || '?', pop = el('div', 'plaza-pop'); pop.appendChild(el('b', null, nm));
+    function b(txt, cls, fn) { var x = el('button', cls || null, txt); x.type = 'button'; x.addEventListener('click', function () { fn(); pop.remove(); }); pop.appendChild(x); }
+    b('👋 Saluer', null, function () { plazaEmote('wave'); toast('👋 ' + (uiLang() === 'en' ? 'You said hi to ' : 'Tu as salué ') + nm); });
+    b('🏠 Inviter dans ma chambre', 'pr', function () { send({ t: 'hinv', to: pid, decor: usableDecor(game.decorOn), acc: accList() }); });
+    b(isFriend(pid) ? '💛 Ami·e' : '💛 Ajouter en ami', null, function () { toggleFriend(pid, nm); });
+    host.appendChild(pop); setTimeout(function () { if (pop.parentNode) pop.remove(); }, 8000);
+  }
+  function usableDecor(l) { var ok = (window.Mika3DMod && Mika3DMod.DECOR_IDS) || []; return (l || []).filter(function (x) { return ok.indexOf(x) >= 0; }); }
+  function plazaBuilding(id) {
+    if (id === 'home') { mikaSay('Retour à la maison ! 🏠', false, 'happy'); setTab('chambre'); }
+    else if (id === 'class') setTab('bobby');
+    else if (id === 'shop') { shopSeg = 'outfit'; setTab('boutique'); }
+    else if (id === 'boba') { toast(uiLang() === 'en' ? '🧋 Boba Shop: snacks for your buddy!' : '🧋 Boba Shop : des goûters pour ton Mika !'); openFood(); }
+    else if (id === 'park') {
+      if (plazaScene) plazaScene.rideWheel();
+      var d = todayKey();
+      if (game.park !== d) { game.park = d; earn(5); saveGame(); toast(uiLang() === 'en' ? '🎡 Wheeee! +5 🌸 for your first ride today' : '🎡 Wouiii ! +5 🌸 pour ton premier tour du jour'); sfx.join(); }
+      else toast(uiLang() === 'en' ? '🎡 Wheeee! Come back tomorrow for petals' : '🎡 Wouiii ! Reviens demain pour des pétales');
+    }
+  }
+
+  /* visites de chambre à deux */
+  var vis = { scene: null, hostPid: null, mine: false, guests: {} };
+  var inviteTimer = null;
+  function showInvite(from) {
+    $('hinv-t').textContent = clean(from.nick, 14) + (uiLang() === 'en' ? ' invites you to their room 🏠' : ' t’invite dans sa chambre 🏠');
+    $('hinv').hidden = false; $('hinv-go').onclick = function () { $('hinv').hidden = true; send({ t: 'hacc', host: from.pid }); };
+    $('hinv-no').onclick = function () { $('hinv').hidden = true; };
+    clearTimeout(inviteTimer); inviteTimer = setTimeout(function () { $('hinv').hidden = true; }, 30000);
+    if (curTab === 'chambre' && vis.mine) return; sfx.join();
+  }
+  function visScene() { return vis.scene || m3d; }
+  function visitStart(m) {
+    if (!window.Mika3DMod) return;
+    closeVisit(true);
+    var h = m.host || {};
+    vis.hostPid = h.pid; vis.mine = false; vis.guests = {};
+    $('visit').hidden = false; document.body.classList.add('in-visit');
+    $('visit-t').textContent = (uiLang() === 'en' ? clean(h.nick, 14) + '’s room' : 'Chez ' + clean(h.nick, 14));
+    var host = $('visit-stage'); host.textContent = '';
+    try { vis.scene = Mika3DMod.init(host, { visit: true, look: Mika3DMod.avatarOpts(/^[0-7][0-3][0-2][0-4]$/.test(h.av || '') ? h.av : defaultAv(h.nick)), acc: (h.acc || []), start: [Number(h.x) || 0.2, Number(h.z) || 1.2], label: clean(h.nick, 14) }); } catch (e) { vis.scene = null; }
+    if (!vis.scene) { toast(uiLang() === 'en' ? 'Your phone cannot show the 3D room' : 'Ton téléphone ne sait pas afficher la chambre 3D'); send({ t: 'hleave' }); $('visit').hidden = true; return; }
+    vis.scene.setDecor(usableDecor(h.decor));
+    vis.scene.addGuest(myPid, { code: myAv, nick: uiLang() === 'en' ? 'Me' : 'Moi', x: m.me.x, z: m.me.z, acc: accList() });
+    (m.others || []).forEach(function (p) { vis.scene.addGuest(p.pid, { code: /^[0-7][0-3][0-2][0-4]$/.test(p.av || '') ? p.av : defaultAv(p.nick), nick: clean(p.nick, 14), x: p.x, z: p.z }); });
+    host.addEventListener('mika3d', function (ev) { var d = ev.detail || {}; if (d.name === 'walk' && vis.scene) { vis.scene.moveGuest(myPid, d.x, d.z); send({ t: 'hpos', x: d.x, z: d.z }); } });
+    progressQuest('wave');
+  }
+  function closeVisit(silent) {
+    if (vis.scene) { try { vis.scene.destroy(); } catch (e) { /* ignore */ } vis.scene = null; }
+    if (!vis.mine && vis.hostPid && !silent) send({ t: 'hleave' });
+    if (!vis.mine) vis.hostPid = null;
+    $('visit').hidden = true; document.body.classList.remove('in-visit');
+  }
+  function hostBar() {
+    var b = $('hostbar'); if (b) return b;
+    b = el('div', 'hostbar'); b.id = 'hostbar'; b.hidden = true;
+    b.innerHTML = '<span class="hb-t"></span><div class="hb-e"><button type="button" data-k="wave">👋</button><button type="button" data-k="heart">💗</button><button type="button" data-k="dance">💃</button></div><form class="hb-f" autocomplete="off"><input type="text" maxlength="80" placeholder="Dis quelque chose…" aria-label="Message"><button type="submit" class="primary" aria-label="Envoyer">➤</button></form><button type="button" class="hb-x">Terminer la visite</button>';
+    $('pane-chambre').insertBefore(b, $('pane-chambre').firstChild);
+    Array.prototype.forEach.call(b.querySelectorAll('.hb-e button'), function (x) { x.addEventListener('click', function () { visEmote(x.getAttribute('data-k')); }); });
+    b.querySelector('form').addEventListener('submit', function (e) { e.preventDefault(); var i = b.querySelector('input'); visSay(i.value); i.value = ''; });
+    b.querySelector('.hb-x').addEventListener('click', function () { send({ t: 'hleave' }); endHostVisit(); });
+    return b;
+  }
+  function renderHostBar() {
+    var n = Object.keys(vis.guests).length, b = hostBar();
+    b.hidden = !(vis.mine && n > 0);
+    var names = Object.keys(vis.guests).map(function (k) { return vis.guests[k]; }).join(', ');
+    b.querySelector('.hb-t').textContent = '👥 ' + names + (uiLang() === 'en' ? (n > 1 ? ' are in your room' : ' is in your room') : (n > 1 ? ' sont dans ta chambre' : ' est dans ta chambre'));
+  }
+  function endHostVisit() { Object.keys(vis.guests).forEach(function (k) { if (m3d) m3d.removeGuest(k); }); vis.guests = {}; vis.mine = false; vis.hostPid = null; renderHostBar(); }
+  function visSay(text) {
+    text = clean(text, 80); if (!text) return;
+    send({ t: 'hsay', text: text });
+  }
+  function visEmote(k) { send({ t: 'hemo', k: k }); var S = visScene(); if (!S) return; if (vis.mine) S.emote(k); else S.guestEmote(myPid, k); }
+  $('visit-x').addEventListener('click', function () { closeVisit(); });
+  $('visit-in').addEventListener('input', function () { $('visit-send').disabled = !$('visit-in').value.trim(); });
+  $('visit-form').addEventListener('submit', function (e) { e.preventDefault(); visSay($('visit-in').value); $('visit-in').value = ''; $('visit-send').disabled = true; });
+  Array.prototype.forEach.call(document.querySelectorAll('#visit-emo button'), function (b) { b.addEventListener('click', function () { visEmote(b.getAttribute('data-k')); }); });
+  var hostPosT = setInterval(function () { if (vis.mine && Object.keys(vis.guests).length && m3d && m3d.pos) { var p = m3d.pos(); send({ t: 'hpos', x: p.x, z: p.z }); } }, 1500);
+  function homeMsg(m) {
+    switch (m.t) {
+      case 'hsent': toast(uiLang() === 'en' ? 'Invitation sent to ' + clean(m.to, 14) + ' 💌' : 'Invitation envoyée à ' + clean(m.to, 14) + ' 💌'); vis.mine = true; vis.hostPid = myPid; break;
+      case 'hinv': if ((m.from || {}).pid) showInvite(m.from); break;
+      case 'hjoin': visitStart(m); break;
+      case 'hg+': {
+        var p = m.p || {}, S = visScene(); if (!S) { vis.guests[p.pid] = clean(p.nick, 14); renderHostBar(); break; }
+        S.addGuest(p.pid, { code: /^[0-7][0-3][0-2][0-4]$/.test(p.av || '') ? p.av : defaultAv(p.nick), nick: clean(p.nick, 14), x: p.x, z: p.z });
+        if (vis.mine) { vis.guests[p.pid] = clean(p.nick, 14); renderHostBar(); toast('🏠 ' + clean(p.nick, 14) + (uiLang() === 'en' ? ' is visiting your room!' : ' visite ta chambre !')); if (curTab !== 'chambre') { $('hinv-t').textContent = clean(p.nick, 14) + (uiLang() === 'en' ? ' is in your room 🏠' : ' est dans ta chambre 🏠'); $('hinv').hidden = false; $('hinv-go').textContent = uiLang() === 'en' ? 'See' : 'Voir'; $('hinv-go').onclick = function () { $('hinv').hidden = true; $('hinv-go').textContent = 'Visiter'; setTab('chambre'); }; $('hinv-no').onclick = function () { $('hinv').hidden = true; }; } }
+        break; }
+      case 'hg-': { var S2 = visScene(); if (S2) S2.removeGuest(m.pid); var nm = vis.guests[m.pid]; delete vis.guests[m.pid]; if (vis.mine) renderHostBar(); if (nm) toast((uiLang() === 'en' ? nm + ' left' : nm + ' est parti·e') + ' 👋'); break; }
+      case 'hend': closeVisit(true); toast(uiLang() === 'en' ? 'The visit is over 💚' : 'La visite est terminée 💚'); break;
+      case 'hp': { var S3 = visScene(); if (!S3) break; if (!vis.mine && m.pid === vis.hostPid) S3.walkTo(m.x, m.z); else S3.moveGuest(m.pid, m.x, m.z); break; }
+      case 'he': { var S4 = visScene(); if (!S4) break; if (!vis.mine && m.pid === vis.hostPid) S4.emote(m.k); else S4.guestEmote(m.pid, m.k); break; }
+      case 'hs': { var S5 = visScene(); if (!S5) break; var txt = chatClean(m.text, 80); if (!txt) break; if (m.pid === vis.hostPid) S5.say(txt, 'me'); else S5.guestSay(m.pid, txt); break; }
+    }
+  }
+  function leaveAllVisits() { if (vis.scene) closeVisit(); if (vis.mine && Object.keys(vis.guests).length) { send({ t: 'hleave' }); endHostVisit(); } }
+
+  /* tutoriel */
+  var TUTO = [
+    { tab: 'chambre', sel: '#mika-stage', h: 'Ta chambre 🏠', p: 'Ici vit ton Mika, c’est toi en version mochi. Touche le frigo, le lit, les plantes, le bain, l’ordi ou la porte : il y va tout seul. Écris-lui en bas pour papoter.' },
+    { tab: 'salon', sel: '#plaza-stage', h: 'Monde 🌍', p: 'La Place : tous les avatars en ligne se retrouvent ici. Touche le sol pour marcher, touche quelqu’un pour le saluer ou l’inviter dans ta chambre. Les bâtiments mènent à la classe, à la boutique et à ta chambre.' },
+    { tab: 'salon', sel: '#compose', h: 'Les rooms 💬', p: 'Une room, c’est une petite discussion à 2, 3 ou 4. Écris un thème, publie-le : dès que quelqu’un l’ouvre, vous papotez, avatars à l’écran. Tu peux aussi rejoindre un thème déjà publié.' },
+    { tab: 'bobby', sel: '#bob-stage', h: 'Classe 🎓', p: 'Professeur Bobby t’aide à pratiquer une langue, à l’écrit ou à l’oral. Ton Mika, à côté de toi, corrige tes erreurs et t’explique.' },
+    { tab: 'boutique', sel: '#shop-grid', h: 'Boutique 🛍️', p: 'Gagne des pétales 🌸 en prenant soin de ton Mika, puis habille-le et décore ta chambre. Touche un article pour l’essayer avant de l’acheter.' },
+    { tab: 'moi', sel: '#me-av', h: 'Moi 🫧', p: 'Ton profil, tes humeurs, ce que Mika retient de toi, les réglages et la langue. Tu peux tout effacer quand tu veux.' }
+  ];
+  var tutoI = 0;
+  function tutoShow() {
+    var s = TUTO[tutoI]; if (!s) return tutoEnd();
+    if (curTab !== s.tab) setTab(s.tab);
+    $('tuto').hidden = false;
+    setTimeout(function () {
+      var t = document.querySelector(s.sel); if (!t) { tutoI++; return tutoShow(); }
+      try { t.scrollIntoView({ block: 'center' }); } catch (e) { /* ignore */ }
+      setTimeout(function () {
+        var r = t.getBoundingClientRect(), ring = $('tuto-ring'), card = $('tuto-card');
+        ring.style.left = Math.max(4, r.left - 6) + 'px'; ring.style.top = Math.max(4, r.top - 6) + 'px'; ring.style.width = Math.min(window.innerWidth - 8, r.width + 12) + 'px'; ring.style.height = Math.min(window.innerHeight - 8, r.height + 12) + 'px';
+        $('tuto-h').textContent = I.t(s.h); $('tuto-p').textContent = I.t(s.p);
+        var d = ''; for (var i = 0; i < TUTO.length; i++) d += i === tutoI ? '● ' : '○ '; $('tuto-d').textContent = d.trim();
+        $('tuto-next').textContent = I.t(tutoI === TUTO.length - 1 ? 'C’est parti !' : 'Suivant');
+        var below = r.top + r.height / 2 < window.innerHeight / 2; card.style.top = below ? Math.min(window.innerHeight - 190, r.bottom + 16) + 'px' : 'auto'; card.style.bottom = below ? 'auto' : Math.max(12, window.innerHeight - r.top + 16) + 'px';
+      }, 250);
+    }, 200);
+  }
+  function tutoEnd() { $('tuto').hidden = true; store('talkie.tuto', '1'); setTab('chambre'); }
+  function tutoStart() { tutoI = 0; tutoShow(); }
+  $('tuto-next').addEventListener('click', function () { tutoI++; if (tutoI >= TUTO.length) tutoEnd(); else tutoShow(); });
+  $('tuto-skip').addEventListener('click', tutoEnd);
+  (function () {
+    var sec = $('btn-me-settings').parentNode, b = el('button', 'ghost', '🎓 Revoir le tutoriel'); b.type = 'button'; b.addEventListener('click', tutoStart); sec.appendChild(b);
+  })();
+  function maybeTuto() { if (store('talkie.tuto') !== '1' && store('talkie.avset') && store('talkie.adult') === '1' && $('sheet-av').hidden && $('sheet-age').hidden) setTimeout(tutoStart, 900); }
+
+
+  function renderVox() {
+    ['av-vox', 'vox-set'].forEach(function (id) {
+      var box = $(id); if (!box) return; box.textContent = '';
+      VOX.forEach(function (v) {
+        var b = el('button', 'voxchip', (uiLang() === 'en' ? v.en : v.fr)); b.type = 'button'; b.setAttribute('aria-pressed', String(vox().id === v.id));
+        b.addEventListener('click', function () { store('talkie.vx', v.id); if (!voiceOn && canSpeak) { voiceOn = true; store('talkie.voice', '1'); renderVoice(); } renderVox(); previewVox(); });
+        box.appendChild(b);
+      });
+    });
+  }
+  function previewVox() {
+    var s = uiLang() === 'en' ? 'Hi! This is my voice. Do you like it?' : 'Coucou ! Voilà ma voix. Tu aimes bien ?';
+    gesture = true;
+    if (cloudTts && voiceEl) { cloudLine(s).then(function (au) { au.play().catch(function () {}); }).catch(function () { ttsSpeak(s); }); } else ttsSpeak(s);
+  }
+  window.addEventListener('talkie:lang', function () { renderVox(); if (canTTS) pickVoice(); });
+  renderVox();
   /* ---------- Démarrage ---------- */
   if ('serviceWorker' in navigator) {
     window.addEventListener('load', function () { navigator.serviceWorker.register('/sw.js').catch(function () {}); });
@@ -2931,6 +3238,6 @@
   renderNotif();
   renderNeeds();
   setTab('chambre');
-  if (!store('talkie.avset')) setTimeout(openAvEditor, 500);
+  if (!store('talkie.avset')) setTimeout(openAvEditor, 500); else setTimeout(maybeTuto, 1800);
   connect();
 })();
