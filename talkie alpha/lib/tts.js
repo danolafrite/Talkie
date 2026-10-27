@@ -133,4 +133,5 @@ async function check() {
     return { ok: false, why: 'other', status: e.api || null, msg: 'Erreur voix : ' + (e.message || 'inconnue') + (d ? ' — ' + d : '') };
   }
 }
-module.exports = { check, enabled, VOICES, PITCH, synth, usedToday: () => { budgetLeft(); return used; }, DAILY_CAP };
+const provider = () => (EL_KEY ? 'el:' + EL_MODEL + ':' + Object.values(EL_VOICES).join('').slice(0, 24) : 'oa');
+module.exports = { provider, check, enabled, VOICES, PITCH, synth, usedToday: () => { budgetLeft(); return used; }, DAILY_CAP };

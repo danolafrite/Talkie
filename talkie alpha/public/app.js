@@ -1030,11 +1030,11 @@
     { id: 'grave', fr: 'Grave', en: 'Deep', tts: 'onyx', pitch: 0.85, rate: 0.95, cr: 0.93 }
   ];
   function vox() { var id = store('talkie.vx'); for (var i = 0; i < VOX.length; i++) if (VOX[i].id === id) return VOX[i]; return VOX[0]; }
-  var cloudTts = false, cloudRate = 1;
+  var cloudTts = false, cloudRate = 1, cloudProv = '';
   var gesture = false;
   var actx = null, seq = null;
   var voiceEl = null;
-  fetch('/api/config').then(function (r) { return r.json(); }).then(function (d) { cloudTts = !!(d && d.tts); if (d && d.ttsRate) cloudRate = d.ttsRate; }).catch(function () {});
+  fetch('/api/config').then(function (r) { return r.json(); }).then(function (d) { cloudTts = !!(d && d.tts); if (d && d.ttsRate) cloudRate = d.ttsRate; cloudProv = String((d && d.ttsProv) || '').replace(/[^a-zA-Z0-9]/g, '').slice(0, 40); }).catch(function () {});
 
   var voiceUnlocked = false, voiceUrl = null;
   var SILENT = 'data:audio/wav;base64,UklGRiQAAABXQVZFZm10IBAAAAABAAEAESsAACJWAAACABAAZGF0AAAAAA==';
@@ -1150,7 +1150,7 @@
       if (!voiceEl) { reject(new Error('audio')); return; }
       var a = voiceEl, ctl = window.AbortController ? new AbortController() : null;
       var to = setTimeout(function () { try { if (ctl) ctl.abort(); } catch (e) { /* ignore */ } reject(new Error('lent')); }, 12000);
-      var url = '/api/tts?t=' + encodeURIComponent(speakable(text)) + '&v=' + vox().tts + '&l=' + (window.I18N && I18N.lang === 'en' ? 'en' : 'fr');
+      var url = '/api/tts?t=' + encodeURIComponent(speakable(text)) + '&v=' + vox().tts + '&l=' + (window.I18N && I18N.lang === 'en' ? 'en' : 'fr') + '&k=' + cloudProv;
       // On télécharge la phrase en entier AVANT de la jouer : sur iPhone, un son qui se charge en route est souvent coupé.
       fetch(url, ctl ? { signal: ctl.signal } : undefined).then(function (r) { if (!r.ok) throw new Error('voix'); return r.blob(); }).then(function (bl) {
         clearTimeout(to);

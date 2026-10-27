@@ -995,7 +995,7 @@ const server = http.createServer(async (req, res) => {
     return;
   }
   if (url.pathname === '/api/config' && req.method === 'GET') {
-    json(res, 200, { turnstile: TURNSTILE_SITE && TURNSTILE_SECRET ? TURNSTILE_SITE : null, tts: tts.enabled(), ttsRate: tts.PITCH, ttsVoices: tts.VOICES, supabase: SUPABASE_URL && SUPABASE_KEY ? { url: SUPABASE_URL, key: SUPABASE_KEY } : null });
+    json(res, 200, { turnstile: TURNSTILE_SITE && TURNSTILE_SECRET ? TURNSTILE_SITE : null, tts: tts.enabled(), ttsRate: tts.PITCH, ttsVoices: tts.VOICES, ttsProv: tts.provider(), supabase: SUPABASE_URL && SUPABASE_KEY ? { url: SUPABASE_URL, key: SUPABASE_KEY } : null });
     return;
   }
   if (url.pathname === '/api/voice-check' && req.method === 'GET') {
