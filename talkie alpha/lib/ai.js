@@ -38,17 +38,29 @@ async function complete(opts) {
   const ctrl = new AbortController();
   const timer = setTimeout(() => ctrl.abort(), timeoutMs || 20000);
   try {
-    const send = (withThinkingOff) => fetch(BASE + '/v1/messages', {
+    const send = (mdl, withThinkingOff, withTemp) => fetch(BASE + '/v1/messages', {
       method: 'POST',
       signal: ctrl.signal,
       headers: { 'content-type': 'application/json', 'x-api-key': KEY, 'anthropic-version': '2023-06-01' },
-      body: JSON.stringify(Object.assign({ model, max_tokens: maxTokens || 220, system, messages }, tools ? { tools } : {}, opts.temperature != null ? { temperature: opts.temperature } : {}, withThinkingOff ? { thinking: { type: 'disabled' } } : {}))
+      body: JSON.stringify(Object.assign({ model: mdl, max_tokens: maxTokens || 220, system, messages }, tools ? { tools } : {}, withTemp && opts.temperature != null ? { temperature: opts.temperature } : {}, withThinkingOff ? { thinking: { type: 'disabled' } } : {}))
     });
-    // Ces tâches courtes n'ont pas besoin de « réfléchir » : sinon le modèle peut épuiser sa réponse en réflexion.
-    let r = await send(thinkingOff);
-    if (r.status === 400 && thinkingOff) { thinkingOff = false; r = await send(false); }
+    // Un modèle récent peut refuser un réglage (température, réflexion désactivée) : on retire les options une à une, puis on retombe sur le modèle de base.
+    const tries = [[model, thinkingOff, true], [model, false, true], [model, thinkingOff, false], [model, false, false]];
+    if (model !== MODEL) tries.push([MODEL, thinkingOff, false], [MODEL, false, false]);
+    let r = null;
+    for (const t of tries) {
+      r = await send(t[0], t[1], t[2]);
+      if (r.status !== 400) break;
+      let d = ''; try { d = (await r.text()).slice(0, 200); } catch (e) { /* ignore */ }
+      console.warn('[talkie] API 400 (' + t[0] + ', pensée coupée=' + t[1] + ', température=' + t[2] + ') : ' + d);
+    }
     if (!r.ok) throw new Error('API ' + r.status);
-    const j = await r.json();
+    let j = await r.json();
+    if (!(j.content || []).some((b) => b.type === 'text') && (j.content || []).some((b) => b.type === 'thinking') && !opts._r) {
+      // La réflexion a mangé toute la réponse : on recommence avec la réflexion coupée.
+      const r2 = await send(MODEL, true, false);
+      if (r2.ok) j = await r2.json();
+    }
     const out = (j.content || []).filter((b) => b.type === 'text').map((b) => b.text).join('').trim();
     if (!out && !opts.allowEmpty) throw new Error('réponse vide (stop_reason=' + j.stop_reason + ', blocs=' + (j.content || []).map((b) => b.type).join('+') + ')');
     return out;

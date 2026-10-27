@@ -70,8 +70,10 @@ function speakable(t) {
     .replace(/\bhi(hi)+\b/gi, 'hi hi')
     .replace(/\bhe(he)+\b/gi, 'hé hé')
     .replace(/hwaiting/gi, 'oué-tingue').replace(/daebak/gi, 'dé-bak').replace(/kyaa+/gi, 'kiya').replace(/\bwow\b/gi, 'waou')
-    .replace(/[~♪♫♥❤]+/g, ' ').replace(/\.{3,}|…/g, '... ').replace(/\s+/g, ' ').trim().slice(0, 220);
+    .replace(/[~♪♫♥❤]+/g, ' ').replace(/\.{3,}|…/g, '... ').replace(/\s+/g, ' ').trim().slice(0, 340);
 }
+const TAG_WORD = { giggles: 'hihi', chuckles: 'hé hé', 'laughs softly': 'hihi', laughs: 'ahah', sighs: 'pfff...', gasps: 'oh !' };
+function untag(t) { return t.replace(/\[([a-z ,]{2,24})\]/gi, (m, k) => TAG_WORD[k.toLowerCase().trim()] || ' ').replace(/\s+/g, ' ').trim(); }
 function ipOk(ip) {
   const now = Date.now();
   const a = (hits.get(ip) || []).filter((x) => now - x < 60000);
@@ -83,7 +85,7 @@ function ipOk(ip) {
 async function elSynth(text, id, signal, emo, model) {
   const e = EMO[emo] || EMO[guessEmo(text)] || EMO.neutral;
   const v3 = /v3/.test(model);
-  let input = text;
+  let input = v3 ? text : untag(text);
   if (v3) { input = text.replace(/\bhi hi\b/gi, '[giggles]').replace(/\bhé hé\b/gi, '[chuckles]').replace(/\baaah\b/gi, '[gasps]'); if (e.tag) input = e.tag + ' ' + input; }
   let vs = null;
   if (v3) vs = { stability: EL_FORCE.stability != null ? EL_FORCE.stability : 0.5 };
@@ -123,7 +125,7 @@ async function synth(text, ip, opts) {
       try { buf = await elTry(t, EL_VOICES[voice], ctrl.signal, emo); } catch (e) { elErr = e; if (!KEY) throw e; }
     }
     if (!buf) {
-    const body = { model: MODEL, voice, input: t, response_format: 'mp3' };
+    const body = { model: MODEL, voice, input: untag(t), response_format: 'mp3' };
     if (/gpt-4o/.test(MODEL)) body.instructions = lang === 'en' ? INSTRUCTIONS_EN : INSTRUCTIONS;
     const r = await fetch(BASE + '/v1/audio/speech', {
       method: 'POST', signal: ctrl.signal,

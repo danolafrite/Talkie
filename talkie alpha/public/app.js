@@ -589,7 +589,7 @@
     return pick(['Oh, une âme de nuit… 🌙 Moi non plus je ne dors jamais !', 'Les couche-tard, c’est par ici 🌙 Je suis là, viens !']);
   }
   var sayTimer = null, sayTok = 0;
-  function mikaSay(text, silent, state) {
+  function mikaSay(text, silent, state, vo) {
     var bub = $('mika-say');
     var tok = ++sayTok;
     clearInterval(sayTimer);
@@ -638,7 +638,7 @@
       bub.classList.add('thinking');
       bub.textContent = '';
       for (var d = 0; d < 3; d++) bub.appendChild(document.createElement('i'));
-      cloudLine(text, state === false ? '' : state).then(function (a) {
+      cloudLine((vo && vo.voice) || text, (vo && vo.emo) || (state === false ? '' : state)).then(function (a) {
         if (tok !== sayTok) return;
         var pr = a.play();
         if (pr && pr.then) pr.then(function () { start(a); }).catch(function () { start(null); });
@@ -1064,7 +1064,7 @@
   function speakable(t) {
     return String(t || '').replace(/@mika/gi, 'Mika').replace(/\*[^*]{1,40}\*/g, ' ').replace(/[\p{Extended_Pictographic}\u{FE0F}\u{200D}]/gu, '').replace(/https?:\/\/\S+/g, '')
       .replace(/\b(?:a+w+h*|aww+e*)\b/gi, 'aaah').replace(/\b[uo]w[uo]\b/gi, 'hihi').replace(/\bw{2,}\b/gi, '').replace(/\bwow\b/gi, 'waou').replace(/hwaiting/gi, 'oué-tingue').replace(/kyaa+/gi, 'kiya')
-      .replace(/[~♪♫♥❤]+/g, ' ').replace(/\s+/g, ' ').trim().slice(0, 220);
+      .replace(/[~♪♫♥❤]+/g, ' ').replace(/\s+/g, ' ').trim().slice(0, 340);
   }
   function stopChirps() {
     if (seq) { try { seq.gain.cancelScheduledValues(0); seq.gain.value = 0; seq.disconnect(); } catch (e) { /* ignore */ } seq = null; }
@@ -2272,7 +2272,7 @@
     if (!say) return;
     addThread('m', say);
     feel(r.e);
-    mikaSay(say, false, false);
+    mikaSay(say, false, false, { voice: clean(r.voice, 360), emo: r.e });
     if (r.mood && kind === 'reply' && !moodToday()) recordMood(r.mood);
     (r.remember || []).forEach(function (f) {
       f = clean(f, 90);
