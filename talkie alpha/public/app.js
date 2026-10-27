@@ -638,7 +638,7 @@
       bub.classList.add('thinking');
       bub.textContent = '';
       for (var d = 0; d < 3; d++) bub.appendChild(document.createElement('i'));
-      cloudLine(text).then(function (a) {
+      cloudLine(text, state === false ? '' : state).then(function (a) {
         if (tok !== sayTok) return;
         var pr = a.play();
         if (pr && pr.then) pr.then(function () { start(a); }).catch(function () { start(null); });
@@ -1145,12 +1145,12 @@
     return k * tickMs;
   }
   // Vraie voix (serveur) : on charge la phrase, puis on la joue avec la bouche de Mika qui bouge.
-  function cloudLine(text) {
+  function cloudLine(text, emo) {
     return new Promise(function (resolve, reject) {
       if (!voiceEl) { reject(new Error('audio')); return; }
       var a = voiceEl, ctl = window.AbortController ? new AbortController() : null;
       var to = setTimeout(function () { try { if (ctl) ctl.abort(); } catch (e) { /* ignore */ } reject(new Error('lent')); }, 12000);
-      var url = '/api/tts?t=' + encodeURIComponent(speakable(text)) + '&v=' + vox().tts + '&l=' + (window.I18N && I18N.lang === 'en' ? 'en' : 'fr') + '&k=' + cloudProv;
+      var url = '/api/tts?t=' + encodeURIComponent(speakable(text)) + '&v=' + vox().tts + '&l=' + (window.I18N && I18N.lang === 'en' ? 'en' : 'fr') + '&k=' + cloudProv + '&e=' + encodeURIComponent(String(emo || '').replace(/[^a-z]/g, '').slice(0, 10));
       // On télécharge la phrase en entier AVANT de la jouer : sur iPhone, un son qui se charge en route est souvent coupé.
       fetch(url, ctl ? { signal: ctl.signal } : undefined).then(function (r) { if (!r.ok) throw new Error('voix'); return r.blob(); }).then(function (bl) {
         clearTimeout(to);

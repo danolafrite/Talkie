@@ -103,3 +103,5 @@ La chambre et Mika sont en 3D (three.js). Le code source est dans `src3d/scene3d
 
 ### Voix premium (ElevenLabs, facultatif)
 Sur Render, ajoute `ELEVENLABS_API_KEY`. Les voix du jeu (Kawaii, Douce, Pétillante, Calme, Grave) utilisent alors ElevenLabs, avec OpenAI en secours. Pour choisir tes voix : `ELEVEN_VOICE_KAWAII`, `ELEVEN_VOICE_DOUCE`, `ELEVEN_VOICE_PETILLANTE`, `ELEVEN_VOICE_CALME`, `ELEVEN_VOICE_GRAVE` (identifiants pris dans la Voice Library, ils ne sont pas secrets). `ELEVEN_MODEL` vaut `eleven_multilingual_v2` par défaut.
+
+La voix ElevenLabs suit maintenant l’émotion de Boubou : modèle `eleven_v3` avec balises ([giggles], [sighs], [excited]…), repli automatique sur `eleven_multilingual_v2` (stabilité et vitesse selon l’humeur).

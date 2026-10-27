@@ -1004,7 +1004,7 @@ const server = http.createServer(async (req, res) => {
   }
   if (url.pathname === '/api/tts' && req.method === 'GET') {
     try {
-      const buf = await tts.synth(url.searchParams.get('t') || '', String(req.headers['x-forwarded-for'] || req.socket.remoteAddress || '').split(',')[0].trim(), { voice: url.searchParams.get('v') || '', lang: url.searchParams.get('l') || '' });
+      const buf = await tts.synth(url.searchParams.get('t') || '', String(req.headers['x-forwarded-for'] || req.socket.remoteAddress || '').split(',')[0].trim(), { voice: url.searchParams.get('v') || '', lang: url.searchParams.get('l') || '', emo: url.searchParams.get('e') || '' });
       res.writeHead(200, { 'content-type': 'audio/mpeg', 'content-length': buf.length, 'cache-control': 'public, max-age=86400' });
       res.end(buf);
     } catch (e) {
