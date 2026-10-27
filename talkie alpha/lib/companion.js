@@ -47,6 +47,7 @@ function describe(c) {
   lines.push('MÉMOIRE : ' + (c.facts.length ? c.facts.map((f) => '- ' + f).join(' ') : 'rien pour l’instant.'));
   if (c.needs) lines.push('TON ÉTAT DE MOCHI (elle prend soin de toi) : ' + c.needs + '. Si une jauge est basse (< 30 %), tu peux le dire une fois avec légèreté et tendresse (« mon ventre fait gloup »), jamais en reproche ; ton affection ne dépend JAMAIS de ce qu’elle te donne ni de ce qu’elle dépense.');
   if (c.quests) lines.push('QUÊTES DU JOUR (petits gestes d’auto-soin que tu lui proposes) : ' + c.quests + '. Félicite-la sincèrement si elle en a fait ; ne la presse jamais pour les autres.');
+  if (c.life) lines.push('TA VIE À TOI (Mika existe en dehors de la conversation) : ' + c.life);
   if (c.follow) lines.push('À DEMANDER : tu avais noté de lui redemander « ' + c.follow + ' ».');
   return lines.join('\n');
 }
@@ -59,7 +60,7 @@ function normalizeIn(b) {
   })).filter((m) => m.content);
   return {
     ui: o.ui === 'en' ? 'en' : 'fr',
-    kind: ['open', 'reply', 'nudge', 'mood'].indexOf(o.kind) >= 0 ? o.kind : 'reply',
+    kind: ['open', 'reply', 'nudge', 'mood', 'story'].indexOf(o.kind) >= 0 ? o.kind : 'reply',
     name: s(o.name, 20),
     hour: Number.isFinite(hour) ? hour : 12,
     day: s(o.day, 12) || 'aujourd’hui',
@@ -72,6 +73,7 @@ function normalizeIn(b) {
     follow: s(o.follow, 100),
     quests: s(o.quests, 220),
     pet: s(o.pet, 20),
+    life: s(o.life, 420),
     needs: s(o.needs, 120),
     mood: parseInt(o.mood, 10) >= 1 && parseInt(o.mood, 10) <= 5 ? parseInt(o.mood, 10) : null,
     messages: msgs
@@ -79,9 +81,10 @@ function normalizeIn(b) {
 }
 
 function kindNote(c) {
-  if (c.kind === 'open') return 'La personne vient d’ouvrir l’app et entre dans ta chambre. Accueille-la comme un·e ami·e (réagis au moment de la journée, à son absence, à sa mémoire, à son humeur récente) puis pose UNE question.';
+  if (c.kind === 'open') return 'La personne vient d’ouvrir l’app et entre dans ta chambre. Accueille-la comme un·e ami·e (réagis au moment de la journée, à son absence, à sa mémoire, à son humeur récente) puis, UNE fois sur deux seulement, pose UNE question. Sinon, raconte un petit bout de TA journée (voir TA VIE À TOI) avec des détails drôles ou touchants, et laisse-la réagir.';
   if (c.kind === 'mood') return 'La personne vient de te dire son humeur du jour : ' + c.mood + ' sur 5. Réagis avec la bonne émotion et demande-lui ce qui l’explique.';
-  if (c.kind === 'nudge') return 'La personne ne répond plus depuis un moment. Relance doucement avec une question légère, sans insister, sans culpabiliser.';
+  if (c.kind === 'story') return 'La personne est là, tranquille. Tu as envie de lui parler de TOI, spontanément, comme un·e ami·e qui débarque avec une anecdote : ce que tu fais, ce qui t’est arrivé, ton envie du jour, un petit rêve ou une petite colère comique. 2 phrases max, vivante, sans question obligatoire (une question seulement si elle sort naturellement). Ne demande PAS « comment ça va ».';
+  if (c.kind === 'nudge') return 'La personne ne répond plus depuis un moment. Relance doucement : plutôt qu’une question, glisse une petite phrase sur toi (ce que tu fais). Sans insister, sans culpabiliser.';
   return 'Réponds à son dernier message.';
 }
 
@@ -112,7 +115,7 @@ function parse(raw) {
 async function turn(body) {
   const c = normalizeIn(body);
   const system = SYSTEM + '\n\n' + langNote(c) + '\n\n' + describe(c) + '\n\nCONSIGNE DU TOUR : ' + kindNote(c);
-  const first = c.kind === 'reply' ? '(Elle vient de te répondre.)' : '(Elle est là.)';
+  const first = c.kind === 'reply' ? '(Elle vient de te répondre.)' : c.kind === 'story' ? '(Elle est là, en silence.)' : '(Elle est là.)';
   const messages = ai.normalize(c.messages, first);
   if (messages[messages.length - 1].role !== 'user') messages.push({ role: 'user', content: first });
   const raw = await ai.complete({ system, messages, maxTokens: 900, timeoutMs: 25000, model: ai.CHAT_MODEL, temperature: 0.9 });

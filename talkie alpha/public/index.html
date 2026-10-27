@@ -994,6 +994,11 @@ body.kb #pane-chambre { padding-bottom: 8px; }
 #cmp-mic.rec { background: #ff6f8e; animation: micp 1s ease-in-out infinite; }
 #cmp-mic.talk { border-color: var(--violet, #7C5CFF); }
 @keyframes micp { 50% { transform: scale(1.12); } }
+.life-line{order:-3;border:0;font:inherit;text-align:left;cursor:pointer;background:rgba(255,255,255,.55);color:#3b2a6b;border-radius:16px;padding:8px 12px;font-size:.86rem;line-height:1.3}
+.life-line b{font-weight:700}.life-line small{display:block;opacity:.8;font-size:.78rem}
+.life-line.done{background:rgba(190,255,215,.7)}
+body.kb .life-line{display:none}
+#tabbar button[data-tab=salon],#tabbar button[data-tab=bobby]{display:none}
 </style>
 </head>
 <body>
@@ -1042,6 +1047,7 @@ body.kb #pane-chambre { padding-bottom: 8px; }
           <div class="mika-ia">Mika est une IA 💚</div>
         </div>
           <div class="cmp" id="cmp">
+            <button type="button" class="life-line" id="life-line" aria-live="polite"></button>
             <div class="care" id="care">
               <button type="button" data-act="feed"><span>🍙</span>Nourrir</button><button type="button" data-act="nap"><span>😴</span>Sieste</button><button type="button" data-act="hug"><span>🤗</span>Câlin</button><button type="button" data-act="play"><span>🎈</span>Jouer</button>
             </div>
@@ -1397,8 +1403,8 @@ body.kb #pane-chambre { padding-bottom: 8px; }
   </div>
 </div>
 <div id="toast" role="status" aria-live="polite" hidden></div>
-<script src="/i18n.js?v=20"></script>
-  <script src="/scene3d.js?v=20" defer></script>
-<script src="/app.js?v=20" defer></script>
+<script src="/i18n.js?v=22"></script>
+  <script src="/scene3d.js?v=22" defer></script>
+<script src="/app.js?v=22" defer></script>
 </body>
 </html>

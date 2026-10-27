@@ -115,3 +115,9 @@ Boubou écrit maintenant deux versions de chaque réplique : `say` (affichée) e
 - Réaction instantanée ("mmh…") + mode conversation au micro dans la Chambre.
 - Personnalité façon Aggretsuko (émotion "angry" comique, jamais contre l'utilisateur), mémoire élargie.
 - Réglages voix ElevenLabs : ELEVEN_MODEL=eleven_v3, ELEVEN_STABILITY=0 pour plus d'expressivité.
+
+## v22 — Refonte « Mika vit sa vie »
+- 3 onglets : Chambre, Monde, Moi (Salon et Classe retirés de la navigation).
+- Mika a une journée (activité selon l'heure), un événement du jour et une envie du jour ; l'exaucer = +5 pétales.
+- Elle raconte spontanément des anecdotes (kind "story") au lieu de toujours demander « comment ça va ».
+- Voix : plus de repli sur la voix par défaut du téléphone (une relance, sinon silence).

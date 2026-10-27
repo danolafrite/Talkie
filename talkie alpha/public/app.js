@@ -609,7 +609,7 @@
       var viaTts = false;
       var tickMs = audio && audio.duration ? Math.max(24, Math.min(120, audio.duration * 1000 / (audio.playbackRate || 1) / Math.max(1, len / 2))) : (wantVoice ? 70 : 26);
       if (audio) setTalking(true);
-      else if (wantVoice) {
+      else if (wantVoice && !(cloudTts && voiceEl)) {
         viaTts = ttsSpeak(text);
         if (viaTts) tickMs = Math.max(55, Math.min(115, (len * 62) / Math.max(1, len / 2)));
         else { var ms = chirpSeq(text, tickMs); if (ms) setTalking(true); }
@@ -660,12 +660,17 @@
       bub.classList.add('thinking');
       bub.textContent = '';
       for (var d = 0; d < 3; d++) bub.appendChild(document.createElement('i'));
-      cloudLine((vo && vo.voice) || text, (vo && vo.emo) || (state === false ? '' : state)).then(function (a) {
-        if (tok !== sayTok) return;
-        var pr = a.play();
-        if (pr && pr.then) pr.then(function () { start(a); }).catch(function () { start(null); });
-        else start(a);
-      }).catch(function () { start(null); });
+      var emoX = (vo && vo.emo) || (state === false || state === 'sleep' ? '' : state), txtX = (vo && vo.voice) || text;
+      // Une seule voix : si le serveur rate, on réessaie une fois, puis on reste muet (jamais la voix par défaut du téléphone).
+      var tryCloud = function (n) {
+        cloudLine(txtX, emoX).then(function (a) {
+          if (tok !== sayTok) return;
+          var pr = a.play();
+          if (pr && pr.then) pr.then(function () { start(a); }).catch(function () { start(null); });
+          else start(a);
+        }).catch(function () { if (tok !== sayTok) return; if (n < 1) tryCloud(n + 1); else start(null); });
+      };
+      tryCloud(0);
     } else start(null);
   }
   function setQr(opts) {
@@ -2151,6 +2156,7 @@
   /* ---------- Onglets ---------- */
   var curTab = 'chambre';
   function setTab(name) {
+    if (name === 'salon' || name === 'bobby') name = 'chambre';
     curTab = name;
     ['chambre', 'monde', 'salon', 'bobby', 'boutique', 'moi'].forEach(function (t) {
       $('pane-' + t).hidden = t !== name;
@@ -2257,7 +2263,7 @@
     return {
       speak: !!(voiceOn && cloudTts && gesture), vox: vox().tts, kind: kind, ui: (window.I18N && I18N.lang === 'en') ? 'en' : 'fr', name: nick, hour: new Date().getHours(), day: new Date().toLocaleDateString(uiLang() === 'en' ? 'en-GB' : 'fr-FR', { weekday: 'long' }),
       awayH: kind === 'open' ? last : null, visits: mem.visits, streak: mem.streak, bond: cmp.bond,
-      moods: cmp.moods.slice(-5).map(function (x) { return x.m; }), facts: cmp.facts, follow: cmp.follow, quests: questSummary(), pet: nick, needs: needsText(),
+      life: lifeText(), moods: cmp.moods.slice(-5).map(function (x) { return x.m; }), facts: cmp.facts, follow: cmp.follow, quests: questSummary(), pet: nick, needs: needsText(),
       messages: cmp.thread.slice(-16).map(function (x) { return { r: x.r, t: x.t }; })
     };
   }
@@ -2282,11 +2288,12 @@
     var to = setTimeout(function () { if (ctrl) ctrl.abort(); }, 25000);
     return fetch('/api/companion', { method: 'POST', headers: { 'content-type': 'application/json' }, body: JSON.stringify(body), signal: ctrl ? ctrl.signal : undefined })
       .then(function (r) { if (!r.ok) throw new Error('http'); return r.json(); })
-      .catch(function () { return localFallback(kind); })
+      .catch(function () { return kind === 'story' ? null : localFallback(kind); })
       .then(function (r) {
         clearTimeout(to);
         if (tok !== cmpTok) return;
         cmpBusy = false;
+        if (!r || !r.say) { var b = $('mika-say'); if (b) b.classList.remove('thinking'); return; }
         applyReply(r, kind);
       });
   }
@@ -2317,7 +2324,7 @@
   }
   function cmpOpen() {
     if (!store('talkie.avset')) return;
-    cmpOpened = true;
+    cmpOpened = true; renderLife(); scheduleStory(); setInterval(renderLife, 60000);
     renderQuests(); renderNeeds();
     $('thread').textContent = '';
     pendingM = '';
@@ -2427,6 +2434,54 @@
   });
   $('cmp-help').addEventListener('click', function () { mikaSay(CARE_LOCAL, false, 'worry'); });
   var CARE_LOCAL = 'Si ça ne va vraiment pas : le 3114 répond jour et nuit, gratuitement (France). Je suis une IA et je reste là, mais une vraie personne peut mieux t’aider 💚';
+
+  /* ---------- La vie de Mika : elle a sa journée, ses envies, ses petites histoires ---------- */
+  var LIFE_ACT = [
+    [[0, 5], ['dort en boule sous sa couette', '😴']], [[5, 8], ['s’étire et rêve encore de frites', '🥱']], [[8, 10], ['prépare son petit-déj (des mochis, évidemment)', '🍡']],
+    [[10, 12], ['arrose Basilic, sa plante', '🌱']], [[12, 14], ['mange des onigiris devant la fenêtre', '🍙']], [[14, 16], ['fait des origamis ratés', '📄']],
+    [[16, 18], ['écoute sa playlist en boucle', '🎧']], [[18, 20], ['cuisine un truc qui sent bon (et un peu brûlé)', '🍳']], [[20, 22], ['se blottit avec un plaid et une série', '🛋️']], [[22, 24], ['compte les étoiles par la fenêtre', '🌙']]
+  ];
+  var LIFE_EVT = [
+    'Basilic a sorti une nouvelle feuille et elle est super fière', 'elle a essayé de faire un gâteau, il ressemble à un nuage plat', 'elle a trouvé un pétale tout rose derrière le radiateur',
+    'un oiseau est venu sur sa fenêtre et ils se sont regardés 10 minutes', 'elle s’est fâchée toute seule contre un puzzle de 500 pièces, puis a gagné', 'elle a appris une chanson et la chante faux avec beaucoup d’amour',
+    'elle a rêvé qu’elle était un onigiri géant', 'elle a rangé sa chambre… et ne retrouve plus rien', 'elle a failli avoir une crise de nerfs devant sa boîte mail imaginaire, puis a mangé un mochi',
+    'elle a inventé un nouveau mot : « douxtranquille »', 'elle a cru que la lune la suivait (c’est vrai, elle la suit)', 'elle a fait un concours de bulles avec le canapé (le canapé a perdu)'
+  ];
+  var LIFE_WISH = [
+    { id: 'feed', t: 'un bon petit plat', e: '🍙' }, { id: 'hug', t: 'un gros câlin', e: '🤗' }, { id: 'play', t: 'jouer un peu avec toi', e: '🎈' },
+    { id: 'nap', t: 'une petite sieste', e: '😴' }, { id: 'water', t: 'arroser Basilic', e: '🌱' }, { id: 'wash', t: 'un bain moussant', e: '🛁' }
+  ];
+  function lifeNow() {
+    var d = new Date(), h = d.getHours(), key = todayKey(), hs = hash(key + (nick || ''));
+    var act = LIFE_ACT[0][1];
+    for (var i = 0; i < LIFE_ACT.length; i++) if (h >= LIFE_ACT[i][0][0] && h < LIFE_ACT[i][0][1]) act = LIFE_ACT[i][1];
+    var evt = LIFE_EVT[hs % LIFE_EVT.length], wish = LIFE_WISH[(hs >> 3) % LIFE_WISH.length];
+    return { act: act[0], e: act[1], evt: evt, wish: wish, wishDone: game.wish === key };
+  }
+  function lifeText() { var l = lifeNow(); return 'En ce moment, Mika ' + l.act + '. Ce qui lui est arrivé aujourd’hui : ' + l.evt + '. Son envie du jour : ' + l.wish.t + (l.wishDone ? ' (déjà exaucée, elle est ravie)' : '') + '.'; }
+  function renderLife() {
+    var b = $('life-line'); if (!b) return;
+    var l = lifeNow();
+    b.className = 'life-line' + (l.wishDone ? ' done' : '');
+    b.textContent = '';
+    b.appendChild(el('b', null, l.e + ' Mika ' + l.act));
+    b.appendChild(el('small', null, l.wishDone ? '✅ Envie exaucée : ' + l.wish.t : 'Son envie du jour : ' + l.wish.e + ' ' + l.wish.t));
+  }
+  function wishCheck(id) {
+    var l = lifeNow();
+    if (l.wishDone || l.wish.id !== id) return;
+    game.wish = todayKey(); saveGame(); renderLife();
+    earn(5);
+    setTimeout(function () { mikaSay(pick(['Tu as deviné mon envie du jour ?! 🥹 Merci, +5 pétales pour toi 🌸', 'C’était exactement ce dont j’avais envie… tu me connais trop bien 💚 (+5 🌸)']), false, 'happy'); }, 1200);
+  }
+  var storyT = null;
+  function scheduleStory() {
+    clearTimeout(storyT);
+    storyT = setTimeout(function () {
+      if (!room && !document.hidden && curTab === 'chambre' && !cmpBusy && cmpOpened && !asleep() && !document.body.classList.contains('kb')) callCompanion('story');
+      scheduleStory();
+    }, 110000 + Math.random() * 70000);
+  }
   function nudge() {
     if (room || document.hidden || curTab !== 'chambre' || cmpBusy || asleep()) return;
     if (cmpNudges >= 2 || !cmpOpened || !cmp.thread.length || cmp.thread[cmp.thread.length - 1].r !== 'm') return;
@@ -2479,6 +2534,7 @@
   function earn(n) { game.petals += n; saveGame(); renderPetals(); }
   var CHEERS = ['Yesss, bravo toi ! Je suis trop fier·ère 🥹', 'Kyaa ! Un pas de plus vers une belle journée ✨', 'Tu gères ! Tiens, des pétales pour toi 🌸', 'Hwaiting ! Ça, c’est du soin 💚'];
   function progressQuest(id) {
+    wishCheck(id);
     ensureQuests();
     if (game.q.ids.indexOf(id) < 0 || game.q.done.indexOf(id) >= 0) return;
     game.q.prog = game.q.prog || {};
@@ -3264,6 +3320,23 @@
       ['Joyeux anniversaire,', [[7, .75], [7, .25], [9, 1], [7, 1], [14, 1], [12, 2]]],
       ['Joyeux anniversaire, mon ami·e,', [[7, .75], [7, .25], [19, 1], [16, 1], [12, 1], [11, 1], [9, 2]]],
       ['Joyeux anniversaire !', [[17, .75], [17, .25], [16, 1], [12, 1], [14, 1], [12, 3]]] ] },
+    { id: 'vous', t: 'Ah ! vous dirai-je, maman', e: '⭐', bpm: 104, lines: [
+      ['Ah ! vous dirai-je, maman,', [[0, 1], [0, 1], [7, 1], [7, 1], [9, 1], [9, 1], [7, 2]]],
+      ['Ce qui cause mon tourment ?', [[5, 1], [5, 1], [4, 1], [4, 1], [2, 1], [2, 1], [0, 2]]],
+      ['Papa veut que je raisonne,', [[7, 1], [7, 1], [5, 1], [5, 1], [4, 1], [4, 1], [2, 2]]],
+      ['Comme une grande personne.', [[7, 1], [7, 1], [5, 1], [5, 1], [4, 1], [4, 1], [2, 2]]],
+      ['Moi, je dis que les bonbons', [[0, 1], [0, 1], [7, 1], [7, 1], [9, 1], [9, 1], [7, 2]]],
+      ['Valent mieux que les raisons !', [[5, 1], [5, 1], [4, 1], [4, 1], [2, 1], [2, 1], [0, 2]]] ] },
+    { id: 'jingle', t: 'Jingle Bells', e: '🛷', bpm: 130, lines: [
+      ['Jingle bells, jingle bells,', [[4, 1], [4, 1], [4, 2], [4, 1], [4, 1], [4, 2]]],
+      ['Jingle all the way !', [[4, 1], [7, 1], [0, 1.5], [2, .5], [4, 3]]],
+      ['Oh what fun it is to ride', [[5, 1], [5, 1], [5, 1.5], [5, .5], [5, 1], [4, 1], [4, 1], [4, .5], [4, .5]]],
+      ['In a one-horse open sleigh, hey !', [[4, 1], [2, 1], [2, 1], [4, 1], [2, 2], [7, 2]]] ] },
+    { id: 'joie', t: 'Hymne à la joie', e: '🎻', bpm: 108, lines: [
+      ['La joie fait chanter le monde,', [[4, 1], [4, 1], [5, 1], [7, 1], [7, 1], [5, 1], [4, 1], [2, 1]]],
+      ['Chante avec moi, chante !', [[0, 1], [0, 1], [2, 1], [4, 1], [4, 1.5], [2, .5], [2, 2]]],
+      ['La joie fait chanter le monde,', [[4, 1], [4, 1], [5, 1], [7, 1], [7, 1], [5, 1], [4, 1], [2, 1]]],
+      ['Tous ensemble, chantons !', [[0, 1], [2, 1], [4, 1], [2, 1], [0, 1.5], [0, .5], [0, 2]]] ] },
     { id: 'kawaii', t: 'Kawaii Girl', e: '💖', premium: '0,99 €' },
     { id: 'sakura', t: 'Sakura Night', e: '🌸', premium: '0,99 €' },
     { id: 'boba', t: 'Boba Dreams', e: '🧋', premium: '0,99 €' }
@@ -3598,7 +3671,7 @@
   }
   function initAuth(cfg) {
     if (!cfg || !cfg.url || !cfg.key) return;
-    var sc = document.createElement('script'); sc.src = '/supa.js?v=20';
+    var sc = document.createElement('script'); sc.src = '/supa.js?v=22';
     sc.onload = function () {
       try { sb = window.TalkieSupa.create(cfg.url, cfg.key); } catch (e) { sb = null; return; }
       renderAcct();
