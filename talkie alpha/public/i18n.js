@@ -91,6 +91,20 @@
     // amis & visites
     'Salut !': 'Hi!', '🏠 Inviter dans ma chambre': '🏠 Invite to my room', '💛 Ajouter en ami': '💛 Add as friend', '💛 Ami·e': '💛 Friend', '👋 Saluer': '👋 Say hi'
   };
+  Object.assign(EN, {
+    'Salon': 'Lounge', '🎯 Défis du jour': '🎯 Daily goals', '🎉 Journée complète !': '🎉 Day complete!', 'ℹ️ À propos et sécurité': 'ℹ️ About and safety',
+    'Dis quelque chose…': 'Say something…', 'Écrire aux autres': 'Write to others', 'Sortir du magasin': 'Leave the shop',
+    '🥐 Boulangerie': '🥐 Bakery', '👗 Friperie': '👗 Thrift shop', '🪴 Déco': '🪴 Home decor', '🎤 Karaoké': '🎤 Karaoke',
+    'Bonjour ! Choisis une douceur pour ton Mika 🥐': 'Hello! Pick a treat for your buddy 🥐', 'Bienvenue ! Essaie ce que tu veux, le miroir est à toi ✨': 'Welcome! Try anything, the mirror is yours ✨',
+    'Pose-toi, regarde : tout peut aller dans ta chambre 🏡': 'Take a look: everything can go in your room 🏡', 'Choisis une chanson, on chante ensemble ! 🎶': 'Pick a song, we sing together! 🎶',
+    'Croissant': 'Croissant', 'Macaron': 'Macaron', 'Gâteau': 'Cake', 'Gratuit': 'Free', '🎤 Chanter': '🎤 Sing', '⏹ Arrêter': '⏹ Stop', 'Porté': 'Worn', 'À toi': 'Yours',
+    'Poser dans ma chambre': 'Place in my room', 'Frère Jacques': 'Frère Jacques', 'Au clair de la lune': 'Au clair de la lune', 'Joyeux anniversaire': 'Happy birthday',
+    '🛍️ Boutique (classe, 💎)': '🛍️ Shop (classroom, 💎)', 'Forme': 'Shape', 'Queue': 'Tail', 'Regard': 'Eyes', 'Style': 'Style', 'Couleur': 'Color', 'Oreilles': 'Ears',
+    'Rond': 'Round', 'Grand': 'Tall', 'Potelé': 'Chubby', 'Haricot': 'Bean', 'Aucune': 'None', 'Chat': 'Cat', 'Lapin': 'Bunny', 'Renard': 'Fox', 'Ours': 'Bear', 'Souris': 'Mouse',
+    'Grands yeux': 'Big eyes', 'Étoiles': 'Stars', 'Content': 'Happy', 'Rien': 'Nothing', 'Soleil': 'Sunglasses', 'Casque': 'Headphones', 'Papillon': 'Bow tie', 'Chapeau': 'Hat', 'Fleur': 'Flower', 'Bonnet': 'Beanie',
+    'Compte': 'Account', 'Se connecter': 'Sign in', 'Se déconnecter': 'Sign out',
+    'Bobby et Mika sont des IA : elles peuvent se tromper.': 'Bobby and Mika are AIs: they can make mistakes.', 'Mika est une IA 💚 ': 'Your buddy is an AI 💚 '
+  });
   var PAT = [
     [/^Niveau (\d+) avec Mika · (\d+) jours? de suite$/, function (m) { return 'Level ' + m[1] + ' with your buddy · ' + m[2] + '-day streak'; }],
     [/^🎓 Niveau (\d+)$/, function (m) { return '🎓 Level ' + m[1]; }],

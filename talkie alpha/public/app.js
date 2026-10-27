@@ -12,6 +12,7 @@
     try {
       if (v === undefined) return localStorage.getItem(k);
       if (v === null) localStorage.removeItem(k); else localStorage.setItem(k, v);
+      if (typeof schedSync === 'function' && /^(talkie\.(cmp|mem|game|care|equip|av|avset|bob|friends|vx|voice|ui)|tablee\.nick)$/.test(k)) schedSync();
     } catch (e) { /* stockage indisponible */ }
     return null;
   }
@@ -141,7 +142,7 @@
   }
 
   function onMessage(m) {
-    if (m.t === 'plaza' || m.t === 'pj' || m.t === 'pl' || m.t === 'pm' || m.t === 'pe') { plazaMsg(m); return; }
+    if (m.t === 'plaza' || m.t === 'pj' || m.t === 'pl' || m.t === 'pm' || m.t === 'pe' || m.t === 'ps') { plazaMsg(m); return; }
     if (/^(hsent|hinv|hjoin|hg\+|hg-|hend|hp|he|hs)$/.test(m.t)) { homeMsg(m); return; }
     switch (m.t) {
       case 'welcome':
@@ -260,6 +261,8 @@
       var j = JSON.parse(store('talkie.game') || '{}');
       g.petals = Math.max(0, Number(j.petals) || 0);
       if (j.q && typeof j.q.d === 'string') g.q = { d: j.q.d, ids: Array.isArray(j.q.ids) ? j.q.ids.slice(0, 5) : [], done: Array.isArray(j.q.done) ? j.q.done.slice(0, 5) : [] };
+      if (typeof j.park === 'string') g.park = j.park.slice(0, 12);
+      if (j.sing && typeof j.sing === 'object') { g.sing = {}; Object.keys(j.sing).slice(0, 12).forEach(function (x) { if (typeof j.sing[x] === 'string') g.sing[x.slice(0, 12)] = j.sing[x].slice(0, 12); }); }
       ['owned', 'decorOwn', 'decorOn', 'bown', 'bobOn'].forEach(function (k) { if (Array.isArray(j[k])) g[k] = j[k].filter(function (x) { return typeof x === 'string'; }).slice(0, 20); });
     } catch (er) { /* ignore */ }
     return g;
@@ -1020,29 +1023,34 @@
   var canSpeak = !!AC || canTTS;
   var voiceOn = canSpeak && store('talkie.voice') === '1';
   var VOX = [
-    { id: 'douce', fr: 'Douce', en: 'Soft', tts: 'shimmer', pitch: 1.45, rate: 1.02, cr: 1.0 },
-    { id: 'petillante', fr: 'Pétillante', en: 'Bubbly', tts: 'nova', pitch: 1.75, rate: 1.1, cr: 1.07 },
-    { id: 'calme', fr: 'Calme', en: 'Calm', tts: 'alloy', pitch: 1.15, rate: 0.96, cr: 0.95 },
-    { id: 'grave', fr: 'Grave', en: 'Deep', tts: 'onyx', pitch: 0.85, rate: 0.95, cr: 0.86 }
+    { id: 'kawaii', fr: 'Kawaii ✨', en: 'Kawaii ✨', tts: 'coral', pitch: 1.7, rate: 1.1, cr: 1.08 },
+    { id: 'douce', fr: 'Douce', en: 'Soft', tts: 'shimmer', pitch: 1.45, rate: 1.02, cr: 1.04 },
+    { id: 'petillante', fr: 'Pétillante', en: 'Bubbly', tts: 'nova', pitch: 1.75, rate: 1.1, cr: 1.06 },
+    { id: 'calme', fr: 'Calme', en: 'Calm', tts: 'sage', pitch: 1.15, rate: 0.96, cr: 1.0 },
+    { id: 'grave', fr: 'Grave', en: 'Deep', tts: 'onyx', pitch: 0.85, rate: 0.95, cr: 0.93 }
   ];
   function vox() { var id = store('talkie.vx'); for (var i = 0; i < VOX.length; i++) if (VOX[i].id === id) return VOX[i]; return VOX[0]; }
-  var cloudTts = false, cloudRate = 1.12;
+  var cloudTts = false, cloudRate = 1;
   var gesture = false;
   var actx = null, seq = null;
   var voiceEl = null;
   fetch('/api/config').then(function (r) { return r.json(); }).then(function (d) { cloudTts = !!(d && d.tts); if (d && d.ttsRate) cloudRate = d.ttsRate; }).catch(function () {});
 
-  function unlockVoice() {
-    if (gesture) return;
+  var voiceUnlocked = false, voiceUrl = null;
+  var SILENT = 'data:audio/wav;base64,UklGRiQAAABXQVZFZm10IBAAAAABAAEAESsAACJWAAACABAAZGF0AAAAAA==';
+  function unlockVoice(ev) {
     gesture = true;
+    if (voiceUnlocked) return;
+    if (ev && ev.type === 'pointerdown') return; // iOS n'accepte le son qu'au toucher relâché / au clic
     try {
-      voiceEl = new Audio();
-      voiceEl.src = 'data:audio/wav;base64,UklGRiQAAABXQVZFZm10IBAAAAABAAEAESsAACJWAAACABAAZGF0YQAAAAA=';
+      if (!voiceEl) { voiceEl = new Audio(); voiceEl.setAttribute('playsinline', ''); voiceEl.setAttribute('webkit-playsinline', ''); voiceEl.preload = 'auto'; }
+      voiceEl.src = SILENT; voiceEl.volume = 1;
       var pr = voiceEl.play();
-      if (pr && pr.catch) pr.catch(function () {});
+      if (pr && pr.then) pr.then(function () { voiceUnlocked = true; }).catch(function () { /* on réessaiera au prochain toucher */ }); else voiceUnlocked = true;
     } catch (e) { /* ignore */ }
+    try { if (AC && !actx) actx = new AC(); if (actx && actx.state === 'suspended') actx.resume(); } catch (e) { /* ignore */ }
   }
-  ['pointerdown', 'touchend', 'click', 'keydown'].forEach(function (ev) { document.addEventListener(ev, unlockVoice, { passive: true, capture: true }); });
+  ['touchend', 'click', 'keydown', 'pointerdown'].forEach(function (ev) { document.addEventListener(ev, unlockVoice, { passive: true, capture: true }); });
 
   function audioReady() {
     if (!canSpeak || !gesture) return false;
@@ -1054,7 +1062,9 @@
   }
   function setTalking(on) { talkFlags.v = !!on; applyTalk(); }
   function speakable(t) {
-    return String(t || '').replace(/@mika/gi, 'Mika').replace(/[\p{Extended_Pictographic}️‍]/gu, '').replace(/https?:\/\/\S+/g, '').replace(/\s+/g, ' ').trim().slice(0, 220);
+    return String(t || '').replace(/@mika/gi, 'Mika').replace(/\*[^*]{1,40}\*/g, ' ').replace(/[\p{Extended_Pictographic}\u{FE0F}\u{200D}]/gu, '').replace(/https?:\/\/\S+/g, '')
+      .replace(/\b(?:a+w+h*|aww+e*)\b/gi, 'aaah').replace(/\b[uo]w[uo]\b/gi, 'hihi').replace(/\bw{2,}\b/gi, '').replace(/\bwow\b/gi, 'waou').replace(/hwaiting/gi, 'oué-tingue').replace(/kyaa+/gi, 'kiya')
+      .replace(/[~♪♫♥❤]+/g, ' ').replace(/\s+/g, ' ').trim().slice(0, 220);
   }
   function stopChirps() {
     if (seq) { try { seq.gain.cancelScheduledValues(0); seq.gain.value = 0; seq.disconnect(); } catch (e) { /* ignore */ } seq = null; }
@@ -1138,23 +1148,21 @@
   function cloudLine(text) {
     return new Promise(function (resolve, reject) {
       if (!voiceEl) { reject(new Error('audio')); return; }
-      var a = voiceEl, done = false;
-      var to = setTimeout(function () { finish(new Error('lent')); }, 6000);
-      function finish(err) {
-        if (done) return;
-        done = true; clearTimeout(to);
-        a.removeEventListener('canplaythrough', ok); a.removeEventListener('error', ko);
-        if (err) reject(err); else resolve(a);
-      }
-      function ok() { finish(null); }
-      function ko() { finish(new Error('voix')); }
-      a.addEventListener('canplaythrough', ok);
-      a.addEventListener('error', ko);
-      a.onended = function () { setTalking(false); };
-      // Un peu plus aigu et pétillant : la hauteur suit la vitesse, comme une petite voix d'anime.
-      try { a.preservesPitch = false; a.mozPreservesPitch = false; a.webkitPreservesPitch = false; a.defaultPlaybackRate = cloudRate * vox().cr; a.playbackRate = cloudRate * vox().cr; } catch (e) { /* ignore */ }
-      a.src = '/api/tts?t=' + encodeURIComponent(speakable(text)) + '&v=' + vox().tts + '&l=' + (window.I18N && I18N.lang === 'en' ? 'en' : 'fr');
-      try { a.load(); } catch (e) { finish(e); }
+      var a = voiceEl, ctl = window.AbortController ? new AbortController() : null;
+      var to = setTimeout(function () { try { if (ctl) ctl.abort(); } catch (e) { /* ignore */ } reject(new Error('lent')); }, 12000);
+      var url = '/api/tts?t=' + encodeURIComponent(speakable(text)) + '&v=' + vox().tts + '&l=' + (window.I18N && I18N.lang === 'en' ? 'en' : 'fr');
+      // On télécharge la phrase en entier AVANT de la jouer : sur iPhone, un son qui se charge en route est souvent coupé.
+      fetch(url, ctl ? { signal: ctl.signal } : undefined).then(function (r) { if (!r.ok) throw new Error('voix'); return r.blob(); }).then(function (bl) {
+        clearTimeout(to);
+        if (!bl || bl.size < 200) throw new Error('vide');
+        try { a.pause(); } catch (e) { /* ignore */ }
+        if (voiceUrl) { try { URL.revokeObjectURL(voiceUrl); } catch (e) { /* ignore */ } }
+        voiceUrl = URL.createObjectURL(bl.type ? bl : new Blob([bl], { type: 'audio/mpeg' }));
+        a.onended = function () { setTalking(false); };
+        a.src = voiceUrl; a.volume = 1; a.muted = false;
+        try { a.playbackRate = 1; a.defaultPlaybackRate = 1; } catch (e) { /* ignore */ }
+        resolve(a);
+      }).catch(function (e) { clearTimeout(to); reject(e); });
     });
   }
   // Phrases de la conversation (texte écrit par des personnes ou par Mika en salon) : jamais envoyées au serveur de voix.
@@ -2030,34 +2038,50 @@
   window.addEventListener('online', function () { if (!replaced && (!ws || ws.readyState > 1)) { retry = 0; connect(); } });
 
   /* ---------- Avatar de l'utilisateur ---------- */
-  var AV_COLORS = ['#5DE3B4', '#B9A6FF', '#FFB89A', '#8EDBFF', '#FFE27A', '#FFA8CF', '#A8E86B', '#E0E4F2'];
-  var AV_EARS = ['Chat', 'Ours', 'Lapin', 'Aucune'];
-  var AV_FACE = ['Rond', 'Content', 'Étoiles'];
-  var AV_ACC = ['Rien', 'Nœud', 'Lunettes', 'Bonnet', 'Fleur'];
+  var AV_COLORS = ['#5DE3B4', '#B9A6FF', '#FFB89A', '#8EDBFF', '#FFE27A', '#FFA8CF', '#A8E86B', '#E0E4F2', '#FF9AA2', '#C7A98F', '#9EC5FF', '#F6A6FF'];
+  var AV_EARS = ['Chat', 'Ours', 'Lapin', 'Aucune', 'Renard', 'Souris'];
+  var AV_FACE = ['Rond', 'Content', 'Étoiles', 'Grands yeux', 'Sieste'];
+  var AV_ACC = ['Rien', 'Nœud', 'Lunettes', 'Bonnet', 'Fleur', 'Couronne', 'Soleil', 'Casque', 'Bandana', 'Papillon', 'Ailes', 'Chapeau'];
+  var AV_SHAPE = ['Rond', 'Grand', 'Potelé', 'Haricot'];
+  var AV_TAIL = ['Aucune', 'Chat', 'Lapin', 'Renard'];
+  function normAv(c) { c = String(c == null ? '' : c); if (/^[0-7][0-3][0-2][0-4]$/.test(c)) c += '00'; return /^[0-9a-b][0-5][0-4][0-9a-b][0-3][0-3]$/.test(c) ? c : ''; }
   function hash(str) { var h = 0; str = String(str); for (var i = 0; i < str.length; i++) h = (h * 31 + str.charCodeAt(i)) | 0; return Math.abs(h); }
-  function defaultAv(seed) { var h = hash(seed); return '' + (h % 8) + (Math.floor(h / 8) % 4) + (Math.floor(h / 32) % 3) + (Math.floor(h / 96) % 5); }
+  function defaultAv(seed) { var h = hash(seed); return (h % 12).toString(12) + (Math.floor(h / 12) % 6) + (Math.floor(h / 72) % 5) + (Math.floor(h / 360) % 6).toString(12) + (Math.floor(h / 2160) % 4) + (Math.floor(h / 8640) % 4); }
   function avatarSvg(code) {
-    code = /^[0-7][0-3][0-2][0-4]$/.test(code || '') ? code : defaultAv(code || 'x');
+    code = normAv(code) || defaultAv(code || 'x');
     if (m3d && window.Mika3DMod) { var u = Mika3DMod.avatarPng(code); if (u) return '<img alt="" src="' + u + '">'; }
-    var c = AV_COLORS[+code[0]], ear = +code[1], face = +code[2], acc = +code[3];
-    var ink = '#2A1B5E', g = '';
-    if (ear === 0) g += '<path d="M12 36 L14 8 L32 22Z" fill="' + c + '"/><path d="M68 36 L66 8 L48 22Z" fill="' + c + '"/><path d="M16 28 L17 15 L26 22Z" fill="#FFB3D1"/><path d="M64 28 L63 15 L54 22Z" fill="#FFB3D1"/>';
+    var c = AV_COLORS[parseInt(code[0], 12)], ear = +code[1], face = +code[2], acc = parseInt(code[3], 12), shape = +code[4], tail = +code[5];
+    var ink = '#2A1B5E', g = '', rx = [31, 27, 35, 28][shape], ry = [28, 31, 25, 30][shape];
+    if (tail === 1) g += '<path d="M66 62 q14 -2 10 -18" stroke="' + c + '" stroke-width="6" fill="none" stroke-linecap="round"/>';
+    else if (tail === 2) g += '<circle cx="70" cy="64" r="6" fill="#fff"/>';
+    else if (tail === 3) g += '<ellipse cx="71" cy="58" rx="6" ry="12" fill="' + c + '" transform="rotate(25 71 58)"/><ellipse cx="74" cy="48" rx="3" ry="5" fill="#fff4ec" transform="rotate(25 74 48)"/>';
+    if (ear === 0 || ear === 4) g += '<path d="M12 36 L14 8 L32 22Z" fill="' + c + '"/><path d="M68 36 L66 8 L48 22Z" fill="' + c + '"/><path d="M16 28 L17 15 L26 22Z" fill="' + (ear === 4 ? '#FFF4EC' : '#FFB3D1') + '"/><path d="M64 28 L63 15 L54 22Z" fill="' + (ear === 4 ? '#FFF4EC' : '#FFB3D1') + '"/>';
     else if (ear === 1) g += '<circle cx="17" cy="21" r="10" fill="' + c + '"/><circle cx="63" cy="21" r="10" fill="' + c + '"/><circle cx="17" cy="21" r="5" fill="#FFB3D1"/><circle cx="63" cy="21" r="5" fill="#FFB3D1"/>';
+    else if (ear === 5) g += '<circle cx="14" cy="26" r="14" fill="' + c + '"/><circle cx="66" cy="26" r="14" fill="' + c + '"/><circle cx="14" cy="26" r="8" fill="#FFB3D1"/><circle cx="66" cy="26" r="8" fill="#FFB3D1"/>';
     else if (ear === 2) g += '<ellipse cx="26" cy="12" rx="7" ry="16" fill="' + c + '" transform="rotate(-8 26 12)"/><ellipse cx="54" cy="12" rx="7" ry="16" fill="' + c + '" transform="rotate(8 54 12)"/><ellipse cx="26" cy="13" rx="3.4" ry="10" fill="#FFB3D1" transform="rotate(-8 26 13)"/><ellipse cx="54" cy="13" rx="3.4" ry="10" fill="#FFB3D1" transform="rotate(8 54 13)"/>';
     else g += '<circle cx="40" cy="14" r="6" fill="' + c + '"/><circle cx="40" cy="14" r="2.6" fill="#fff" opacity=".6"/>';
-    g += '<ellipse cx="40" cy="48" rx="31" ry="28" fill="' + c + '"/><ellipse cx="29" cy="30" rx="8" ry="4" fill="#fff" opacity=".4" transform="rotate(-25 29 30)"/>';
+    g += '<ellipse cx="40" cy="' + (76 - ry) + '" rx="' + rx + '" ry="' + ry + '" fill="' + c + '"/><ellipse cx="29" cy="30" rx="8" ry="4" fill="#fff" opacity=".4" transform="rotate(-25 29 30)"/>';
     g += '<ellipse cx="19" cy="55" rx="5.5" ry="3.4" fill="#FF8FC0" opacity=".8"/><ellipse cx="61" cy="55" rx="5.5" ry="3.4" fill="#FF8FC0" opacity=".8"/>';
     if (face === 0) g += '<ellipse cx="29" cy="47" rx="4.6" ry="5.8" fill="' + ink + '"/><ellipse cx="51" cy="47" rx="4.6" ry="5.8" fill="' + ink + '"/><circle cx="30.4" cy="44.8" r="1.8" fill="#fff"/><circle cx="52.4" cy="44.8" r="1.8" fill="#fff"/>';
     else if (face === 1) g += '<g fill="none" stroke="' + ink + '" stroke-width="3" stroke-linecap="round"><path d="M23.5 49 Q29 41 34.5 49"/><path d="M45.5 49 Q51 41 56.5 49"/></g>';
+    else if (face === 3) g += '<ellipse cx="29" cy="47" rx="6.6" ry="8" fill="' + ink + '"/><ellipse cx="51" cy="47" rx="6.6" ry="8" fill="' + ink + '"/><circle cx="31" cy="44" r="2.6" fill="#fff"/><circle cx="53" cy="44" r="2.6" fill="#fff"/>';
+    else if (face === 4) g += '<g fill="none" stroke="' + ink + '" stroke-width="3" stroke-linecap="round"><path d="M23.5 46 Q29 52 34.5 46"/><path d="M45.5 46 Q51 52 56.5 46"/></g>';
     else g += '<ellipse cx="29" cy="47" rx="6" ry="7" fill="' + ink + '"/><ellipse cx="51" cy="47" rx="6" ry="7" fill="' + ink + '"/><circle cx="31" cy="44" r="2.5" fill="#fff"/><circle cx="27" cy="50" r="1.2" fill="#fff"/><circle cx="53" cy="44" r="2.5" fill="#fff"/><circle cx="49" cy="50" r="1.2" fill="#fff"/>';
     g += '<path d="M35.5 57 Q40 62 44.5 57" stroke="' + ink + '" stroke-width="2.6" fill="none" stroke-linecap="round"/>';
     if (acc === 1) g += '<path d="M54 20 l10 -6 v13z M54 20 l-10 -6 v13z" fill="#FF6FAE"/><circle cx="54" cy="20" r="3.2" fill="#FFB3D1"/>';
     else if (acc === 2) g += '<g fill="none" stroke="' + ink + '" stroke-width="2.4"><circle cx="29" cy="47" r="9"/><circle cx="51" cy="47" r="9"/><path d="M38 47 H42"/></g>';
     else if (acc === 3) g += '<path d="M14 28 Q40 -2 66 28 Q40 20 14 28Z" fill="#FF6F8E"/><circle cx="40" cy="6" r="4.5" fill="#fff"/>';
     else if (acc === 4) g += '<g transform="translate(58 18)"><circle r="3" fill="#FFCF3F"/><g fill="#FFB3D1"><circle cx="0" cy="-6" r="3.6"/><circle cx="6" cy="0" r="3.6"/><circle cx="0" cy="6" r="3.6"/><circle cx="-6" cy="0" r="3.6"/></g><circle r="3" fill="#FFCF3F"/></g>';
+    else if (acc === 5) g += '<path d="M27 24 L29 10 L35 18 L40 8 L45 18 L51 10 L53 24Z" fill="#FFCF3F"/>';
+    else if (acc === 6) g += '<g fill="#1D1640"><ellipse cx="29" cy="47" rx="9" ry="7"/><ellipse cx="51" cy="47" rx="9" ry="7"/><rect x="36" y="45" width="8" height="2.4"/></g>';
+    else if (acc === 7) g += '<path d="M12 44 Q40 -6 68 44" stroke="#FF8FC0" stroke-width="4" fill="none"/><rect x="8" y="40" width="9" height="14" rx="4" fill="#fff"/><rect x="63" y="40" width="9" height="14" rx="4" fill="#fff"/>';
+    else if (acc === 8) g += '<path d="M12 30 Q40 18 68 30 L66 36 Q40 25 14 36Z" fill="#FF5A6E"/>';
+    else if (acc === 9) g += '<g fill="#E0457B"><ellipse cx="32" cy="71" rx="8" ry="5"/><ellipse cx="48" cy="71" rx="8" ry="5"/></g><circle cx="40" cy="71" r="3" fill="#FFD1E3"/>';
+    else if (acc === 10) g += '<ellipse cx="6" cy="44" rx="6" ry="14" fill="#fff" opacity=".9" transform="rotate(-20 6 44)"/><ellipse cx="74" cy="44" rx="6" ry="14" fill="#fff" opacity=".9" transform="rotate(20 74 44)"/>';
+    else if (acc === 11) g += '<path d="M24 24 L40 -6 L56 24Z" fill="#7C5CFF"/><ellipse cx="40" cy="24" rx="22" ry="4" fill="#5B3FD6"/>';
     return '<svg viewBox="0 0 80 80" aria-hidden="true">' + g + '</svg>';
   }
-  var myAv = (function () { var v = store('talkie.av'); return /^[0-7][0-3][0-2][0-4]$/.test(v || '') ? v : defaultAv(cid); })();
+  var myAv = (function () { var v = store('talkie.av'); return normAv(v) || defaultAv(cid); })();
   var avDraft = myAv;
   var avPrev = null;
   function renderAvEditor(changed) {
@@ -2065,14 +2089,14 @@
     function row(id, labels, idx, swatch) {
       var box = $(id); box.textContent = '';
       labels.forEach(function (l, i) {
-        var b = el('button', (swatch ? 'sw ' : '') + (+avDraft[idx] === i ? 'on' : ''), swatch ? '' : l);
+        var b = el('button', (swatch ? 'sw ' : '') + (parseInt(avDraft[idx], 12) === i ? 'on' : ''), swatch ? '' : l);
         b.type = 'button';
         if (swatch) { b.style.background = l; b.setAttribute('aria-label', 'Couleur ' + (i + 1)); }
-        b.addEventListener('click', function () { var a = avDraft.split(''); a[idx] = String(i); avDraft = a.join(''); renderAvEditor(true); });
+        b.addEventListener('click', function () { var a = avDraft.split(''); a[idx] = i.toString(12); avDraft = a.join(''); renderAvEditor(true); });
         box.appendChild(b);
       });
     }
-    row('av-colors', AV_COLORS, 0, true); row('av-ears', AV_EARS, 1); row('av-face', AV_FACE, 2); row('av-acc', AV_ACC, 3);
+    row('av-shape', AV_SHAPE, 4); row('av-colors', AV_COLORS, 0, true); row('av-ears', AV_EARS, 1); row('av-tail', AV_TAIL, 5); row('av-face', AV_FACE, 2); row('av-acc', AV_ACC, 3);
   }
   function closeAvSheet() { if (avPrev) { avPrev.destroy(); avPrev = null; } $('avprev').classList.remove('is3d'); $('avprev').textContent = ''; $('sheet-av').hidden = true; }
   function openAvEditor() {
@@ -2094,19 +2118,19 @@
     send({ t: 'nick', nick: nick, av: myAv });
     closeAvSheet(); renderMoi();
     if (m3d) { m3d.setLook(Mika3DMod.avatarOpts(myAv)); m3d.emit('heart', 8); }
-    if (first) { toast('Bienvenue, ' + nick + ' ! 💚'); setTab('chambre'); cmpOpen(); setTimeout(maybeTuto, 2500); } else toast('Mika a changé de look ✨');
+    if (first) { if (store('talkie.voice') == null && canSpeak) { voiceOn = true; store('talkie.voice', '1'); renderVoice(); } toast('Bienvenue, ' + nick + ' ! 💚'); setTab('chambre'); cmpOpen(); setTimeout(maybeTuto, 2500); } else toast('Mika a changé de look ✨');
   }
   $('btn-edit-av').addEventListener('click', openAvEditor);
   $('me-av').addEventListener('click', openAvEditor);
   $('av-save').addEventListener('click', saveAv);
-  $('av-rand').addEventListener('click', function () { avDraft = '' + Math.floor(Math.random() * 8) + Math.floor(Math.random() * 4) + Math.floor(Math.random() * 3) + Math.floor(Math.random() * 5); renderAvEditor(true); });
+  $('av-rand').addEventListener('click', function () { avDraft = defaultAv('r' + Math.random()); renderAvEditor(true); });
   $('sheet-av').addEventListener('click', function (ev) { if (ev.target === $('sheet-av') && store('talkie.avset')) closeAvSheet(); });
 
   /* ---------- Onglets ---------- */
   var curTab = 'chambre';
   function setTab(name) {
     curTab = name;
-    ['chambre', 'salon', 'bobby', 'boutique', 'moi'].forEach(function (t) {
+    ['chambre', 'monde', 'salon', 'bobby', 'boutique', 'moi'].forEach(function (t) {
       $('pane-' + t).hidden = t !== name;
       document.body.classList.toggle('tab-' + t, t === name);
     });
@@ -2117,7 +2141,8 @@
     if (name === 'moi') renderMoi();
     if (name === 'boutique') openShop(); else closeShopPreview();
     if (name === 'bobby') openBobby(); else closeBobby();
-    if (name === 'salon') openPlaza(); else closePlaza();
+    if (name === 'monde') openPlaza(); else closePlaza();
+    if (name !== 'bobby') bobMicStop(true);
     if (name === 'chambre') renderHostBar();
     if (name === 'chambre' && !cmpOpened) cmpOpen();
     window.scrollTo(0, 0);
@@ -2345,7 +2370,7 @@
     ensureQuests();
     var box = $('quests'); box.textContent = '';
     var n = game.q.done.length, tot = game.q.ids.length;
-    var h = el('div', 'qh'); h.appendChild(el('span', null, n >= tot ? 'Journée complète, bravo ! 🎉' : 'Aujourd’hui avec ton Mika'));
+    var h = el('div', 'qh'); h.appendChild(el('span', null, n >= tot ? '🎉 Journée complète !' : '🎯 Défis du jour')); h.addEventListener('click', function () { box.classList.toggle('open'); });
     h.appendChild(el('b', null, n + '/' + tot)); box.appendChild(h);
     var bar = el('div', 'qb'); var bi = el('i'); bi.style.width = Math.round(n / tot * 100) + '%'; bar.appendChild(bi); box.appendChild(bar);
     game.q.ids.forEach(function (id) {
@@ -2512,7 +2537,7 @@
     mikaSay(pick(['Allez Basilic, à boire ! 🌱💧', 'Glou glou… elles ont soif, les petites 🌿']), true, 'happy');
     runJob('water', null, { idx: idx || 0 }, function () { bump('pl', 55); setCareBusy(false); progressQuest('water'); mood('happy', 2600); mikaSay('Elles se redressent ! 🌿✨ Merci, tu as la main verte.', false, false); });
   }
-  function goMonde() { mikaSay('Allons voir qui est là ! 🌍', false, 'happy'); setTimeout(function () { setTab('salon'); }, 700); }
+  function goMonde() { mikaSay('Allons voir qui est là ! 🌍', false, 'happy'); setTimeout(function () { setTab('monde'); }, 700); }
   var OBJ = {
     fridge: function () { openFood(); }, bath: doWash, toilet: doToilet, bed: doNap, pc: goMonde, door: goMonde,
     plant: function (d) { doWater(d && d.idx); }
@@ -2531,7 +2556,7 @@
     lastSelfTalk = Date.now();
     if (k === 'h') { if (m3d) m3d.act('rumble'); mikaSay('Gloup… mon ventre fait des bruits de frites 🍟 Tu aurais un petit quelque chose ?', false, 'worry'); setQr([['🍙 Nourrir', openFood, 'yes']]); }
     else if (k === 'e') { mikaSay('*bâille* Je commence à avoir les yeux qui piquent… 😪', false, 'sleep'); setQr([['😴 Sieste', doNap, 'yes']]); }
-    else { mikaSay('Je me sens un peu seul… et si on allait voir du monde ? 💞', false, 'sad'); setQr([['🌍 Aller au Monde', function () { setTab('salon'); }, 'yes'], ['🤗 Câlin', doHug]]); }
+    else { mikaSay('Je me sens un peu seul… et si on allait voir du monde ? 💞', false, 'sad'); setQr([['🌍 Aller au Monde', function () { setTab('monde'); }, 'yes'], ['🤗 Câlin', doHug]]); }
   }
   setInterval(selfTalk, 30000);
   setInterval(function () { decayCare(); renderNeeds(); }, 60000);
@@ -2617,7 +2642,7 @@
   /* ---------- La Place (monde 3D partagé) ---------- */
   var plazaScene = null, plazaMe = null, plazaNames = {};
   function plazaCount() { if (plazaScene) { var n = plazaScene.count() - 1 - 1; $('plaza-count').textContent = n > 0 ? '🌍 ' + n + ' autre' + (n > 1 ? 's' : '') + ' sur la Place' : '🌍 Tu es seul·e sur la Place… pour l’instant 💚'; } }
-  function plazaP(p) { return { pid: p.pid, nick: clean(p.nick, 14), code: /^[0-7][0-3][0-2][0-4]$/.test(p.av || '') ? p.av : defaultAv(p.nick || p.pid), x: Number(p.x) || 0, z: Number(p.z) || 0 }; }
+  function plazaP(p) { return { pid: p.pid, nick: clean(p.nick, 14), code: normAv(p.av) || defaultAv(p.nick || p.pid), x: Number(p.x) || 0, z: Number(p.z) || 0 }; }
   function openPlaza() {
     if (!m3d || !window.Mika3DMod || !Mika3DMod.initPlaza) return;
     $('plaza').hidden = false;
@@ -2661,6 +2686,7 @@
       case 'pl': plazaScene.remove(m.pid); plazaCount(); break;
       case 'pm': plazaScene.moveTo(m.pid, Number(m.x) || 0, Number(m.z) || 0); break;
       case 'pe': plazaScene.emote(m.pid, clean(m.k, 8)); break;
+      case 'ps': plazaScene.say(m.pid, clean(m.text, 80)); break;
     }
   }
 
@@ -2836,18 +2862,46 @@
     c.appendChild(el('div', null, rows.length ? rows.map(function (v) { return (BLANG[v.l] ? BLANG[v.l].f + ' ' : '') + v.w + ' = ' + v.fr; }).join(' · ') : 'Vide pour l’instant : parle avec Bobby !'));
     bobLog(c);
   });
-  var SR = window.SpeechRecognition || window.webkitSpeechRecognition, bobRec = null;
+  var SR = window.SpeechRecognition || window.webkitSpeechRecognition, bobRec = null, bobRecTimer = 0;
+  function bobMicStop(abort) {
+    clearTimeout(bobRecTimer);
+    var r = bobRec; bobRec = null;
+    try { $('bob-mic').classList.remove('rec'); } catch (e) { /* ignore */ }
+    try { if (bobStage && bobStage.bobbyListen) bobStage.bobbyListen(false); } catch (e) { /* ignore */ }
+    if (r) { r.onresult = r.onerror = r.onend = null; try { abort ? r.abort() : r.stop(); } catch (e) { /* ignore */ } }
+  }
+  if (!SR) { try { $('bob-mic').style.display = 'none'; } catch (e) { /* ignore */ } }
   $('bob-mic').addEventListener('click', function () {
     if (!SR) { toast('Ton navigateur ne gère pas la dictée : utilise le micro de ton clavier 🎤'); return; }
-    if (bobRec) { try { bobRec.stop(); } catch (e) { /* ignore */ } return; }
-    var rec = new SR(); bobRec = rec; rec.lang = BLANG[bob.lang].sr; rec.interimResults = true; rec.maxAlternatives = 1;
-    var btn = $('bob-mic'), final = '';
-    btn.classList.add('rec'); if (bobStage) bobStage.bobbyListen(true);
-    rec.onresult = function (ev) { var t = ''; for (var i = 0; i < ev.results.length; i++) t += ev.results[i][0].transcript; final = t; $('bob-in').value = t; $('bob-send').disabled = !t.trim(); };
-    rec.onerror = function (ev) { if (ev.error === 'not-allowed') toast('Autorise le micro pour parler à Bobby 🎤'); };
-    rec.onend = function () { btn.classList.remove('rec'); bobRec = null; if (bobStage) bobStage.bobbyListen(false); if (final.trim()) { bobSpeak = true; bobSend(final, true); } };
-    try { rec.start(); } catch (e) { btn.classList.remove('rec'); bobRec = null; }
+    if (bobRec) { var done = bobRec; bobRec._fin = true; try { done.stop(); } catch (e) { bobMicStop(true); } return; }
+    if (typeof bobBusy !== 'undefined' && bobBusy) { toast('Bobby réfléchit… un instant 🧸'); return; }
+    try { if (window.speechSynthesis) speechSynthesis.cancel(); } catch (e) { /* ignore */ }
+    try { if (voiceEl && !voiceEl.paused) voiceEl.pause(); } catch (e) { /* ignore */ }
+    var rec;
+    try { rec = new SR(); } catch (e) { toast('La dictée n’est pas disponible ici 🎤'); return; }
+    bobRec = rec;
+    var final = '', sent = false;
+    try { rec.lang = BLANG[bob.lang].sr; rec.interimResults = true; rec.continuous = false; rec.maxAlternatives = 1; } catch (e) { /* ignore */ }
+    $('bob-mic').classList.add('rec');
+    try { if (bobStage && bobStage.bobbyListen) bobStage.bobbyListen(true); } catch (e) { /* ignore */ }
+    rec.onresult = function (ev) {
+      try { var t = ''; for (var i = 0; i < ev.results.length; i++) t += ev.results[i][0].transcript; final = t; $('bob-in').value = t; $('bob-send').disabled = !t.trim(); } catch (e) { /* ignore */ }
+    };
+    rec.onerror = function (ev) {
+      var er = ev && ev.error;
+      if (er === 'not-allowed' || er === 'service-not-allowed') toast('Autorise le micro pour parler à Bobby 🎤 (Réglages du navigateur)');
+      else if (er === 'no-speech') toast('Je n’ai rien entendu… réessaie 🎤');
+      else if (er !== 'aborted') toast('Le micro a eu un souci, tu peux écrire à la place ✍️');
+      bobMicStop(true);
+    };
+    rec.onend = function () {
+      var t = final; bobMicStop(true);
+      if (t.trim() && !sent) { sent = true; bobSpeak = true; try { bobSend(t, true); } catch (e) { /* ignore */ } }
+    };
+    bobRecTimer = setTimeout(function () { if (bobRec === rec) { try { rec.stop(); } catch (e) { bobMicStop(true); } } }, 12000);
+    try { rec.start(); } catch (e) { bobMicStop(true); toast('Le micro n’a pas pu démarrer 🎤'); }
   });
+  document.addEventListener('visibilitychange', function () { if (document.hidden && bobRec) bobMicStop(true); });
   function bobShopAction(it) {
     if (!it.own) {
       if (game.petals < it.price) { toast('Il te manque ' + (it.price - game.petals) + ' 🌸 : prends soin de ton Mika et papote avec Bobby !'); return; }
@@ -2897,6 +2951,7 @@
     $('thread').textContent = ''; pendingM = ''; renderMoi(); renderBond(); toast('Mémoire effacée 🫧');
   });
   $('btn-me-settings').addEventListener('click', function () { $('btn-settings').click(); });
+  $('btn-me-shop').addEventListener('click', function () { shopSeg = 'bobby'; setTab('boutique'); });
 
   /* ---------- Scène d'avatars dans la conversation ---------- */
   var stageNodes = {};
@@ -2920,7 +2975,7 @@
     }
   }
   function destroyStage3d() { if (stage3d) { try { stage3d.destroy(); } catch (e) { /* ignore */ } stage3d = null; } $('perch').classList.remove('is3d'); }
-  function validAv(p) { return /^[0-7][0-3][0-2][0-4]$/.test(p.av || '') ? p.av : defaultAv(p.nick); }
+  function validAv(p) { return normAv(p.av) || defaultAv(p.nick); }
   function renderStage() {
     ensureStage3d();
     if (stage3d) {
@@ -3058,7 +3113,7 @@
       if (!bd && (n > 0 || fr.length)) { bd = el('span', 'tbadge'); btn.appendChild(bd); }
       if (bd) { bd.hidden = !(n > 0 || fr.length); bd.textContent = fr.length ? '💛' + (n > 0 ? n : '') : String(n); bd.classList.toggle('fr', !!fr.length); }
     }
-    fr.forEach(function (f) { if (!social.seen[f.pid] && curTab !== 'salon') toast('💛 ' + clean(f.nick, 14) + (uiLang() === 'en' ? (f.plaza ? ' is on the Square' : ' is online') : (f.plaza ? ' est sur la Place' : ' est en ligne'))); social.seen[f.pid] = 1; });
+    fr.forEach(function (f) { if (!social.seen[f.pid] && curTab !== 'monde') toast('💛 ' + clean(f.nick, 14) + (uiLang() === 'en' ? (f.plaza ? ' is on the Square' : ' is online') : (f.plaza ? ' est sur la Place' : ' est en ligne'))); social.seen[f.pid] = 1; });
     Object.keys(social.seen).forEach(function (k) { if (!fr.some(function (f) { return f.pid === k; })) delete social.seen[k]; });
     social.friends = fr;
     var bar = $('friends-bar');
@@ -3078,17 +3133,175 @@
     host.appendChild(pop); setTimeout(function () { if (pop.parentNode) pop.remove(); }, 8000);
   }
   function usableDecor(l) { var ok = (window.Mika3DMod && Mika3DMod.DECOR_IDS) || []; return (l || []).filter(function (x) { return ok.indexOf(x) >= 0; }); }
+  function plazaSay(text) {
+    text = clean(text, 80); if (!text || !plazaScene || !plazaMe) return;
+    plazaScene.say(plazaMe, text); send({ t: 'psay', text: text });
+  }
+  $('plaza-form').addEventListener('submit', function (ev) {
+    ev.preventDefault(); var i = $('plaza-say'); plazaSay(i.value); i.value = '';
+  });
   function plazaBuilding(id) {
     if (id === 'home') { mikaSay('Retour à la maison ! 🏠', false, 'happy'); setTab('chambre'); }
-    else if (id === 'class') setTab('bobby');
-    else if (id === 'shop') { shopSeg = 'outfit'; setTab('boutique'); }
-    else if (id === 'boba') { toast(uiLang() === 'en' ? '🧋 Boba Shop: snacks for your buddy!' : '🧋 Boba Shop : des goûters pour ton Mika !'); openFood(); }
+    else if (id === 'bakery' || id === 'thrift' || id === 'deco' || id === 'karaoke') openStore(id);
     else if (id === 'park') {
       if (plazaScene) plazaScene.rideWheel();
       var d = todayKey();
       if (game.park !== d) { game.park = d; earn(5); saveGame(); toast(uiLang() === 'en' ? '🎡 Wheeee! +5 🌸 for your first ride today' : '🎡 Wouiii ! +5 🌸 pour ton premier tour du jour'); sfx.join(); }
       else toast(uiLang() === 'en' ? '🎡 Wheeee! Come back tomorrow for petals' : '🎡 Wouiii ! Reviens demain pour des pétales');
     }
+  }
+
+  /* ---------- Magasins en 3D : boulangerie, friperie, déco, karaoké ---------- */
+  var STORE = {
+    bakery: { t: '🥐 Boulangerie', hi: 'Bonjour ! Choisis une douceur pour ton Mika 🥐' },
+    thrift: { t: '👗 Friperie', hi: 'Bienvenue ! Essaie ce que tu veux, le miroir est à toi ✨' },
+    deco: { t: '🪴 Déco', hi: 'Pose-toi, regarde : tout peut aller dans ta chambre 🏡' },
+    karaoke: { t: '🎤 Karaoké', hi: 'Choisis une chanson, on chante ensemble ! 🎶' }
+  };
+  var BAKERY_EXTRA = [
+    { id: 'croissant', e: '🥐', t: 'Croissant', d: 'Beurré et doré', price: 12, gain: 26 },
+    { id: 'macaron', e: '🍬', t: 'Macaron', d: 'Rose, bien sûr', price: 18, gain: 28 },
+    { id: 'gateau', e: '🍰', t: 'Gâteau', d: 'Une part de rêve', price: 35, gain: 42 }
+  ];
+  var SONGS = [
+    { id: 'jacques', t: 'Frère Jacques', e: '🔔', bpm: 100, lines: [
+      ['Frère Jacques, frère Jacques,', [[0, 1], [2, 1], [4, 1], [0, 1], [0, 1], [2, 1], [4, 1], [0, 1]]],
+      ['Dormez-vous ? Dormez-vous ?', [[4, 1], [5, 1], [7, 2], [4, 1], [5, 1], [7, 2]]],
+      ['Sonnez les matines, sonnez les matines,', [[7, .5], [9, .5], [7, .5], [5, .5], [4, 1], [0, 1], [7, .5], [9, .5], [7, .5], [5, .5], [4, 1], [0, 1]]],
+      ['Ding, dang, dong. Ding, dang, dong.', [[0, 1], [-5, 1], [0, 2], [0, 1], [-5, 1], [0, 2]]] ] },
+    { id: 'lune', t: 'Au clair de la lune', e: '🌙', bpm: 88, lines: [
+      ['Au clair de la lune, mon ami Pierrot,', [[0, 1], [0, 1], [0, 1], [2, 1], [4, 2], [2, 2]]],
+      ['Prête-moi ta plume pour écrire un mot.', [[0, 1], [4, 1], [2, 1], [2, 1], [0, 3]]],
+      ['Ma chandelle est morte, je n’ai plus de feu,', [[0, 1], [0, 1], [0, 1], [2, 1], [4, 2], [2, 2]]],
+      ['Ouvre-moi ta porte, pour l’amour de Dieu.', [[0, 1], [4, 1], [2, 1], [2, 1], [0, 3]]] ] },
+    { id: 'anniv', t: 'Joyeux anniversaire', e: '🎂', bpm: 96, lines: [
+      ['Joyeux anniversaire,', [[7, .75], [7, .25], [9, 1], [7, 1], [12, 1], [11, 2]]],
+      ['Joyeux anniversaire,', [[7, .75], [7, .25], [9, 1], [7, 1], [14, 1], [12, 2]]],
+      ['Joyeux anniversaire, mon ami·e,', [[7, .75], [7, .25], [19, 1], [16, 1], [12, 1], [11, 1], [9, 2]]],
+      ['Joyeux anniversaire !', [[17, .75], [17, .25], [16, 1], [12, 1], [14, 1], [12, 3]]] ] },
+    { id: 'kawaii', t: 'Kawaii Girl', e: '💖', premium: '0,99 €' },
+    { id: 'sakura', t: 'Sakura Night', e: '🌸', premium: '0,99 €' },
+    { id: 'boba', t: 'Boba Dreams', e: '🧋', premium: '0,99 €' }
+  ];
+  var st = { theme: null, scene: null, sel: null, singing: false, timer: 0, srcs: [] };
+  function storeItems() {
+    var th = st.theme;
+    if (th === 'bakery') return FOODS.concat(BAKERY_EXTRA).map(function (f) { return { kind: 'food', id: f.id, label: f.t, e: f.e, d: f.d, price: f.price, gain: f.gain, own: false }; });
+    if (th === 'thrift') { shopSeg = 'outfit'; return items().filter(function (i) { return i.kind === 'outfit'; }); }
+    if (th === 'deco') { shopSeg = 'decor'; return items(); }
+    return SONGS.map(function (g) { return { kind: 'song', id: g.id, label: g.t, e: g.e, premium: g.premium, own: !g.premium, song: g }; });
+  }
+  function storeMsg(t) { $('store-msg').textContent = t; }
+  function renderStore() {
+    $('store-pet').textContent = '🌸 ' + game.petals;
+    var list = $('store-list'); list.textContent = '';
+    storeItems().forEach(function (it) {
+      var b = el('button', (st.sel && st.sel.id === it.id ? 'sel ' : '') + (it.own || it.kind === 'food' ? '' : 'locked')); b.type = 'button';
+      if (it.kind === 'outfit') { var img = (m3d && window.Mika3DMod) ? Mika3DMod.mikaPng(it.id) : ''; if (img) { var im = el('img'); im.alt = ''; im.src = img; b.appendChild(im); } else b.appendChild(el('span', 'em', '👗')); }
+      else b.appendChild(el('span', 'em', it.e));
+      b.appendChild(el('b', null, it.label.replace(/^Bobby : /, '')));
+      var sub = it.premium ? '💎 ' + it.premium : it.kind === 'song' ? 'Gratuit' : it.kind === 'food' ? (it.price ? '🌸 ' + it.price : 'Gratuit') : it.own ? (it.on ? 'Porté' : 'À toi') : '🌸 ' + it.price;
+      b.appendChild(el('small', null, sub));
+      b.addEventListener('click', function () { storePick(it); });
+      list.appendChild(b);
+    });
+    renderStoreAct();
+  }
+  function renderStoreAct() {
+    var box = $('store-act'); box.textContent = '';
+    var it = st.sel; if (!it) return;
+    var lab;
+    if (it.kind === 'song') lab = it.premium ? '💎 Bientôt' : (st.singing ? '⏹ Arrêter' : '🎤 Chanter');
+    else if (it.kind === 'food') lab = it.price ? 'Offrir · 🌸 ' + it.price : 'Offrir (gratuit)';
+    else lab = it.premium ? '💎 Bientôt' : it.own ? (it.on ? 'Retirer' : (it.kind === 'decor' ? 'Poser dans ma chambre' : 'Porter')) : 'Acheter · 🌸 ' + it.price;
+    var b = el('button', 'primary', lab); b.type = 'button'; b.addEventListener('click', function () { storeDo(it); }); box.appendChild(b);
+  }
+  function storePick(it) {
+    st.sel = it;
+    if (it.kind === 'outfit' || it.kind === 'decor') { shopSel = it; if (st.scene) { st.scene.setItem(it.kind, it.kind === 'decor' ? it.id : null); st.scene.rebuild(); } storeMsg(it.label + (it.own ? (it.on ? ' · il le porte' : ' · dans ton armoire') : ' · 🌸 ' + it.price)); }
+    else if (it.kind === 'food') { storeMsg(it.label + ' : ' + it.d); if (st.scene) st.scene.emote('happy'); }
+    else storeMsg(it.premium ? it.label + ' · chanson originale, bientôt 💎' : it.label);
+    renderStore();
+  }
+  function storeDo(it) {
+    if (it.premium) { toast('💎 Bientôt disponible !'); return; }
+    if (it.kind === 'song') { if (st.singing) stopSong(); else playSong(it.song); return; }
+    if (it.kind === 'food') {
+      decayCare();
+      if (care.h >= 96) { storeMsg('Mika est tout rond, il n’a plus de place ! 🥹'); if (st.scene) st.scene.emote('shy'); return; }
+      if (game.petals < it.price) { storeMsg('Il te manque ' + (it.price - game.petals) + ' 🌸 : l’onigiri est gratuit !'); return; }
+      game.petals -= it.price; saveGame(); renderPetals(); bump('h', it.gain); progressQuest('feed');
+      if (st.scene) { st.scene.emote('love'); }
+      storeMsg(pick(['Miam ! ' + it.e + ' Merci, c’est délicieux 🥹', 'Hmmm ' + it.e + ' tu prends tellement soin de moi 💚', 'Itadakimasu ! ' + it.e]));
+      renderStore(); return;
+    }
+    var had = game.petals, wasOwn = it.own;
+    shopAction(it);
+    st.sel = null; shopSel = null;
+    if (st.scene) { st.scene.setItem(null, null); st.scene.rebuild(); }
+    storeMsg(!wasOwn && game.petals < had ? 'Acheté ! ' + it.label + ' 🎉' : wasOwn ? 'C’est fait ✨' : storeMsg.t || '');
+    renderStore();
+  }
+  function openStore(theme) {
+    if (!m3d || !window.Mika3DMod || !Mika3DMod.initInterior) { toast(uiLang() === 'en' ? 'The 3D shops need a more recent phone.' : 'Les magasins 3D demandent un téléphone plus récent.'); return; }
+    st.theme = theme; st.sel = null; shopSel = null;
+    $('store').hidden = false; $('store-t').textContent = STORE[theme].t; storeMsg(STORE[theme].hi);
+    var host = $('store-stage'); host.textContent = '';
+    st.scene = Mika3DMod.initInterior(host, theme, function () { return theme === 'thrift' ? shopLook() : Mika3DMod.avatarOpts(myAv); });
+    if (st.scene && theme === 'bakery') { /* le gâteau du jour */ }
+    if (!st.scene) { $('store').hidden = true; toast('😢'); return; }
+    if (theme !== 'thrift') { /* l'avatar porte déjà son look */ }
+    renderStore(); sfx.join();
+  }
+  function closeStore() {
+    stopSong();
+    if (st.scene) { st.scene.destroy(); st.scene = null; }
+    $('store').hidden = true; st.sel = null; shopSel = null; renderShop();
+  }
+  $('store-x').addEventListener('click', closeStore);
+  if (/[?&]shot/.test(location.search)) { window.__openStore = openStore; window.__setTab = setTab; window.__dbg = function () { return m3d && m3d.debug ? m3d.debug() : null; }; }
+
+  /* karaoké : mélodies du domaine public jouées en WebAudio, paroles qui s’allument */
+  function stopSong() {
+    st.singing = false; clearInterval(st.timer);
+    st.srcs.forEach(function (o) { try { o.stop(); } catch (e) { /* ignore */ } }); st.srcs = [];
+    if (st.scene) { st.scene.sing(false); st.scene.lyrics('', '', 0, '♪ Choisis une chanson ♪'); }
+    if (!$('store').hidden) renderStoreAct();
+  }
+  function playSong(song) {
+    if (!canSpeak) { toast('Ton navigateur ne peut pas jouer de musique ici 😢'); return; }
+    try { if (!actx) actx = new AC(); if (actx.state === 'suspended') actx.resume(); } catch (e) { toast('Le son est bloqué : touche l’écran puis réessaie 🔊'); return; }
+    stopSong(); stopSpeaking();
+    var beat = 60 / song.bpm, t0 = actx.currentTime + 0.4, t = t0, marks = [];
+    var master = actx.createGain(); master.gain.value = 0.5; master.connect(actx.destination);
+    song.lines.forEach(function (ln) {
+      var start = t;
+      ln[1].forEach(function (nd) {
+        var f = 523.25 * Math.pow(2, nd[0] / 12), dur = nd[1] * beat;
+        var o = actx.createOscillator(), o2 = actx.createOscillator(), g = actx.createGain(), lp = actx.createBiquadFilter(), lfo = actx.createOscillator(), lg = actx.createGain();
+        o.type = 'triangle'; o2.type = 'sine'; o.frequency.value = f; o2.frequency.value = f * 2; lp.type = 'lowpass'; lp.frequency.value = 2600;
+        lfo.frequency.value = 5.5; lg.gain.value = f * 0.006; lfo.connect(lg); lg.connect(o.frequency); lg.connect(o2.frequency);
+        g.gain.setValueAtTime(0.0001, t); g.gain.exponentialRampToValueAtTime(0.32, t + 0.04); g.gain.setValueAtTime(0.28, t + dur * 0.7); g.gain.exponentialRampToValueAtTime(0.0001, t + dur * 0.97);
+        o.connect(g); o2.connect(g); g.connect(lp); lp.connect(master);
+        [o, o2, lfo].forEach(function (x) { x.start(t); x.stop(t + dur); st.srcs.push(x); });
+        t += dur;
+      });
+      marks.push({ a: start, b: t, txt: ln[0] });
+    });
+    st.singing = true; if (st.scene) st.scene.sing(true);
+    var total = t, ti = song.t;
+    st.timer = setInterval(function () {
+      var now = actx.currentTime, cur = -1;
+      for (var i = 0; i < marks.length; i++) if (now >= marks[i].a - 0.3 && now < marks[i].b) { cur = i; break; }
+      if (cur >= 0 && st.scene) { var m = marks[cur]; st.scene.lyrics(m.txt, marks[cur + 1] ? marks[cur + 1].txt : '', Math.max(0, (now - m.a) / (m.b - m.a)), '♪ ' + ti + ' ♪'); }
+      if (now > total + 0.4) { var dn = true; stopSong(); if (dn) songDone(song); }
+    }, 120);
+    renderStoreAct();
+  }
+  function songDone(song) {
+    var d = todayKey(); game.sing = game.sing || {};
+    if (game.sing[song.id] !== d) { game.sing[song.id] = d; earn(4); saveGame(); toast('🎤 Bravo ! +4 🌸 pour ta première chanson du jour'); } else toast('🎤 Bravo ! Encore ? 🎶');
+    if (st.scene) st.scene.emote('love'); storeMsg('Bravo, quelle voix ! 💖');
   }
 
   /* visites de chambre à deux */
@@ -3110,11 +3323,11 @@
     $('visit').hidden = false; document.body.classList.add('in-visit');
     $('visit-t').textContent = (uiLang() === 'en' ? clean(h.nick, 14) + '’s room' : 'Chez ' + clean(h.nick, 14));
     var host = $('visit-stage'); host.textContent = '';
-    try { vis.scene = Mika3DMod.init(host, { visit: true, look: Mika3DMod.avatarOpts(/^[0-7][0-3][0-2][0-4]$/.test(h.av || '') ? h.av : defaultAv(h.nick)), acc: (h.acc || []), start: [Number(h.x) || 0.2, Number(h.z) || 1.2], label: clean(h.nick, 14) }); } catch (e) { vis.scene = null; }
+    try { vis.scene = Mika3DMod.init(host, { visit: true, look: Mika3DMod.avatarOpts(normAv(h.av) || defaultAv(h.nick)), acc: (h.acc || []), start: [Number(h.x) || 0.2, Number(h.z) || 1.2], label: clean(h.nick, 14) }); } catch (e) { vis.scene = null; }
     if (!vis.scene) { toast(uiLang() === 'en' ? 'Your phone cannot show the 3D room' : 'Ton téléphone ne sait pas afficher la chambre 3D'); send({ t: 'hleave' }); $('visit').hidden = true; return; }
     vis.scene.setDecor(usableDecor(h.decor));
     vis.scene.addGuest(myPid, { code: myAv, nick: uiLang() === 'en' ? 'Me' : 'Moi', x: m.me.x, z: m.me.z, acc: accList() });
-    (m.others || []).forEach(function (p) { vis.scene.addGuest(p.pid, { code: /^[0-7][0-3][0-2][0-4]$/.test(p.av || '') ? p.av : defaultAv(p.nick), nick: clean(p.nick, 14), x: p.x, z: p.z }); });
+    (m.others || []).forEach(function (p) { vis.scene.addGuest(p.pid, { code: normAv(p.av) || defaultAv(p.nick), nick: clean(p.nick, 14), x: p.x, z: p.z }); });
     host.addEventListener('mika3d', function (ev) { var d = ev.detail || {}; if (d.name === 'walk' && vis.scene) { vis.scene.moveGuest(myPid, d.x, d.z); send({ t: 'hpos', x: d.x, z: d.z }); } });
     progressQuest('wave');
   }
@@ -3158,7 +3371,7 @@
       case 'hjoin': visitStart(m); break;
       case 'hg+': {
         var p = m.p || {}, S = visScene(); if (!S) { vis.guests[p.pid] = clean(p.nick, 14); renderHostBar(); break; }
-        S.addGuest(p.pid, { code: /^[0-7][0-3][0-2][0-4]$/.test(p.av || '') ? p.av : defaultAv(p.nick), nick: clean(p.nick, 14), x: p.x, z: p.z });
+        S.addGuest(p.pid, { code: normAv(p.av) || defaultAv(p.nick), nick: clean(p.nick, 14), x: p.x, z: p.z });
         if (vis.mine) { vis.guests[p.pid] = clean(p.nick, 14); renderHostBar(); toast('🏠 ' + clean(p.nick, 14) + (uiLang() === 'en' ? ' is visiting your room!' : ' visite ta chambre !')); if (curTab !== 'chambre') { $('hinv-t').textContent = clean(p.nick, 14) + (uiLang() === 'en' ? ' is in your room 🏠' : ' est dans ta chambre 🏠'); $('hinv').hidden = false; $('hinv-go').textContent = uiLang() === 'en' ? 'See' : 'Voir'; $('hinv-go').onclick = function () { $('hinv').hidden = true; $('hinv-go').textContent = 'Visiter'; setTab('chambre'); }; $('hinv-no').onclick = function () { $('hinv').hidden = true; }; } }
         break; }
       case 'hg-': { var S2 = visScene(); if (S2) S2.removeGuest(m.pid); var nm = vis.guests[m.pid]; delete vis.guests[m.pid]; if (vis.mine) renderHostBar(); if (nm) toast((uiLang() === 'en' ? nm + ' left' : nm + ' est parti·e') + ' 👋'); break; }
@@ -3172,12 +3385,11 @@
 
   /* tutoriel */
   var TUTO = [
-    { tab: 'chambre', sel: '#mika-stage', h: 'Ta chambre 🏠', p: 'Ici vit ton Mika, c’est toi en version mochi. Touche le frigo, le lit, les plantes, le bain, l’ordi ou la porte : il y va tout seul. Écris-lui en bas pour papoter.' },
-    { tab: 'salon', sel: '#plaza-stage', h: 'Monde 🌍', p: 'La Place : tous les avatars en ligne se retrouvent ici. Touche le sol pour marcher, touche quelqu’un pour le saluer ou l’inviter dans ta chambre. Les bâtiments mènent à la classe, à la boutique et à ta chambre.' },
-    { tab: 'salon', sel: '#compose', h: 'Les rooms 💬', p: 'Une room, c’est une petite discussion à 2, 3 ou 4. Écris un thème, publie-le : dès que quelqu’un l’ouvre, vous papotez, avatars à l’écran. Tu peux aussi rejoindre un thème déjà publié.' },
-    { tab: 'bobby', sel: '#bob-stage', h: 'Classe 🎓', p: 'Professeur Bobby t’aide à pratiquer une langue, à l’écrit ou à l’oral. Ton Mika, à côté de toi, corrige tes erreurs et t’explique.' },
-    { tab: 'boutique', sel: '#shop-grid', h: 'Boutique 🛍️', p: 'Gagne des pétales 🌸 en prenant soin de ton Mika, puis habille-le et décore ta chambre. Touche un article pour l’essayer avant de l’acheter.' },
-    { tab: 'moi', sel: '#me-av', h: 'Moi 🫧', p: 'Ton profil, tes humeurs, ce que Mika retient de toi, les réglages et la langue. Tu peux tout effacer quand tu veux.' }
+    { tab: 'chambre', sel: '#mika-stage', h: 'Ta chambre 🏠', p: 'Ton Mika vit ici. Touche un objet : il y va tout seul. Écris-lui en bas pour papoter.' },
+    { tab: 'monde', sel: '#plaza-stage', h: 'Monde 🌍', p: 'Marche, écris, salue les autres. Les boutiques et le karaoké sont dans les bâtiments : touche-en un.' },
+    { tab: 'salon', sel: '#compose', h: 'Salon 💬', p: 'Écris un thème : dès que quelqu’un le rejoint, vous papotez à deux, trois ou quatre.' },
+    { tab: 'bobby', sel: '#bob-stage', h: 'Classe 🎓', p: 'Professeur Bobby te fait pratiquer une langue. Mika corrige et t’explique.' },
+    { tab: 'moi', sel: '#me-av', h: 'Moi 🫧', p: 'Ton avatar, tes réglages et ton compte. Tu peux tout effacer quand tu veux.' }
   ];
   var tutoI = 0;
   function tutoShow() {
@@ -3222,8 +3434,100 @@
     gesture = true;
     if (cloudTts && voiceEl) { cloudLine(s).then(function (au) { au.play().catch(function () {}); }).catch(function () { ttsSpeak(s); }); } else ttsSpeak(s);
   }
+
+  $('btn-vox-test').addEventListener('click', function () {
+    var out = $('vox-test-res'); out.textContent = uiLang() === 'en' ? 'Checking…' : 'Je vérifie…';
+    fetch('/api/voice-check').then(function (r) { return r.json(); }).then(function (d) {
+      if (d.ok) { cloudTts = true; if (!voiceOn && canSpeak) { voiceOn = true; store('talkie.voice', '1'); renderVoice(); } out.textContent = '✅ ' + (uiLang() === 'en' ? 'OpenAI voice is working (' + d.ms + ' ms).' : 'La voix OpenAI fonctionne (' + d.ms + ' ms).'); previewVox(); }
+      else out.textContent = '⚠️ ' + d.msg + (uiLang() === 'en' ? ' → your phone’s robotic voice is used meanwhile.' : ' → en attendant, la voix du téléphone est utilisée.');
+    }).catch(function () { out.textContent = '⚠️ ' + (uiLang() === 'en' ? 'Cannot reach the server.' : 'Serveur injoignable.'); });
+  });
   window.addEventListener('talkie:lang', function () { renderVox(); if (canTTS) pickVoice(); });
   renderVox();
+  /* ---------- Compte (Supabase) : connexion par lien e-mail + sauvegarde du Mika ---------- */
+  var SYNC_KEYS = ['talkie.cmp', 'talkie.mem', 'talkie.game', 'talkie.care', 'talkie.equip', 'talkie.av', 'talkie.avset', 'talkie.bob', 'talkie.friends', 'talkie.vx', 'talkie.voice', 'talkie.ui', 'tablee.nick'];
+  var sb = null, sbUser = null, syncTimer = 0, syncState = { msg: '', conflict: null, at: Number(store('talkie.syncAt')) || 0, sent: false };
+  function schedSync() { if (!sb || !sbUser || syncState.conflict) return; clearTimeout(syncTimer); syncTimer = setTimeout(pushNow, 4000); }
+  function snapshot() { var d = {}; SYNC_KEYS.forEach(function (k) { var v = store(k); if (v != null) d[k] = v; }); return d; }
+  function pushNow() {
+    if (!sb || !sbUser) return Promise.resolve();
+    return sb.from('profiles').upsert({ id: sbUser.id, data: snapshot(), updated_at: new Date().toISOString() }).then(function (r) {
+      if (r.error) { syncState.msg = 'La sauvegarde a échoué (' + (r.error.message || 'erreur') + ')'; } else { syncState.at = Date.now(); store('talkie.syncAt', String(syncState.at)); syncState.msg = ''; }
+      renderAcct();
+    });
+  }
+  function applyCloud(data) {
+    SYNC_KEYS.forEach(function (k) { try { if (data && typeof data[k] === 'string') localStorage.setItem(k, data[k]); else localStorage.removeItem(k); } catch (e) { /* ignore */ } });
+    try { localStorage.setItem('talkie.syncAt', String(Date.now())); } catch (e) { /* ignore */ }
+    location.reload();
+  }
+  function pullThenSync() {
+    if (!sb || !sbUser) return;
+    sb.from('profiles').select('data,updated_at').eq('id', sbUser.id).maybeSingle().then(function (r) {
+      if (r.error) { syncState.msg = /relation|does not exist|schema cache/i.test(r.error.message || '') ? 'Compte prêt, mais la table de sauvegarde n’est pas encore créée (voir supabase.sql).' : 'Lecture impossible : ' + (r.error.message || ''); renderAcct(); return; }
+      var row = r.data, local = !!store('talkie.avset');
+      if (!row || !row.data || !Object.keys(row.data).length) { pushNow(); return; }
+      var cloudNewer = !syncState.at || new Date(row.updated_at).getTime() > syncState.at + 5000;
+      if (!local) { applyCloud(row.data); return; }
+      if (cloudNewer) { syncState.conflict = row; renderAcct(); } else pushNow();
+    });
+  }
+  function renderAcct() {
+    var sec = $('acct'), box = $('acct-body'); if (!sec || !box) return;
+    sec.hidden = !sb; if (!sb) return;
+    box.textContent = '';
+    if (!sbUser) {
+      box.appendChild(el('p', 'me-hint', syncState.sent ? 'Lien envoyé ! Ouvre ton e-mail sur ce téléphone et touche le lien 💌' : 'Sauvegarde ton Mika et retrouve-le sur tous tes appareils.'));
+      if (!syncState.sent) {
+        var f = el('form', 'plaza-say'); f.autocomplete = 'on';
+        var i = el('input'); i.type = 'email'; i.id = 'acct-mail'; i.required = true; i.placeholder = 'ton@email.com'; i.autocomplete = 'email'; i.setAttribute('aria-label', 'Ton e-mail');
+        var b = el('button', 'primary', '💌'); b.type = 'submit'; b.setAttribute('aria-label', 'Recevoir un lien de connexion');
+        f.appendChild(i); f.appendChild(b);
+        f.addEventListener('submit', function (ev) {
+          ev.preventDefault(); b.disabled = true;
+          sb.auth.signInWithOtp({ email: i.value.trim(), options: { emailRedirectTo: location.origin + '/' } }).then(function (r) {
+            if (r.error) { toast('Oups : ' + (r.error.message || 'envoi impossible')); b.disabled = false; return; }
+            syncState.sent = true; renderAcct();
+          });
+        });
+        box.appendChild(f);
+      }
+      if (syncState.msg) box.appendChild(el('p', 'me-hint', syncState.msg));
+      return;
+    }
+    box.appendChild(el('p', 'me-hint', '✅ ' + (sbUser.email || 'Connecté·e') + (syncState.at ? ' · sauvegardé à ' + new Date(syncState.at).toLocaleTimeString('fr-FR', { hour: '2-digit', minute: '2-digit' }) : '')));
+    if (syncState.conflict) {
+      box.appendChild(el('p', 'me-hint', 'Une sauvegarde plus récente existe sur ton compte. Laquelle garder ?'));
+      var row = el('div', 'stack');
+      var a = el('button', 'primary', '☁️ Prendre la sauvegarde'); a.type = 'button'; a.addEventListener('click', function () { applyCloud(syncState.conflict.data); });
+      var c = el('button', 'ghost', '📱 Garder cet appareil'); c.type = 'button'; c.addEventListener('click', function () { syncState.conflict = null; pushNow(); });
+      row.appendChild(a); row.appendChild(c); box.appendChild(row);
+    } else {
+      var r2 = el('div', 'stack');
+      var s1 = el('button', 'ghost', '☁️ Sauvegarder maintenant'); s1.type = 'button'; s1.addEventListener('click', function () { pushNow().then(function () { toast('Sauvegardé ✨'); }); });
+      var s2 = el('button', 'ghost', 'Se déconnecter'); s2.type = 'button'; s2.addEventListener('click', function () { sb.auth.signOut().then(function () { sbUser = null; syncState.sent = false; renderAcct(); }); });
+      var s3 = el('button', 'ghost danger', '🗑️ Supprimer ma sauvegarde'); s3.type = 'button'; s3.addEventListener('click', function () { sb.from('profiles').delete().eq('id', sbUser.id).then(function () { syncState.at = 0; store('talkie.syncAt', null); toast('Sauvegarde supprimée'); renderAcct(); }); });
+      r2.appendChild(s1); r2.appendChild(s2); r2.appendChild(s3); box.appendChild(r2);
+    }
+    if (syncState.msg) box.appendChild(el('p', 'me-hint', syncState.msg));
+  }
+  function initAuth(cfg) {
+    if (!cfg || !cfg.url || !cfg.key) return;
+    var sc = document.createElement('script'); sc.src = '/supa.js?v=19';
+    sc.onload = function () {
+      try { sb = window.TalkieSupa.create(cfg.url, cfg.key); } catch (e) { sb = null; return; }
+      renderAcct();
+      sb.auth.getSession().then(function (r) { sbUser = r.data && r.data.session ? r.data.session.user : null; renderAcct(); if (sbUser) pullThenSync(); });
+      sb.auth.onAuthStateChange(function (ev, session) {
+        var u = session ? session.user : null;
+        if (u && (!sbUser || sbUser.id !== u.id)) { sbUser = u; renderAcct(); pullThenSync(); if (ev === 'SIGNED_IN') toast('Connecté·e 💚'); }
+        else if (!u && sbUser) { sbUser = null; renderAcct(); }
+      });
+    };
+    document.head.appendChild(sc);
+  }
+  fetch('/api/config').then(function (r) { return r.json(); }).then(function (d) { initAuth(d && d.supabase); }).catch(function () {});
+
   /* ---------- Démarrage ---------- */
   if ('serviceWorker' in navigator) {
     window.addEventListener('load', function () { navigator.serviceWorker.register('/sw.js').catch(function () {}); });

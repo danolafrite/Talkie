@@ -31,6 +31,7 @@ function normalize(messages, firstUserText) {
 
 async function complete(opts) {
   const { system, messages, maxTokens, timeoutMs, tools } = opts;
+  const model = opts.model || MODEL;
   if (!KEY) throw new Error('clé absente');
   if (!budgetLeft()) throw new Error('plafond quotidien atteint');
   used++;
@@ -41,7 +42,7 @@ async function complete(opts) {
       method: 'POST',
       signal: ctrl.signal,
       headers: { 'content-type': 'application/json', 'x-api-key': KEY, 'anthropic-version': '2023-06-01' },
-      body: JSON.stringify(Object.assign({ model: MODEL, max_tokens: maxTokens || 220, system, messages }, tools ? { tools } : {}, withThinkingOff ? { thinking: { type: 'disabled' } } : {}))
+      body: JSON.stringify(Object.assign({ model, max_tokens: maxTokens || 220, system, messages }, tools ? { tools } : {}, opts.temperature != null ? { temperature: opts.temperature } : {}, withThinkingOff ? { thinking: { type: 'disabled' } } : {}))
     });
     // Ces tâches courtes n'ont pas besoin de « réfléchir » : sinon le modèle peut épuiser sa réponse en réflexion.
     let r = await send(thinkingOff);
@@ -54,4 +55,5 @@ async function complete(opts) {
   } finally { clearTimeout(timer); }
 }
 
-module.exports = { enabled, configured, usedToday, complete, normalize, MODEL, DAILY_CAP };
+const CHAT_MODEL = process.env.CHAT_MODEL || 'claude-sonnet-5-5'; // Boubou et le prof Bobby : le meilleur rapport qualité / prix pour bien parler
+module.exports = { CHAT_MODEL, enabled, configured, usedToday, complete, normalize, MODEL, DAILY_CAP };

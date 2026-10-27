@@ -88,3 +88,15 @@ La chambre et Mika sont en 3D (three.js). Le code source est dans `src3d/scene3d
 - **Monde** : compteur sur l'onglet, amis (💛, stockés sur le téléphone), bâtiments cliquables (Chambre, Classe, Boba, Boutique, grande roue + bonus quotidien), fenêtre avatar (saluer / inviter / ami).
 - **Visites** : invitation → visite de la chambre en 3D à deux, bulles courtes modérées (`hinv/hacc/hpos/hemo/hsay/hleave`).
 - **Boutique** : aperçu en 3D du décor et des tenues de Bobby avant achat, 12 articles de décor.
+
+## v19
+
+- **Voix** : texte nettoyé avant lecture ("aww" ne se lit plus « A double V »), voix kawaii (coral par défaut), diagnostic Réglages › « Tester la voix » (`/api/voice-check`). iPhone : la phrase est téléchargée en entier puis jouée sur un élément audio « déverrouillé » au premier toucher.
+- **Boubou** : nouveau prompt (naturel, varié, émotions, exemples), modèle `CHAT_MODEL` (défaut `claude-sonnet-5-5`) pour Boubou et le prof Bobby.
+- **Bugs** : sieste (roulis/hauteur remis à zéro), micro de la Classe blindé (garde-fous, timeout 12 s, arrêt en quittant l'onglet).
+- **Monde** : chat texte modéré (`psay` → `ps`, bulles au-dessus des avatars), bâtiments alignés : Chambre, Boulangerie, Friperie, Déco, Karaoké + grande roue. Chaque magasin ouvre un intérieur 3D (`initInterior`). Karaoké : 3 chansons gratuites (domaine public) + 3 « 💎 bientôt ».
+- **Onglets** : Chambre · Monde · Salon (rooms) · Classe · Moi. La Boutique complète reste accessible depuis Moi.
+- **Interface simplifiée** : défis du jour repliés, textes d'aide retirés, infos légales repliées, raccourcis (partager/notifs/installer) dans Réglages.
+- **Polices** : DynaPuff (titres) + Fredoka (texte), embarquées.
+- **Avatar** : code à 6 caractères (couleur ×12, oreilles ×6, regard ×5, accessoire ×12, forme ×4, queue ×4), anciens codes à 4 chiffres toujours valides.
+- **Compte Supabase** : lien magique par e-mail, sauvegarde du Mika (table `profiles`, voir `supabase.sql`), choix en cas de conflit, suppression de la sauvegarde.

@@ -75,7 +75,7 @@ async function turn(body) {
   const first = c.kind === 'start' ? '(Bobby, accueille l’élève et lance la situation. Mika dit un petit mot d’encouragement en français, sans correction.)' : '(Continue.)';
   const messages = ai.normalize(c.messages, first);
   if (messages[messages.length - 1].role !== 'user') messages.push({ role: 'user', content: first });
-  const raw = await ai.complete({ system: system(c), messages, maxTokens: 650, timeoutMs: 25000 });
+  const raw = await ai.complete({ system: system(c), messages, maxTokens: 650, timeoutMs: 25000, model: ai.CHAT_MODEL, temperature: 0.8 });
   return parse(raw, c);
 }
 

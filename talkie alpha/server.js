@@ -335,6 +335,9 @@ async function companionTurn(room, kind) {
 }
 
 /* ---------- Anti-bots (Cloudflare Turnstile) et majorité ---------- */
+// Supabase : l'URL et la clé « publishable » sont publiques par conception (la sécurité vient des règles RLS, voir supabase.sql).
+const SUPABASE_URL = process.env.SUPABASE_URL || 'https://xbyablplpwuqnggoeekp.supabase.co';
+const SUPABASE_KEY = process.env.SUPABASE_PUBLISHABLE_KEY || 'sb_publishable_gZ4HTzxDwBD4Cx2isJyzhw_GFVZf3z6';
 const TURNSTILE_SITE = process.env.TURNSTILE_SITE_KEY || '';
 const TURNSTILE_SECRET = process.env.TURNSTILE_SECRET_KEY || '';
 const TURNSTILE_VERIFY_URL = process.env.TURNSTILE_VERIFY_URL || 'https://challenges.cloudflare.com/turnstile/v0/siteverify';
@@ -475,8 +478,9 @@ async function mentionTurn(room, c, ws) {
 }
 
 
-/* ---------- La Place : monde 3D partagé. Positions et emotes seulement (aucun texte libre → rien à modérer). ---------- */
+/* ---------- La Place : monde 3D partagé. Positions, emotes et petits messages (80 caractères, mêmes filtres que les visites). ---------- */
 const PLAZA_MAX = 12;
+
 const PLAZA_EMOTES = ['wave', 'heart', 'happy', 'dance', 'wow'];
 const plazas = []; // chaque shard : Map ws -> {pid,nick,av,x,z}
 function plazaOf(ws) { return plazas.find((sh) => sh.has(ws)); }
@@ -633,6 +637,17 @@ function handle(ws, msg) {
       if (!isFinite(x) || !isFinite(z)) return;
       m.x = Math.max(-5.2, Math.min(5.2, x)); m.z = Math.max(-3.2, Math.min(4.2, z));
       plazaSend(sh, ws, { t: 'pm', pid: m.pid, x: m.x, z: m.z });
+      return;
+    }
+    case 'psay': {
+      const sh = plazaOf(ws); if (!sh) return;
+      const m = sh.get(ws), text = clean(msg.text, 80); if (!text) return;
+      const now = Date.now(); if (now - (m.lastS || 0) < 1500) return; m.lastS = now;
+      const a = mod.analyse(text);
+      if (a.level === 'care') { send(ws, { t: 'error', text: 'Je suis là si tu as besoin de parler 💚 Le 3114 (gratuit, 24 h sur 24) peut aussi t’écouter.' }); return; }
+      if (a.level === 'block' || (a.level === 'suspect' && a.hard)) { send(ws, { t: 'error', text: a.msg || 'Ce message ne peut pas être envoyé ici.' }); return; }
+      if (mod.botLike(c.cid, text)) return;
+      plazaSend(sh, ws, { t: 'ps', pid: m.pid, text });
       return;
     }
     case 'emote': {
@@ -980,7 +995,11 @@ const server = http.createServer(async (req, res) => {
     return;
   }
   if (url.pathname === '/api/config' && req.method === 'GET') {
-    json(res, 200, { turnstile: TURNSTILE_SITE && TURNSTILE_SECRET ? TURNSTILE_SITE : null, tts: tts.enabled(), ttsRate: tts.PITCH, ttsVoices: tts.VOICES });
+    json(res, 200, { turnstile: TURNSTILE_SITE && TURNSTILE_SECRET ? TURNSTILE_SITE : null, tts: tts.enabled(), ttsRate: tts.PITCH, ttsVoices: tts.VOICES, supabase: SUPABASE_URL && SUPABASE_KEY ? { url: SUPABASE_URL, key: SUPABASE_KEY } : null });
+    return;
+  }
+  if (url.pathname === '/api/voice-check' && req.method === 'GET') {
+    try { json(res, 200, await tts.check()); } catch (e) { json(res, 200, { ok: false, why: 'other', msg: 'Erreur inattendue' }); }
     return;
   }
   if (url.pathname === '/api/tts' && req.method === 'GET') {
