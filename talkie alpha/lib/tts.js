@@ -117,14 +117,14 @@ async function synth(text, ip, opts) {
 /* Diagnostic pour le bouton « Tester la voix » : dit exactement pourquoi la vraie voix ne marche pas. */
 async function check() {
   if (!KEY && !EL_KEY) return { ok: false, why: 'no_key', msg: 'La clé OPENAI_API_KEY est absente sur Render (ou le service n’a pas redémarré).' };
-  const t0 = Date.now();
+  const t0 = Date.now(); let elWhy = '';
   try {
     if (EL_KEY) {
       try { await elSynth('Coucou, c’est moi !', EL_VOICES.coral, AbortSignal.timeout(15000)); return { ok: true, ms: Date.now() - t0, model: EL_MODEL, provider: 'elevenlabs', msg: 'Voix ElevenLabs active ✅' }; }
-      catch (e) { const dd = String(e.detail || ''); const why = e.api === 401 ? 'La clé ElevenLabs est refusée (401) : recopie-la.' : e.api === 402 || e.api === 429 || /quota|limit/i.test(dd) ? 'ElevenLabs dit que le quota est atteint : ajoute du crédit ou passe à un abonnement.' : e.api === 404 || /voice/i.test(dd) ? 'ElevenLabs ne trouve pas cette voix : vérifie les variables ELEVEN_VOICE_… (identifiants).' : 'Erreur ElevenLabs : ' + (e.message || '') + (dd ? ' — ' + dd : ''); if (!KEY) return { ok: false, why: 'eleven', status: e.api || null, msg: why }; }
+      catch (e) { const dd = String(e.detail || ''); const why = e.api === 401 ? 'La clé ElevenLabs est refusée (401) : recopie-la.' : e.api === 402 || e.api === 429 || /quota|limit/i.test(dd) ? 'ElevenLabs dit que le quota est atteint : ajoute du crédit ou passe à un abonnement.' : e.api === 404 || /voice/i.test(dd) ? 'ElevenLabs refuse cette voix (' + (e.api || '?') + ') : ajoute-la d’abord à « My Voices », vérifie l’identifiant, et sache que les voix de la bibliothèque exigent un abonnement payant (le plan gratuit ne les autorise pas via l’API).' : 'Erreur ElevenLabs : ' + (e.message || '') + (dd ? ' — ' + dd : ''); elWhy = why; if (!KEY) return { ok: false, why: 'eleven', status: e.api || null, msg: why }; }
     }
     await synth('Coucou, c’est moi !', 'check', { voice: 'shimmer', lang: 'fr' });
-    return { ok: true, ms: Date.now() - t0, model: MODEL, provider: 'openai', msg: 'Voix OpenAI active ✅' + (EL_KEY ? ' (ElevenLabs a échoué, OpenAI prend le relais)' : '') };
+    return { ok: true, ms: Date.now() - t0, model: MODEL, provider: 'openai', msg: 'Voix OpenAI active ✅' + (EL_KEY ? ' ⚠️ ElevenLabs ne marche PAS, OpenAI a pris le relais. Raison : ' + (elWhy || 'inconnue') : '') };
   } catch (e) {
     const d = String(e.detail || '');
     if (e.api === 401) return { ok: false, why: 'bad_key', status: 401, msg: 'OpenAI refuse la clé (401) : copie-la de nouveau, sans espace, ou crée-en une nouvelle.' };
