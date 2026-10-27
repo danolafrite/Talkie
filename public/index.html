@@ -2,10 +2,11 @@
 <html lang="fr">
 <head>
 <meta charset="utf-8">
-<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, user-scalable=no, viewport-fit=cover">
 <title>Talkie</title>
 <meta name="description" content="Parle de ce que tu veux, avec quelqu’un qui est là maintenant.">
-<meta name="theme-color" content="#FFF3FA">
+<meta name="theme-color" content="#FFF8EE">
+<script>try{var __s=localStorage.getItem("talkie.scheme")||"light";if(__s==="dark"||(__s==="auto"&&matchMedia("(prefers-color-scheme: dark)").matches))document.documentElement.setAttribute("data-scheme","dark")}catch(e){}</script>
 <meta name="apple-mobile-web-app-capable" content="yes">
 <meta name="mobile-web-app-capable" content="yes">
 <meta name="apple-mobile-web-app-title" content="Talkie">
@@ -14,12 +15,13 @@
 <link rel="icon" type="image/png" href="/favicon.png">
 <link rel="apple-touch-icon" href="/apple-touch-icon.png">
 <link rel="preload" href="/fonts/fredoka-latin-wght-normal.woff2" as="font" type="font/woff2" crossorigin>
-<link rel="preload" href="/fonts/nunito-latin-wght-normal.woff2" as="font" type="font/woff2" crossorigin>
+<link rel="preload" href="/fonts/dynapuff-latin-600-normal.woff2" as="font" type="font/woff2" crossorigin>
 <style>
+@font-face { font-family: 'DynaPuff'; font-style: normal; font-weight: 400; font-display: swap; src: url(/fonts/dynapuff-latin-400-normal.woff2) format('woff2'); }
+@font-face { font-family: 'DynaPuff'; font-style: normal; font-weight: 600; font-display: swap; src: url(/fonts/dynapuff-latin-600-normal.woff2) format('woff2'); }
+@font-face { font-family: 'DynaPuff'; font-style: normal; font-weight: 700; font-display: swap; src: url(/fonts/dynapuff-latin-700-normal.woff2) format('woff2'); }
 @font-face { font-family: 'Fredoka'; font-style: normal; font-weight: 300 700; font-display: swap; src: url(/fonts/fredoka-latin-ext-wght-normal.woff2) format('woff2'); unicode-range: U+0100-02BA, U+02BD-02C5, U+02C7-02CC, U+02CE-02D7, U+02DD-02FF, U+0304, U+0308, U+0329, U+1D00-1DBF, U+1E00-1E9F, U+1EF2-1EFF, U+2020, U+20A0-20AB, U+20AD-20C0, U+2113, U+2C60-2C7F, U+A720-A7FF; }
 @font-face { font-family: 'Fredoka'; font-style: normal; font-weight: 300 700; font-display: swap; src: url(/fonts/fredoka-latin-wght-normal.woff2) format('woff2'); unicode-range: U+0000-00FF, U+0131, U+0152-0153, U+02BB-02BC, U+02C6, U+02DA, U+02DC, U+0304, U+0308, U+0329, U+2000-206F, U+20AC, U+2122, U+2191, U+2193, U+2212, U+2215, U+FEFF, U+FFFD; }
-@font-face { font-family: 'Nunito'; font-style: normal; font-weight: 200 1000; font-display: swap; src: url(/fonts/nunito-latin-ext-wght-normal.woff2) format('woff2'); unicode-range: U+0100-02BA, U+02BD-02C5, U+02C7-02CC, U+02CE-02D7, U+02DD-02FF, U+0304, U+0308, U+0329, U+1D00-1DBF, U+1E00-1E9F, U+1EF2-1EFF, U+2020, U+20A0-20AB, U+20AD-20C0, U+2113, U+2C60-2C7F, U+A720-A7FF; }
-@font-face { font-family: 'Nunito'; font-style: normal; font-weight: 200 1000; font-display: swap; src: url(/fonts/nunito-latin-wght-normal.woff2) format('woff2'); unicode-range: U+0000-00FF, U+0131, U+0152-0153, U+02BB-02BC, U+02C6, U+02DA, U+02DC, U+0304, U+0308, U+0329, U+2000-206F, U+20AC, U+2122, U+2191, U+2193, U+2212, U+2215, U+FEFF, U+FFFD; }
 
 /* Talkie : raisin (texte), violet (ta voix), jaune soleil (action), rose, menthe et ciel pour les sourires. */
 :root {
@@ -58,12 +60,11 @@
   --meta-in: rgba(42, 27, 94, 0.5);
   --meta-out: rgba(255, 255, 255, 0.78);
   --sheet-scrim: rgba(30, 14, 70, 0.5);
-  --font-display: 'Fredoka', 'Nunito', system-ui, -apple-system, 'Segoe UI', sans-serif;
-  --font-body: 'Nunito', system-ui, -apple-system, 'Segoe UI', sans-serif;
+  --font-display: 'DynaPuff', 'Fredoka', system-ui, -apple-system, 'Segoe UI', sans-serif;
+  --font-body: 'Fredoka', system-ui, -apple-system, 'Segoe UI', sans-serif;
   color-scheme: light;
 }
-@media (prefers-color-scheme: dark) {
-  :root {
+/* sombre */ :root[data-scheme="dark"] {
     --bg: #17103A;
     --bg-glass: rgba(23, 16, 58, 0.85);
     --surface: #251A58;
@@ -86,7 +87,6 @@
     --sheet-scrim: rgba(8, 3, 28, 0.65);
     color-scheme: dark;
   }
-}
 
 html, body { height: 100%; margin: 0; }
 body { background: var(--bg); color: var(--fg); font-family: var(--font-body); font-size: 16px; font-weight: 600; line-height: 1.5; -webkit-text-size-adjust: 100%; -webkit-tap-highlight-color: transparent; }
@@ -104,7 +104,7 @@ svg.i { width: 20px; height: 20px; fill: none; stroke: currentColor; stroke-widt
 #app::before, #app::after { content: ''; position: fixed; z-index: -1; border-radius: 50%; filter: blur(70px); opacity: 0.55; pointer-events: none; }
 #app::before { width: 320px; height: 320px; top: -80px; right: -100px; background: #FFC2E3; }
 #app::after { width: 300px; height: 300px; bottom: 60px; left: -120px; background: #CDBEFF; }
-@media (prefers-color-scheme: dark) { #app::before { background: #6B2D8F; opacity: 0.45; } #app::after { background: #2D3FB0; opacity: 0.4; } }
+/* sombre */ :root[data-scheme="dark"] #app::before { background: #6B2D8F; opacity: 0.45; } :root[data-scheme="dark"] #app::after { background: #2D3FB0; opacity: 0.4; }
 .wrap { max-width: 720px; margin: 0 auto; padding-left: max(18px, env(safe-area-inset-left, 0px)); padding-right: max(18px, env(safe-area-inset-right, 0px)); }
 
 /* ---------- Barre du haut ---------- */
@@ -123,8 +123,8 @@ svg.i { width: 20px; height: 20px; fill: none; stroke: currentColor; stroke-widt
 .reconnect { align-self: flex-start; margin-top: 10px; }
 
 /* ---------- Accueil : un gros sourire avec Mika ---------- */
-.hero { position: relative; overflow: hidden; isolation: isolate; border-radius: 34px; padding: 46px 18px 18px; color: var(--ink); background: linear-gradient(145deg, #D9CCFF 0%, #FFD0EA 55%, #FFE2C9 100%); box-shadow: 0 3px 0 rgba(124, 92, 255, 0.15), 0 22px 40px -22px rgba(124, 92, 255, 0.6); }
-@media (prefers-color-scheme: dark) { .hero { background: linear-gradient(145deg, #4A2FB8 0%, #8A2E92 60%, #B2476F 100%); color: #FFF3FF; } }
+.hero { position: relative; overflow: hidden; isolation: isolate; border-radius: 34px; padding: 24px 18px 18px; color: var(--ink); background: linear-gradient(145deg, #D9CCFF 0%, #FFD0EA 55%, #FFE2C9 100%); box-shadow: 0 3px 0 rgba(124, 92, 255, 0.15), 0 22px 40px -22px rgba(124, 92, 255, 0.6); }
+/* sombre */ :root[data-scheme="dark"] .hero { background: linear-gradient(145deg, #4A2FB8 0%, #8A2E92 60%, #B2476F 100%); color: #FFF3FF; }
 .hero h2 { font-family: var(--font-display); font-weight: 600; font-size: clamp(30px, 9vw, 40px); line-height: 1.04; letter-spacing: -0.015em; max-width: 12em; }
 .hero .sub { margin-top: 6px; font-size: 16px; font-weight: 700; opacity: 0.82; max-width: 26rem; }
 .deco { position: absolute; z-index: -1; font-size: 30px; opacity: 0.9; animation: floaty 5s ease-in-out infinite; user-select: none; pointer-events: none; }
@@ -142,7 +142,7 @@ svg.i { width: 20px; height: 20px; fill: none; stroke: currentColor; stroke-widt
 @keyframes mblink { 0%, 92%, 100% { transform: scaleY(1); } 95% { transform: scaleY(0.1); } }
 @keyframes wave { 0%, 60%, 100% { transform: rotate(0); } 70% { transform: rotate(-22deg); } 80% { transform: rotate(8deg); } 90% { transform: rotate(-16deg); } }
 .mika-body { min-width: 0; flex: 1; }
-.mika-name { font-family: var(--font-display); font-weight: 500; font-size: 15px; display: flex; gap: 7px; align-items: center; flex-wrap: wrap; }
+.mika-name { flex-wrap: nowrap !important; font-family: var(--font-display); font-weight: 500; font-size: 15px; display: flex; gap: 7px; align-items: center; flex-wrap: wrap; }
 .mika-name small { font-family: var(--font-body); opacity: 0.7; font-weight: 700; font-size: 13px; }
 .who .mini { width: 22px; height: 22px; display: inline-block; flex: none; }
 .who .mini svg { width: 100%; height: 100%; display: block; }
@@ -158,7 +158,7 @@ svg.i { width: 20px; height: 20px; fill: none; stroke: currentColor; stroke-widt
 .mika-qr button { flex: none; border: 2px solid rgba(42, 27, 94, 0.14); background: rgba(255, 255, 255, 0.7); color: var(--ink); border-radius: 999px; padding: 7px 14px; font-size: 14.5px; font-weight: 800; cursor: pointer; transition: transform 0.12s ease, background 0.15s ease; }
 .mika-qr button:hover { background: #fff; }
 .mika-qr button:active { transform: scale(0.95); }
-@media (prefers-color-scheme: dark) { .mika-qr button { border-color: rgba(255, 255, 255, 0.25); background: rgba(255, 255, 255, 0.12); color: #FFF3FF; } .mika-qr button:hover { background: rgba(255, 255, 255, 0.2); } }
+/* sombre */ :root[data-scheme="dark"] .mika-qr button { border-color: rgba(255, 255, 255, 0.25); background: rgba(255, 255, 255, 0.12); color: #FFF3FF; } :root[data-scheme="dark"] .mika-qr button:hover { background: rgba(255, 255, 255, 0.2); }
 @keyframes mpop { from { opacity: 0; transform: translateY(6px) scale(0.96); } to { opacity: 1; transform: none; } }
 
 /* Publication, dans le bloc d'accueil */
@@ -175,11 +175,11 @@ svg.i { width: 20px; height: 20px; fill: none; stroke: currentColor; stroke-widt
 .chip { flex: none; border: 0; background: rgba(255, 255, 255, 0.65); color: var(--ink); border-radius: 999px; padding: 7px 14px; font-size: 14.5px; font-weight: 800; cursor: pointer; transition: transform 0.12s ease, background 0.15s ease; }
 .chip:hover { background: #fff; }
 .chip:active { transform: scale(0.95); }
-@media (prefers-color-scheme: dark) { .chip { background: rgba(255, 255, 255, 0.14); color: #FFF3FF; } .chip:hover { background: rgba(255, 255, 255, 0.22); } }
+/* sombre */ :root[data-scheme="dark"] .chip { background: rgba(255, 255, 255, 0.14); color: #FFF3FF; } :root[data-scheme="dark"] .chip:hover { background: rgba(255, 255, 255, 0.22); }
 
 /* Arbre de pistes proposé par Mika */
 .branches { background: rgba(255, 255, 255, 0.82); border-radius: 24px; padding: 14px 12px 12px; display: flex; flex-direction: column; gap: 8px; animation: mpop 0.3s cubic-bezier(.2, .9, .3, 1.2) both; color: var(--ink); }
-@media (prefers-color-scheme: dark) { .branches { background: rgba(23, 16, 58, 0.6); color: #FFF3FF; } }
+/* sombre */ :root[data-scheme="dark"] .branches { background: rgba(23, 16, 58, 0.6); color: #FFF3FF; }
 .br-head { display: flex; align-items: center; gap: 8px; padding: 0 4px 2px; }
 .br-head strong { font-family: var(--font-display); font-weight: 500; font-size: 16px; flex: 1; min-width: 0; }
 .br-back { border: 0; background: rgba(124, 92, 255, 0.14); color: inherit; border-radius: 999px; padding: 4px 12px; font-size: 13px; font-weight: 800; cursor: pointer; display: inline-flex; align-items: center; gap: 4px; }
@@ -190,7 +190,7 @@ svg.i { width: 20px; height: 20px; fill: none; stroke: currentColor; stroke-widt
 .br-item .em { font-size: 24px; line-height: 1; flex: none; }
 .br-item .tx { flex: 1; min-width: 0; }
 .br-item svg { color: var(--violet); }
-@media (prefers-color-scheme: dark) { .br-item { background: #32257A; color: #FFF3FF; } }
+/* sombre */ :root[data-scheme="dark"] .br-item { background: #32257A; color: #FFF3FF; }
 .br-skel { height: 48px; border-radius: 18px; background: linear-gradient(100deg, rgba(255, 255, 255, 0.5) 30%, rgba(255, 255, 255, 0.95) 50%, rgba(255, 255, 255, 0.5) 70%); background-size: 200% 100%; animation: shimmer 1.2s linear infinite; }
 @keyframes shimmer { to { background-position: -200% 0; } }
 .br-foot { font-size: 12.5px; opacity: 0.7; padding: 2px 4px 0; }
@@ -267,6 +267,9 @@ fieldset { border: 0; padding: 0; margin: 0; min-width: 0; display: flex; flex-d
 .themes { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 12px; }
 @media (min-width: 560px) { .themes { grid-template-columns: repeat(3, minmax(0, 1fr)); } }
 .tcard { text-align: left; border: 0; border-radius: 26px; padding: 14px; min-height: 140px; display: flex; flex-direction: column; justify-content: space-between; gap: 12px; cursor: pointer; background: var(--tc, #E4DAFF); color: #2A1B5E; box-shadow: 0 4px 0 var(--tc-d, rgba(124, 92, 255, 0.25)); transition: transform 0.12s ease, box-shadow 0.12s ease; }
+.tskel { cursor: default; background: linear-gradient(100deg, rgba(124,92,255,.10) 30%, rgba(124,92,255,.22) 50%, rgba(124,92,255,.10) 70%) 0 0 / 200% 100%; box-shadow: none; animation: tskel 1.2s linear infinite; }
+@keyframes tskel { to { background-position: -200% 0; } }
+@media (prefers-reduced-motion: reduce) { .tskel { animation: none; } }
 .tcard:active { transform: translateY(3px); box-shadow: 0 1px 0 var(--tc-d, rgba(124, 92, 255, 0.25)); }
 .tcard .em { font-size: 34px; line-height: 1; display: block; }
 .tcard .txt { font-family: var(--font-display); font-size: 17.5px; font-weight: 500; line-height: 1.18; overflow-wrap: anywhere; display: block; }
@@ -278,9 +281,7 @@ fieldset { border: 0; padding: 0; margin: 0; min-width: 0; display: flex; flex-d
 .themes .tcard:nth-child(6n+4) { --tc: #FFE9A8; --tc-d: #F5CF62; }
 .themes .tcard:nth-child(6n+5) { --tc: #D3EEFF; --tc-d: #A5D9F7; }
 .themes .tcard:nth-child(6n) { --tc: #FFDCC8; --tc-d: #F7B999; }
-@media (prefers-color-scheme: dark) {
-  .tcard { color: #2A1B5E; }
-}
+/* sombre */ :root[data-scheme="dark"] .tcard { color: #2A1B5E; }
 
 .foot { color: var(--muted); font-size: 12.5px; max-width: 38rem; line-height: 1.55; font-weight: 600; }
 
@@ -308,7 +309,7 @@ fieldset { border: 0; padding: 0; margin: 0; min-width: 0; display: flex; flex-d
 .ctitle h2 { font-family: var(--font-display); font-size: 17.5px; font-weight: 500; line-height: 1.2; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
 .ctitle p { font-size: 13px; color: var(--muted); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
 .ctitle p.live-on { color: #0B9A6E; font-weight: 800; }
-@media (prefers-color-scheme: dark) { .ctitle p.live-on { color: var(--mint); } }
+/* sombre */ :root[data-scheme="dark"] .ctitle p.live-on { color: var(--mint); }
 
 .wait { flex: none; background: color-mix(in srgb, var(--mint) 16%, var(--surface)); color: var(--fg); font-size: 13.5px; padding: 9px max(16px, env(safe-area-inset-left, 0px)); text-align: center; border-bottom: 1px solid var(--line); }
 .wait.plain { background: var(--surface); color: var(--muted); }
@@ -403,17 +404,9 @@ fieldset { border: 0; padding: 0; margin: 0; min-width: 0; display: flex; flex-d
 .sheet .stack .ghost, .sheet .stack .primary { width: 100%; }
 
 #toast { position: fixed; left: 50%; transform: translateX(-50%); bottom: calc(16px + env(safe-area-inset-bottom, 0px)); width: max-content; max-width: calc(100% - 32px); background: var(--ink); color: #fff; padding: 11px 16px; border-radius: 14px; font-size: 14px; font-weight: 500; z-index: 50; box-shadow: var(--shadow); }
-@media (prefers-color-scheme: dark) { #toast { background: #FFF3FF; color: #2A1B5E; } }
+/* sombre */ :root[data-scheme="dark"] #toast { background: #FFF3FF; color: #2A1B5E; }
 
 /* Astuce @Mika et suggestion */
-.tip { max-width: 720px; margin: 0 auto; padding: 8px 12px 0; position: relative; }
-.tipb { position: relative; display: flex; align-items: center; gap: 10px; background: #5A3FD6; color: #fff; border-radius: 20px; padding: 9px 8px 9px 10px; box-shadow: 0 10px 26px rgba(11, 18, 38, 0.28); font-size: 14px; line-height: 1.3; }
-.tipb::after { content: ''; position: absolute; left: 24px; bottom: -5px; width: 11px; height: 11px; background: #5A3FD6; transform: rotate(45deg); border-radius: 2px; }
-.tipb .tipav { flex: none; width: 34px; height: 34px; border-radius: 50%; background: #fff; display: grid; place-items: center; }
-.tipb .tipav svg { width: 28px; height: 28px; }
-.tipb .tiptx { flex: 1; min-width: 0; }
-.tipgo { flex: none; border: 0; border-radius: 999px; padding: 7px 14px; font-family: var(--font-display); font-weight: 600; background: var(--sun); color: #2A1B5E; cursor: pointer; box-shadow: 0 2px 0 var(--sun-deep); }
-.tipx { flex: none; border: 0; background: transparent; color: rgba(241, 244, 255, 0.7); width: 30px; height: 30px; border-radius: 50%; font-size: 18px; cursor: pointer; }
 .mpop { max-width: 720px; margin: 0 auto; padding: 8px 12px 0; }
 .mpop button { display: flex; align-items: center; gap: 10px; width: 100%; text-align: left; border: 1px solid var(--line); background: var(--surface); color: inherit; border-radius: 18px; padding: 8px 12px; font: inherit; font-weight: 700; cursor: pointer; box-shadow: var(--shadow); }
 .mpop small { color: var(--muted); }
@@ -421,6 +414,37 @@ fieldset { border: 0; padding: 0; margin: 0; min-width: 0; display: flex; flex-d
 .mpop .tipav svg { width: 24px; height: 24px; }
 .mention { font-weight: 700; color: inherit; background: rgba(255, 255, 255, 0.22); border-radius: 6px; padding: 0 3px; }
 .msg:not(.mine) .mention { background: color-mix(in srgb, var(--blue) 14%, transparent); color: var(--accent-text); }
+
+
+/* Mika toujours à portée, au-dessus du clavier */
+.mika-row { max-width: 720px; margin: 0 auto; padding: 8px 12px 0; display: flex; }
+.mika-pill { display: inline-flex; align-items: center; gap: 6px; border: 0; background: #C9F6E3; color: #0A6B4D; border-radius: 999px; padding: 3px 14px 3px 4px; height: 32px; font-family: var(--font-display); font-weight: 600; font-size: 15px; cursor: pointer; box-shadow: 0 2px 0 #8FE3C2; transition: transform 0.1s ease; }
+.mika-pill:active { transform: translateY(2px); box-shadow: none; }
+.mika-pill .pav { width: 26px; height: 26px; border-radius: 50%; background: #fff; display: grid; place-items: center; }
+.mika-pill .pav svg { width: 22px; height: 22px; }
+/* sombre */ :root[data-scheme="dark"] .mika-pill { background: #13503E; color: #8CF3CC; box-shadow: 0 2px 0 #0B3A2D; }
+.mpop .tipav { width: 30px; height: 30px; border-radius: 50%; background: #C9F6E3; display: grid; place-items: center; flex: none; }
+.mpop .tipav svg { width: 24px; height: 24px; }
+
+/* Voix */
+.vbtn { margin-left: auto; border: 0; background: rgba(255, 255, 255, 0.7); border-radius: 999px; width: 32px; height: 32px; font-size: 16px; cursor: pointer; display: grid; place-items: center; }
+.vbtn[aria-pressed="true"] { background: var(--mint); }
+/* sombre */ :root[data-scheme="dark"] .vbtn { background: rgba(255, 255, 255, 0.16); }
+.mika-av.talking { animation-duration: 0.9s; }
+.mika-av .mouth { transform-origin: center; transform-box: fill-box; }
+.mika-av.talking .mouth { animation: talk 0.28s ease-in-out infinite alternate; }
+@keyframes talk { from { transform: scaleY(0.5); } to { transform: scaleY(1.6); } }
+
+/* Lieu et thèmes en bref */
+.place { border: 0; background: var(--surface); color: var(--fg); border-radius: 999px; padding: 6px 13px; font-size: 14px; font-weight: 800; cursor: pointer; box-shadow: var(--shadow); max-width: 55%; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.more { margin: 14px auto 0; display: flex; align-items: center; gap: 6px; border: 0; background: transparent; color: var(--accent-text); font-size: 15px; font-weight: 800; cursor: pointer; padding: 6px 10px; }
+.more svg { transition: transform 0.2s ease; width: 18px; height: 18px; }
+.more[aria-expanded="true"] svg { transform: rotate(180deg); }
+#more { margin-top: 10px; }
+.place-form { display: flex; gap: 8px; }
+.place-form input { flex: 1; min-width: 0; background: var(--bg); border: 2px solid var(--line); border-radius: 16px; padding: 11px 14px; font-size: 16px; font-weight: 700; }
+.place-form input:focus { outline: none; border-color: var(--violet); }
+.tcard { min-height: 118px; }
 
 /* Fonds de conversation */
 #log[data-bg="aurore"] { background-image: linear-gradient(160deg, rgba(120,230,190,.35), rgba(120,160,255,.30) 55%, rgba(210,150,255,.28)); background-size: auto; }
@@ -446,6 +470,512 @@ fieldset { border: 0; padding: 0; margin: 0; min-width: 0; display: flex; flex-d
   .tcard, .primary, .chip, .send { transition: none; }
 }
 @media (prefers-reduced-motion: reduce) { .deco, .mika-av, .mika-av .eye, .mika-av .arm, .mika-bubble, .mika-bubble.thinking i, .branches, .br-item, .br-skel, #mika-fab .orb, #mika-fab .lab { animation: none; } }
+
+/* Mika kawaii */
+.mika { position: relative; }
+button.mika-av { border: 0; background: none; padding: 0; cursor: pointer; -webkit-tap-highlight-color: transparent; }
+.mika-av.big { width: 104px; height: 104px; margin: -4px 0 -6px -6px; filter: drop-shadow(0 8px 10px rgba(60, 30, 140, 0.22)); }
+.mk { overflow: visible; }
+.mk .eh, .mk .ec, .mk .mo, .mk .mw, .mk .zz, .mk .ht { display: none; }
+.mk .eo { transform-box: fill-box; transform-origin: center; }
+.mika-av .mk .eo { animation: mblink 4.2s infinite; }
+.mk .pupil { transform: translate(var(--lx, 0px), var(--ly, 0px)); transition: transform 0.18s ease-out; }
+.mk .leaf { transform-box: fill-box; transform-origin: 50% 100%; }
+.mika-av .mk .ear { transform-box: fill-box; transform-origin: 50% 100%; }
+.mika-av .mk .ear-l { animation: eartw 5s ease-in-out infinite; }
+.mika-av .mk .ear-r { animation: eartw 5s ease-in-out 1.4s infinite reverse; }
+@keyframes eartw { 0%, 86%, 100% { transform: rotate(0); } 90% { transform: rotate(-9deg); } 94% { transform: rotate(5deg); } }
+.mika-av .mk .leaf-l { animation: sway 3.2s ease-in-out infinite; }
+.mika-av .mk .leaf-r { animation: sway 3.2s ease-in-out infinite reverse; }
+.mika-av .mk .body { transform-box: fill-box; transform-origin: 50% 100%; animation: squish 3.4s ease-in-out infinite; }
+.mika-av .mk .mk-arm-l { transform-box: fill-box; transform-origin: 90% 30%; animation: wave 3.6s ease-in-out infinite; }
+@keyframes sway { 0%, 100% { transform: rotate(-7deg); } 50% { transform: rotate(8deg); } }
+@keyframes squish { 0%, 100% { transform: scale(1, 1); } 50% { transform: scale(1.03, 0.97); } }
+.mika-av.st-happy .mk .eo, .mika-av.st-sleep .mk .eo { display: none; }
+.mika-av.st-happy .mk .eh { display: inline; }
+.mika-av.st-happy .mk .ms, .mika-av.st-wow .mk .ms, .mika-av.st-sleep .mk .ms { display: none; }
+.mika-av.st-happy .mk .mw { display: inline; }
+.mika-av.st-wow .mk .mo { display: inline; }
+.mika-av.st-sleep .mk .ec, .mika-av.st-sleep .mk .zz { display: inline; }
+.mika-av.st-sleep { animation-duration: 5s; }
+.mika-av.st-sleep .mk .zz { animation: zz 2.4s ease-in-out infinite; }
+.mika-av.st-love .mk .eo { display: none; }
+.mika-av.st-love .mk .ht { display: inline; }
+.mika-av.st-love .mk .ms { display: none; }
+.mika-av.st-love .mk .mw { display: inline; }
+.mika-av.talking .mk .ms, .mika-av.talking .mk .mw, .mika-av.talking .mk .mo { display: none; }
+.mika-av.talking .mk .mt { display: inline; transform-box: fill-box; transform-origin: center; animation: talk 0.26s ease-in-out infinite alternate; }
+.mk .mt { display: none; }
+@keyframes zz { 0%, 100% { opacity: 0.25; transform: translateY(2px); } 50% { opacity: 1; transform: translateY(-3px); } }
+.mika-av.jump { animation: hop 0.7s cubic-bezier(.3, .8, .4, 1) 1; }
+@keyframes hop { 0% { transform: translateY(0) scale(1.1, 0.88); } 30% { transform: translateY(-22px) scale(0.92, 1.1); } 55% { transform: translateY(0) scale(1.12, 0.86); } 75% { transform: translateY(-6px) scale(0.98, 1.03); } 100% { transform: translateY(0) scale(1, 1); } }
+.mika-av.shy { animation: shy 0.6s ease-in-out 1; }
+@keyframes shy { 0%, 100% { transform: rotate(0); } 25% { transform: rotate(-9deg); } 75% { transform: rotate(9deg); } }
+.mika-fx { position: absolute; left: 0; top: 0; width: 104px; height: 90px; pointer-events: none; z-index: 3; }
+.mika-fx span { position: absolute; left: 48px; top: 36px; font-size: 20px; opacity: 0; animation: fxup 1.3s ease-out forwards; }
+@keyframes fxup { 0% { opacity: 0; transform: translate(0, 0) scale(0.4); } 15% { opacity: 1; } 100% { opacity: 0; transform: translate(var(--dx, 0px), -70px) scale(1.1) rotate(var(--rot, 0deg)); } }
+.mika-bubble.say::after { content: ''; }
+.mika-bubble .cursor { display: inline-block; width: 2px; height: 1em; background: var(--violet); margin-left: 2px; vertical-align: -2px; animation: blinkc 0.7s steps(1) infinite; }
+@keyframes blinkc { 50% { opacity: 0; } }
+.mika-qr button.yes { background: var(--sun, #FFCF3F); border-color: transparent; color: #2A1B5E; box-shadow: 0 3px 0 rgba(160, 110, 0, 0.35); }
+.mika-qr button.voice { background: #C9F6E3; border-color: transparent; color: #0A6B4D; }
+.mika-bubble .bq { color: var(--violet); }
+@media (prefers-reduced-motion: reduce) { .mika-av .mk *, .mika-av.jump, .mika-av.shy, .mika-fx span, .mika-bubble .cursor { animation: none !important; } }
+
+/* Le monde de Mika */
+.hero { color: var(--hero-fg, var(--ink)); }
+.hero[data-tod="morning"] { background: linear-gradient(160deg, #FFE9B8 0%, #FFCFE0 52%, #DCD0FF 100%); }
+.hero[data-tod="evening"] { background: linear-gradient(165deg, #FFB690 0%, #F274A8 50%, #7550D6 100%); --hero-fg: #2A1050; }
+.hero[data-tod="night"] { background: linear-gradient(165deg, #3B2F9E 0%, #6C4CC6 55%, #B86AC0 100%); --hero-fg: #FFF3FF; }
+/* sombre */ :root[data-scheme="dark"] .hero[data-tod="morning"] { background: linear-gradient(160deg, #6A3A9A 0%, #B04A8C 60%, #D9805F 100%); --hero-fg: #FFF3FF; } :root[data-scheme="dark"] .hero[data-tod="day"] { --hero-fg: #FFF3FF; } :root[data-scheme="dark"] .hero[data-tod="evening"] { background: linear-gradient(165deg, #B8456A 0%, #7A2E9A 55%, #3A2A94 100%); --hero-fg: #FFF3FF; }
+.sky { position: absolute; inset: 0; z-index: -1; overflow: hidden; pointer-events: none; }
+.sky .orb { position: absolute; top: 172px; right: 64px; width: 54px; height: 54px; border-radius: 50%; background: radial-gradient(circle at 35% 35%, #FFF6C9, #FFD25E 70%); box-shadow: 0 0 0 10px rgba(255, 224, 120, 0.25), 0 0 40px 14px rgba(255, 214, 110, 0.45); animation: orbpulse 6s ease-in-out infinite; }
+.hero[data-tod="evening"] .orb { top: 214px; background: radial-gradient(circle at 35% 35%, #FFE1B5, #FF9A5C 75%); box-shadow: 0 0 0 12px rgba(255, 150, 90, 0.28), 0 0 46px 16px rgba(255, 130, 90, 0.5); }
+.hero[data-tod="night"] .orb { background: radial-gradient(circle at 35% 35%, #FFFFFF, #E8E4FF 70%); box-shadow: 0 0 0 9px rgba(220, 215, 255, 0.18), 0 0 34px 10px rgba(200, 195, 255, 0.45); }
+@keyframes orbpulse { 0%, 100% { transform: scale(1); } 50% { transform: scale(1.06); } }
+.sky .cloud { position: absolute; height: 26px; width: 92px; border-radius: 999px; background: rgba(255, 255, 255, 0.75); filter: blur(0.3px); animation: cdrift 46s linear infinite alternate; }
+.sky .cloud::before, .sky .cloud::after { content: ''; position: absolute; background: inherit; border-radius: 50%; }
+.sky .cloud::before { width: 38px; height: 38px; left: 14px; top: -18px; }
+.sky .cloud::after { width: 28px; height: 28px; left: 46px; top: -12px; }
+.sky .c1 { top: 96px; left: -20px; }
+.sky .c2 { top: 190px; right: -30px; transform: scale(0.8); animation-duration: 62s; animation-direction: alternate-reverse; opacity: 0.7; }
+.sky .c3 { top: 38px; left: 38%; transform: scale(0.6); animation-duration: 80s; opacity: 0.6; }
+@keyframes cdrift { to { translate: 120px 0; } }
+.hero[data-tod="night"] .cloud, .hero[data-tod="evening"] .cloud { background: rgba(255, 255, 255, 0.22); }
+/* sombre */ :root[data-scheme="dark"] .sky .cloud { background: rgba(255, 255, 255, 0.2); }
+.sky .star { display: none; position: absolute; width: 5px; height: 5px; border-radius: 50%; background: #fff; box-shadow: 0 0 8px 2px rgba(255, 255, 255, 0.8); animation: twinkle 2.6s ease-in-out infinite; }
+.hero[data-tod="night"] .star { display: block; }
+.sky .t1 { top: 20px; left: 12%; } .sky .t2 { top: 52px; left: 34%; animation-delay: .6s; } .sky .t3 { top: 30px; left: 58%; animation-delay: 1.2s; }
+.sky .t4 { top: 120px; left: 8%; animation-delay: 1.8s; } .sky .t5 { top: 150px; right: 10%; animation-delay: .3s; } .sky .t6 { top: 84px; right: 28%; animation-delay: 1.5s; } .sky .t7 { top: 230px; left: 20%; animation-delay: 2.1s; }
+@keyframes twinkle { 0%, 100% { opacity: 0.25; transform: scale(0.7); } 50% { opacity: 1; transform: scale(1.3); } }
+.sky .petal { position: absolute; top: 100%; font-size: 16px; opacity: 0; animation: petal 14s linear infinite; }
+.sky .p1 { left: 14%; } .sky .p2 { left: 48%; animation-delay: 4s; font-size: 14px; } .sky .p3 { left: 74%; animation-delay: 8s; } .sky .p4 { left: 88%; animation-delay: 11s; font-size: 13px; }
+@keyframes petal { 0% { transform: translate(0, 0) rotate(0); opacity: 0; } 10% { opacity: 0.85; } 100% { transform: translate(34px, -360px) rotate(160deg); opacity: 0; } }
+
+.mika-world { margin-top: 6px; position: relative; }
+.mika-stage { position: relative; height: 136px; }
+.mika-actor { position: fixed; left: 0; top: 0; width: 104px; will-change: transform; z-index: 6; transform-origin: 50% 100%; touch-action: none; -webkit-user-select: none; user-select: none; }
+.mika-actor .mika-av.big { margin: 0; display: block; }
+.mika-tag { display: block; text-align: center; margin-top: -6px; font-family: var(--font-display); font-weight: 600; font-size: 14px; letter-spacing: 0.02em; opacity: 0.9; }
+.mika-shadow { position: fixed; left: 0; top: 0; z-index: 5; width: 74px; height: 12px; margin-left: 15px; pointer-events: none; border-radius: 50%; background: rgba(60, 20, 120, 0.22); filter: blur(3px); will-change: transform, opacity; }
+.mika-world .vbtn { position: absolute; right: 0; top: 0; z-index: 3; margin: 0; }
+.mika-world .mika-bubble { position: relative; display: block; width: fit-content; max-width: 100%; margin: 4px 0 0; border-radius: 22px; }
+.mika-world .mika-bubble::before { content: ''; position: absolute; top: -8px; left: clamp(20px, var(--mx, 52px), calc(100% - 34px)); width: 18px; height: 18px; background: inherit; border-radius: 4px; transform: translateX(-50%) rotate(45deg); box-shadow: -2px -2px 0 rgba(124, 92, 255, 0.10); }
+.mika-world .mika-bubble.thinking::before { display: block; }
+.mika-world .mika-bubble.away::before { display: none; }
+.mika-ia { margin: 6px 4px 0; font-size: 11.5px; font-weight: 800; opacity: 0.62; }
+.mika-world .mika-qr { margin-top: 10px; }
+.mika-world .mika-fx { left: 0; top: 0; }
+.mika-world .mika-tag { text-shadow: 0 1px 0 rgba(255, 255, 255, 0.35); }
+@media (prefers-reduced-motion: reduce) { .sky .orb, .sky .cloud, .sky .star, .sky .petal { animation: none !important; } .sky .petal { display: none; } }
+
+/* v12 : plus clair, plus simple */
+.live { white-space: nowrap; font-size: 13px; }
+@media (max-width: 440px) { .brand .tag { display: none; } }
+.barr { display: flex; align-items: center; gap: 8px; }
+.gear { border: 0; width: 38px; height: 38px; border-radius: 50%; background: var(--surface); color: var(--fg); display: grid; place-items: center; cursor: pointer; box-shadow: 0 2px 0 rgba(124, 92, 255, 0.14); }
+.gear svg { width: 20px; height: 20px; fill: none; stroke: currentColor; stroke-width: 2; stroke-linecap: round; }
+.tips { display: flex; flex-wrap: wrap; gap: 8px; margin: 12px 0 0; }
+.tips > span { display: contents; }
+.tips [hidden] { display: none !important; }
+.tip { border: 2px solid var(--line); background: var(--surface); color: var(--fg); border-radius: 999px; padding: 6px 13px; font: inherit; font-size: 13.5px; font-weight: 800; cursor: pointer; min-height: 34px; }
+.tip:active { transform: scale(0.96); }
+.seg { display: inline-flex; background: var(--bg); border: 1px solid var(--line); border-radius: 999px; padding: 3px; gap: 2px; }
+.seg button { border: 0; background: none; color: inherit; font: inherit; font-size: 13.5px; font-weight: 800; padding: 5px 12px; border-radius: 999px; cursor: pointer; }
+.seg button[aria-pressed="true"] { background: var(--mint, #5DE3B4); color: #05382A; }
+.place-results { display: flex; flex-direction: column; gap: 8px; margin: 10px 0; }
+.place-results button { text-align: left; border: 2px solid var(--line); background: var(--surface); color: inherit; border-radius: 16px; padding: 11px 14px; font: inherit; font-weight: 800; cursor: pointer; }
+.countryrow { display: flex; align-items: center; justify-content: space-between; gap: 10px; margin: 10px 0 2px; font-weight: 800; font-size: 14.5px; }
+.countryrow select { font: inherit; font-weight: 700; padding: 7px 10px; border-radius: 12px; border: 1px solid var(--line); background: var(--bg); color: inherit; max-width: 60%; }
+.perch { position: relative; height: 54px; flex: none; overflow: hidden; background: linear-gradient(180deg, rgba(93, 227, 180, 0.16), rgba(93, 227, 180, 0.04)); border-bottom: 1px solid var(--line); }
+.perch-ground { position: absolute; left: 0; right: 0; bottom: 0; height: 9px; background: repeating-linear-gradient(90deg, rgba(93, 227, 180, 0.35) 0 14px, rgba(93, 227, 180, 0.2) 14px 28px); border-radius: 9px 9px 0 0; }
+.perch-mika { position: absolute; left: 0; bottom: 6px; width: 46px; height: 46px; border: 0; padding: 0; background: none; cursor: pointer; will-change: transform; -webkit-tap-highlight-color: transparent; }
+.perch-mika svg { width: 100%; height: 100%; display: block; overflow: visible; }
+.perch-thought { position: absolute; font-size: 17px; pointer-events: none; animation: thoughtpop 3.6s ease-in-out both; }
+@keyframes thoughtpop { 0% { opacity: 0; transform: translateY(6px) scale(0.5); } 12%, 80% { opacity: 1; transform: translateY(0) scale(1); } 100% { opacity: 0; transform: translateY(-6px) scale(0.8); } }
+.mika-actor .thought { position: absolute; right: -6px; top: -10px; font-size: 26px; pointer-events: none; animation: thoughtpop 4.2s ease-in-out both; filter: drop-shadow(0 2px 3px rgba(60, 30, 140, 0.25)); }
+.invite-box { display: flex; gap: 8px; flex-wrap: wrap; margin-top: 10px; }
+.invite-box button { border: 0; border-radius: 999px; background: var(--sun, #FFCF3F); color: #2A1B5E; font: inherit; font-weight: 900; font-size: 14px; padding: 8px 16px; cursor: pointer; box-shadow: 0 3px 0 rgba(160, 110, 0, 0.35); }
+.mika-av.big { filter: drop-shadow(0 8px 10px rgba(60, 30, 140, 0.18)); }
+.mk .acc { display: none; }
+.mk.has-scarf .acc-scarf, .mk.has-bow .acc-bow, .mk.has-crown .acc-crown { display: inline; }
+
+/* ===== v13 : Mika compagnon, onglets, Moi ===== */
+.page { padding-bottom: calc(86px + env(safe-area-inset-bottom, 0px)); }
+.tabpane[hidden] { display: none !important; }
+.tabbar { position: fixed; left: 0; right: 0; bottom: 0; z-index: 7; display: flex; justify-content: center; gap: 6px; padding: 8px 14px calc(8px + env(safe-area-inset-bottom, 0px)); background: var(--bg-glass); -webkit-backdrop-filter: saturate(1.5) blur(16px); backdrop-filter: saturate(1.5) blur(16px); border-top: 1px solid var(--line); }
+#conv:not([hidden]) ~ .tabbar, #lobby[hidden] .tabbar { display: none; }
+.tabbar button { position: relative; flex: 1; max-width: 140px; border: 0; background: none; color: var(--muted, #7a6c9b); border-radius: 18px; padding: 6px 4px 5px; font: inherit; font-size: 12.5px; font-weight: 800; display: grid; justify-items: center; gap: 0; cursor: pointer; transition: background .15s, transform .12s; }
+.tabbar button .ti { font-size: 22px; line-height: 1.25; filter: grayscale(.6) opacity(.8); transition: transform .2s cubic-bezier(.2,.9,.3,1.5), filter .2s; }
+.tabbar button[aria-current="page"] { color: var(--violet, #7C5CFF); background: rgba(124, 92, 255, 0.12); }
+.tabbar button[aria-current="page"] .ti { filter: none; transform: translateY(-2px) scale(1.12); }
+.tabbar button:active { transform: scale(.94); }
+body.tab-chambre #mika-fab, body.tab-moi #mika-fab { display: none; }
+#mika-fab { bottom: calc(78px + env(safe-area-inset-bottom, 0px)); }
+
+.hero.room { padding-top: 14px; }
+.room-head { display: flex; justify-content: space-between; align-items: center; gap: 8px; margin-bottom: 4px; position: relative; z-index: 2; }
+.rh-t { font-family: var(--font-display); font-weight: 600; font-size: 20px; letter-spacing: -.01em; }
+.rh-b { display: inline-flex; align-items: center; gap: 6px; background: rgba(255,255,255,.7); border-radius: 999px; padding: 4px 10px; font-size: 12.5px; font-weight: 800; color: var(--ink); white-space: nowrap; }
+.bond-bar { width: 44px; height: 7px; border-radius: 6px; background: rgba(42,27,94,.14); overflow: hidden; display: block; }
+.bond-bar i { display: block; height: 100%; width: 0; border-radius: 6px; background: linear-gradient(90deg, #5DE3B4, #FF8FC0); transition: width .6s ease; }
+.cmp { position: relative; z-index: 2; margin-top: 10px; display: flex; flex-direction: column; gap: 8px; }
+.cmp .mika-qr { margin: 0 -18px; }
+.mood-row { display: flex; align-items: center; gap: 4px; background: rgba(255,255,255,.72); border-radius: 18px; padding: 6px 10px; animation: mpop .4s both; }
+.mood-row .mr-q { flex: 1; white-space: nowrap; font-size: 14px; font-weight: 800; color: var(--ink); }
+.mood-row button { border: 0; background: none; font-size: 26px; padding: 2px 4px; cursor: pointer; border-radius: 12px; transition: transform .15s cubic-bezier(.2,.9,.3,1.6); }
+.mood-row button:hover, .mood-row button:focus-visible { transform: scale(1.25) rotate(-6deg); }
+.thread { display: flex; flex-direction: column; gap: 6px; max-height: 240px; overflow-y: auto; padding: 2px 2px 2px; scrollbar-width: none; mask-image: linear-gradient(180deg, transparent 0, #000 14px); -webkit-mask-image: linear-gradient(180deg, transparent 0, #000 14px); }
+.thread:empty { display: none; }
+.thread::-webkit-scrollbar { display: none; }
+.tmsg { max-width: 86%; padding: 8px 12px; border-radius: 18px; font-size: 15.5px; font-weight: 700; line-height: 1.35; overflow-wrap: anywhere; animation: mpop .3s cubic-bezier(.2,.9,.3,1.3) both; }
+.tmsg.m { align-self: flex-start; background: #fff; color: var(--ink); border-bottom-left-radius: 5px; box-shadow: 0 2px 0 rgba(124,92,255,.14); }
+.tmsg.u { align-self: flex-end; background: var(--violet, #7C5CFF); color: #fff; border-bottom-right-radius: 5px; }
+.cmp-form { display: flex; gap: 8px; }
+.cmp-form input { flex: 1; min-width: 0; background: rgba(255,255,255,.9); color: var(--ink); border: 2px solid transparent; border-radius: 999px; padding: 12px 16px; font-size: 16px; font-weight: 700; box-shadow: 0 3px 0 rgba(124,92,255,.14); }
+.cmp-form input:focus { outline: none; border-color: var(--violet, #7C5CFF); }
+.cmp-form .primary { width: 48px; padding: 0; display: grid; place-items: center; border-radius: 50%; flex: none; }
+.cmp-note { font-size: 12px; font-weight: 700; opacity: .7; line-height: 1.35; }
+.linkish { border: 0; background: none; padding: 0; font: inherit; color: inherit; text-decoration: underline; cursor: pointer; }
+.salon-head { margin: 4px 2px 6px; }
+.salon-head h2 { font-family: var(--font-display); font-weight: 600; font-size: 30px; line-height: 1.05; }
+.salon-head .sub { margin-top: 2px; opacity: .8; font-weight: 700; }
+.salon-head .compose { margin-top: 12px; background: linear-gradient(145deg, #D9CCFF, #FFD0EA 70%, #FFE2C9); border-radius: 28px; padding: 14px; color: var(--ink); }
+
+.me-card { display: flex; align-items: center; gap: 12px; background: var(--surface); border-radius: 26px; padding: 14px; box-shadow: var(--shadow); margin-top: 4px; flex-wrap: wrap; }
+.me-av { width: 74px; height: 74px; flex: none; border-radius: 50%; background: linear-gradient(145deg, #D9CCFF, #FFD0EA); display: grid; place-items: center; overflow: hidden; }
+.me-av svg, .av svg { width: 100%; height: 100%; display: block; }
+.me-id { flex: 1; min-width: 120px; }
+.me-id input { width: 100%; border: 0; background: none; font-family: var(--font-display); font-size: 24px; font-weight: 600; color: var(--fg); padding: 0; }
+.me-id input:focus { outline: 2px solid var(--violet); border-radius: 8px; }
+.me-id p { font-size: 13px; opacity: .7; font-weight: 700; }
+.me-sec { margin-top: 14px; background: var(--surface); border-radius: 24px; padding: 14px 16px; box-shadow: var(--shadow); }
+.me-sec h3 { font-size: 16px; font-weight: 800; margin-bottom: 8px; }
+.me-sec .sec-head { display: flex; justify-content: space-between; align-items: center; }
+.soon { font-size: 11px; font-weight: 800; background: #FFE9A8; color: #6a4a00; border-radius: 999px; padding: 2px 8px; }
+.me-hint { font-size: 13px; opacity: .7; font-weight: 700; margin-top: 8px; }
+.mood-chart { display: flex; align-items: flex-end; gap: 8px; height: 82px; }
+.mood-chart .mc { flex: 1; display: grid; justify-items: center; align-content: end; gap: 3px; font-size: 11px; font-weight: 800; opacity: .9; }
+.mood-chart .mc i { width: 100%; max-width: 28px; border-radius: 10px 10px 4px 4px; background: linear-gradient(180deg, #FF8FC0, #7C5CFF); min-height: 6px; }
+.mood-chart .mc.none i { background: var(--line); opacity: .6; }
+.facts { list-style: none; display: grid; gap: 6px; }
+.facts li { display: flex; align-items: center; gap: 8px; background: var(--bg); border-radius: 14px; padding: 8px 12px; font-size: 14.5px; font-weight: 700; }
+.facts li span { flex: 1; }
+.facts li button { border: 0; background: none; font-size: 15px; cursor: pointer; opacity: .6; }
+.facts .none { opacity: .6; background: none; padding: 0; }
+.ghost.danger { color: #C23B6B; margin-top: 8px; }
+.wardrobe { display: grid; grid-template-columns: repeat(4, 1fr); gap: 8px; }
+.ward { position: relative; border: 2px solid var(--line); background: var(--bg); border-radius: 18px; padding: 6px 2px 4px; display: grid; justify-items: center; gap: 0; font: inherit; font-size: 11.5px; font-weight: 800; cursor: pointer; color: inherit; }
+.ward svg { width: 52px; height: 52px; }
+.ward.on { border-color: var(--violet); background: rgba(124,92,255,.1); }
+.ward .lk { position: absolute; top: 3px; right: 5px; font-size: 12px; }
+.ward .px { font-size: 10.5px; opacity: .65; }
+.ward.locked svg { filter: saturate(.7); opacity: .85; }
+
+.av { display: inline-block; border-radius: 50%; overflow: hidden; flex: none; background: linear-gradient(145deg, #D9CCFF, #FFD0EA); }
+.avatar.av-slot { background: none; padding: 0; }
+.avcreator { display: grid; gap: 10px; }
+.avprev { width: 120px; height: 120px; margin: 0 auto; border-radius: 50%; background: linear-gradient(145deg, #D9CCFF, #FFD0EA); overflow: hidden; }
+.avprev svg { width: 100%; height: 100%; }
+.avrow { display: flex; align-items: center; gap: 8px; flex-wrap: wrap; }
+.avrow .lbl { width: 62px; font-size: 13px; font-weight: 800; opacity: .75; }
+.avrow button { border: 2px solid var(--line); background: var(--bg); color: inherit; border-radius: 999px; min-width: 38px; height: 38px; padding: 0 12px; font: inherit; font-size: 14px; font-weight: 800; cursor: pointer; }
+.avrow button.on { border-color: var(--violet); background: rgba(124,92,255,.14); }
+.avrow button.sw { width: 34px; min-width: 34px; height: 34px; padding: 0; border-width: 3px; }
+.avrow button.sw.on { border-color: var(--ink, #2A1B5E); }
+
+.perch { height: 150px; }
+.perch .sa-b.mk-b { bottom: 96px; background: #C9FBE8; max-width: 62%; }
+.perch .sa { position: absolute; bottom: 8px; width: 46px; height: 46px; transition: left .6s cubic-bezier(.3,.9,.3,1.1); will-change: transform; }
+.perch .sa .av { width: 100%; height: 100%; background: none; overflow: visible; }
+.perch .sa svg { overflow: visible; }
+.perch .sa.hop { animation: sahop .55s cubic-bezier(.2,.9,.3,1.3); }
+.perch .sa.idle { animation: saidle 3.4s ease-in-out infinite; }
+@keyframes sahop { 0% { transform: translateY(0) scale(1); } 35% { transform: translateY(-16px) scale(1.06, .96); } 70% { transform: translateY(0) scale(.96, 1.05); } 100% { transform: translateY(0); } }
+@keyframes saidle { 0%, 100% { transform: translateY(0); } 50% { transform: translateY(-3px); } }
+.perch .sa-b { position: absolute; bottom: 58px; max-width: 48%; background: #fff; color: #2A1B5E; font-size: 13px; font-weight: 800; line-height: 1.25; padding: 6px 10px; border-radius: 14px 14px 14px 4px; box-shadow: 0 2px 0 rgba(124,92,255,.18); overflow: hidden; display: -webkit-box; -webkit-line-clamp: 2; -webkit-box-orient: vertical; animation: mpop .3s cubic-bezier(.2,.9,.3,1.3) both; pointer-events: none; }
+.perch .sa-b.r { border-radius: 14px 14px 4px 14px; }
+.perch .sa-n { position: absolute; bottom: -1px; left: 50%; transform: translateX(-50%); font-size: 9.5px; font-weight: 800; color: #2A1B5E; background: rgba(255,255,255,.75); border-radius: 8px; padding: 0 5px; white-space: nowrap; max-width: 70px; overflow: hidden; text-overflow: ellipsis; }
+.perch-mika { bottom: 10px; width: 40px; height: 40px; animation: none; }
+
+/* Nouvelle Mika : émotions */
+.mk .bw, .mk .mf, .mk .tr, .mk .sp, .mk .sw2 { display: none; }
+.mika-av.st-sad .mk .eo, .mika-av.st-worry .mk .eo { transform: scaleY(1.08); }
+.mika-av.st-sad .mk .bw, .mika-av.st-worry .mk .bw { display: inline; }
+.mika-av.st-sad .mk .ms, .mika-av.st-worry .mk .ms { display: none; }
+.mika-av.st-sad .mk .mf { display: inline; }
+.mika-av.st-sad .mk .tr { display: inline; animation: tear 2.2s ease-in infinite; }
+.mika-av.st-worry .mk .mo { display: inline; transform-box: fill-box; transform-origin: center; transform: scale(.55); }
+.mika-av.st-worry .mk .sw2 { display: inline; animation: sweat 2.6s ease-in-out infinite; }
+.mika-av.st-sad .mk .body, .mika-av.st-worry .mk .body { animation-duration: 6s; }
+.mika-av.st-proud .mk .eo { display: none; }
+.mika-av.st-proud .mk .eh { display: inline; }
+.mika-av.st-proud .mk .ms { display: none; }
+.mika-av.st-proud .mk .mw { display: inline; }
+.mika-av.st-proud .mk .sp { display: inline; animation: twinkle 1.2s ease-in-out infinite; }
+.mika-av.st-shy .mk .eo { display: none; }
+.mika-av.st-shy .mk .ec { display: inline; }
+.mika-av.st-shy .mk .ck { transform-box: fill-box; transform-origin: center; transform: scale(1.3); opacity: 1; }
+@keyframes tear { 0% { transform: translateY(0); opacity: 0; } 20% { opacity: 1; } 100% { transform: translateY(10px); opacity: 0; } }
+@keyframes sweat { 0%, 100% { transform: translateY(0); opacity: .9; } 50% { transform: translateY(3px); opacity: .6; } }
+@keyframes twinkle { 0%, 100% { opacity: .3; transform: scale(.8); } 50% { opacity: 1; transform: scale(1.1); } }
+.mk .sp, .mk .tr, .mk .sw2 { transform-box: fill-box; transform-origin: center; }
+.mk .pom { transform-box: fill-box; transform-origin: 50% 100%; }
+.mika-av .mk .pom { animation: sway 3.2s ease-in-out infinite; }
+
+/* ===== v14 : chambre 3D ===== */
+body.has3d .mika-stage { height: min(78vw, 400px); min-height: 300px; border-radius: 26px; overflow: hidden; margin: 6px 0 0; box-shadow: 0 6px 0 rgba(124,92,255,.16), 0 18px 34px -14px rgba(90,60,170,.5); background: #f3e6ff; }
+body.has3d .mika-stage .scene3d { position: absolute; inset: 0; width: 100%; height: 100%; display: block; }
+body.has3d .mika-stage .vbtn { z-index: 3; }
+body.has3d #mika-actor, body.has3d #mika-shadow { display: none !important; }
+body.has3d .mika-bubble { margin-top: -22px; position: relative; z-index: 3; margin-left: 8px; max-width: calc(100% - 16px); }
+body.has3d .hero.room .sky { opacity: .55; }
+
+/* ===== v15 : avatars 3D, quêtes, pétales ===== */
+.rh-p { display: inline-flex; align-items: center; gap: 4px; background: rgba(255,255,255,.7); border-radius: 999px; padding: 4px 10px; font-size: 13px; font-weight: 800; color: var(--ink); margin-left: auto; margin-right: 6px; white-space: nowrap; }
+.room-head .rh-t { white-space: nowrap; font-size: 18px; flex: 1; min-width: 0; overflow: hidden; text-overflow: ellipsis; }
+.room-head .rh-p { margin-left: 0; margin-right: 0; }
+.room-head { gap: 6px; }
+.rh-b .bond-bar { width: 30px; }
+.quests { background: rgba(255,255,255,.8); border-radius: 20px; padding: 10px 12px; display: grid; gap: 6px; color: var(--ink); animation: mpop .4s both; }
+.quests .qh { display: flex; justify-content: space-between; align-items: center; font-size: 13px; font-weight: 800; }
+.quests .qh b { background: #FFE9A8; color: #6a4a00; border-radius: 999px; padding: 1px 9px; }
+.quests .qb { height: 6px; border-radius: 6px; background: rgba(42,27,94,.12); overflow: hidden; }
+.quests .qb i { display: block; height: 100%; background: linear-gradient(90deg, #5DE3B4, #FF8FC0); border-radius: 6px; transition: width .5s ease; }
+.quests .q { display: flex; align-items: center; gap: 10px; border: 0; background: rgba(124,92,255,.07); border-radius: 14px; padding: 8px 10px; font: inherit; font-size: 14.5px; font-weight: 800; color: inherit; text-align: left; cursor: pointer; transition: transform .12s, background .2s; }
+.quests .q:active { transform: scale(.97); }
+.quests .q .ck { width: 24px; height: 24px; border-radius: 50%; border: 3px solid #B9A6FF; display: grid; place-items: center; font-size: 14px; color: #fff; flex: none; background: #fff; }
+.quests .q .tx { flex: 1; }
+.quests .q .rw { font-size: 12px; opacity: .75; white-space: nowrap; }
+.quests .q.done { background: rgba(93,227,180,.22); }
+.quests .q.done .ck { background: #3FC79A; border-color: #3FC79A; }
+.quests .q.done .tx { text-decoration: line-through; opacity: .65; }
+.quests .q.auto .rw::after { content: ' · auto'; }
+.petal-bal { font-size: 13px; font-weight: 800; background: #FFE9A8; color: #6a4a00; border-radius: 999px; padding: 2px 10px; }
+.avprev.is3d { width: 100%; max-width: 280px; height: 230px; border-radius: 28px; background: linear-gradient(160deg, #E7DDFF, #FFD9EC 70%, #FFE9D2); }
+.avprev.is3d .scene3d { position: absolute; inset: 0; width: 100%; height: 100%; display: block; }
+.avprev { position: relative; }
+.avatar.av-slot img, .me-av img, .ward img { width: 100%; height: 100%; object-fit: contain; display: block; }
+.me-av { overflow: visible; background: radial-gradient(circle at 50% 60%, #fff 0, #E7DDFF 70%); }
+.me-av img { transform: scale(1.18); }
+.ward img { width: 62px; height: 62px; }
+.wardrobe.decor { grid-template-columns: repeat(3, 1fr); }
+.ward .em { font-size: 34px; line-height: 62px; }
+.perch.is3d { height: 196px; background: linear-gradient(180deg, #F0E4FF 0%, #FFE6F3 100%); }
+.perch.is3d .perch-ground, .perch.is3d .perch-mika, .perch.is3d .perch-thought, .perch.is3d .sa, .perch.is3d .sa-b { display: none; }
+.perch .scene3d { position: absolute; inset: 0; width: 100%; height: 100%; display: block; }
+.st3-ov { position: absolute; inset: 0; pointer-events: none; overflow: hidden; }
+.st3-b { width: max-content; position: absolute; transform: translate(-50%, -100%); max-width: 46%; background: #fff; color: #2A1B5E; font-size: 13.5px; font-weight: 800; line-height: 1.25; padding: 6px 10px; border-radius: 14px; box-shadow: 0 2px 0 rgba(124,92,255,.2); display: -webkit-box; -webkit-line-clamp: 3; -webkit-box-orient: vertical; overflow: hidden; animation: st3pop .3s cubic-bezier(.2,.9,.3,1.3) both; }
+@keyframes st3pop { from { transform: translate(-50%, -100%) scale(.6); opacity: 0; } to { transform: translate(-50%, -100%) scale(1); opacity: 1; } }
+.st3-b.mk { background: #C9FBE8; }
+.st3-n { position: absolute; transform: translate(-50%, 0); font-size: 10.5px; font-weight: 800; color: #2A1B5E; background: rgba(255,255,255,.82); border-radius: 8px; padding: 0 7px; white-space: nowrap; max-width: 90px; overflow: hidden; text-overflow: ellipsis; }
+.st3-n.mk { background: #C9FBE8; }
+
+/* ===== v16 : besoins, soins, boutique ===== */
+.needs { display: flex; gap: 8px; position: relative; z-index: 2; margin: 2px 0 2px; }
+.nd { flex: 1; display: flex; align-items: center; gap: 6px; background: rgba(255,255,255,.72); border-radius: 999px; padding: 5px 10px; font-size: 15px; color: var(--ink); min-width: 0; }
+.nd i { flex: 1; height: 8px; border-radius: 8px; background: rgba(42,27,94,.12); overflow: hidden; display: block; }
+.nd i b { display: block; height: 100%; border-radius: 8px; background: linear-gradient(90deg, #5DE3B4, #9CF5D4); transition: width .6s ease, background .3s; }
+.nd.low i b { background: linear-gradient(90deg, #FF8FA3, #FFB89A); }
+.nd.low { animation: nlow 1.6s ease-in-out infinite; }
+@keyframes nlow { 0%, 100% { transform: scale(1); } 50% { transform: scale(1.04); } }
+.care { display: grid; grid-template-columns: repeat(4, 1fr); gap: 8px; }
+.care button { border: 0; background: rgba(255,255,255,.85); color: var(--ink); border-radius: 20px; padding: 8px 2px 7px; font: inherit; font-size: 12.5px; font-weight: 800; display: grid; justify-items: center; cursor: pointer; box-shadow: 0 3px 0 rgba(124,92,255,.18); transition: transform .12s; }
+.care button span { font-size: 24px; line-height: 1.2; }
+.care button:active { transform: translateY(2px) scale(.97); box-shadow: 0 1px 0 rgba(124,92,255,.18); }
+.care button:disabled { opacity: .5; }
+.foods { display: grid; gap: 8px; margin: 8px 0; }
+.food { display: flex; align-items: center; gap: 12px; border: 2px solid var(--line); background: var(--bg); color: inherit; border-radius: 18px; padding: 10px 14px; font: inherit; font-weight: 800; cursor: pointer; text-align: left; }
+.food .fe { font-size: 30px; }
+.food .ft { flex: 1; } .food .ft small { display: block; font-size: 12px; opacity: .65; font-weight: 700; }
+.food .fp { font-size: 13px; background: #FFE9A8; color: #6a4a00; border-radius: 999px; padding: 2px 10px; }
+.shop-hero { position: relative; margin-top: 4px; background: linear-gradient(160deg, #E7DDFF, #FFD9EC 70%, #FFE9D2); border-radius: 28px; padding: 10px 12px 12px; box-shadow: var(--shadow); }
+.shop-prev { position: relative; height: 230px; border-radius: 22px; overflow: hidden; }
+.shop-prev .scene3d { position: absolute; inset: 0; width: 100%; height: 100%; display: block; }
+.shop-top { position: absolute; top: 14px; left: 18px; right: 18px; display: flex; justify-content: space-between; align-items: center; pointer-events: none; }
+.shop-top h2 { font-family: var(--font-display); font-size: 26px; font-weight: 600; color: var(--ink); }
+.shop-act { margin-top: 10px; display: flex; gap: 8px; align-items: center; color: var(--ink); }
+.shop-act .sn { flex: 1; font-weight: 800; font-size: 15px; min-width: 0; }
+.shop-act .sn small { display: block; font-size: 12.5px; opacity: .7; font-weight: 700; }
+.shop-seg { margin: 12px 0 10px; display: flex; gap: 6px; }
+.shop-seg button { flex: 1; border: 2px solid var(--line); background: var(--surface); color: inherit; border-radius: 999px; padding: 8px 4px; font: inherit; font-size: 13.5px; font-weight: 800; cursor: pointer; }
+.shop-seg button.on { border-color: var(--violet); background: rgba(124,92,255,.14); }
+.ward.sel { outline: 3px solid var(--violet); }
+
+/* v17 · Classe du Professeur Bobby */
+.bob-top { display: flex; align-items: center; justify-content: space-between; gap: 8px; margin: 4px 2px 8px; flex-wrap: wrap; }
+.bob-top h2 { margin: 0; font-size: 22px; }
+.bob-sel { display: flex; gap: 6px; }
+.bob-sel select { font: inherit; font-size: 13px; font-weight: 800; border: 1px solid var(--line); background: var(--bg); color: inherit; border-radius: 999px; padding: 5px 10px; }
+.bob-stage { position: relative; height: 300px; border-radius: 28px; overflow: hidden; background: linear-gradient(170deg, #FFE3F1, #E7DDFF 60%, #D9F6EA); box-shadow: var(--shadow); }
+.bob-stage .scene3d { position: absolute; inset: 0; width: 100%; height: 100%; display: block; }
+.bob-stage .st3-b { max-width: 64%; -webkit-line-clamp: 4; }
+.bob-stage .st3-b.pr { background: #FFE9C9; }
+.bob-stage .st3-b.me { background: #E7DDFF; }
+.st3-n.pr { background: #FFE9C9; }
+.bob-2d { position: absolute; inset: 0; display: grid; place-items: center; font-size: 64px; }
+.bob-scenes { display: flex; gap: 6px; overflow-x: auto; padding: 8px 2px 2px; scrollbar-width: none; }
+.bob-scenes button { flex: none; border: 1px solid var(--line); background: var(--bg); color: inherit; font: inherit; font-size: 13px; font-weight: 800; padding: 6px 12px; border-radius: 999px; cursor: pointer; }
+.bob-scenes button.on { background: var(--violet, #7C5CFF); color: #fff; border-color: transparent; }
+.bob-scenes button.lock { opacity: .55; }
+.bob-prog { display: flex; align-items: center; gap: 10px; font-size: 12.5px; font-weight: 800; color: var(--muted, #7a6c9b); margin: 8px 4px 2px; }
+.bob-prog .bar { flex: 1; height: 8px; border-radius: 8px; background: var(--line); overflow: hidden; }
+.bob-prog .bar i { display: block; height: 100%; background: linear-gradient(90deg, #FFB3D1, #7C5CFF); border-radius: 8px; transition: width .4s; }
+.bob-log { display: grid; gap: 8px; margin: 10px 0 6px; }
+.bob-log .bm { max-width: 88%; padding: 9px 12px; border-radius: 18px; font-size: 15px; line-height: 1.35; font-weight: 600; }
+.bob-log .bm.b { background: #FFE9C9; color: #2A1B5E; border-bottom-left-radius: 6px; justify-self: start; }
+.bob-log .bm.u { background: #E7DDFF; color: #2A1B5E; border-bottom-right-radius: 6px; justify-self: end; }
+.bob-log .bm small { display: block; margin-top: 4px; font-size: 12.5px; font-weight: 700; opacity: .7; }
+.bob-log .bm .tools { display: flex; gap: 6px; margin-top: 5px; }
+.bob-log .bm .tools button { border: 0; background: rgba(255,255,255,.7); border-radius: 999px; font-size: 12px; font-weight: 800; padding: 2px 9px; cursor: pointer; color: inherit; }
+.bob-log .mc { justify-self: start; max-width: 94%; background: #C9FBE8; color: #0b3f31; border-radius: 18px; padding: 9px 12px; font-size: 14px; line-height: 1.4; }
+.bob-log .mc b.who { font-size: 12px; opacity: .75; display: block; margin-bottom: 3px; }
+.bob-log .mc del { background: #FFD1DC; text-decoration-color: #d6336c; border-radius: 4px; padding: 0 3px; }
+.bob-log .mc ins { background: #B8F2D2; text-decoration: none; font-weight: 800; border-radius: 4px; padding: 0 3px; }
+.bob-log .mc .why { margin-top: 5px; font-weight: 600; }
+.bob-log .mc .ktag { display: inline-block; font-size: 11px; font-weight: 800; background: #fff; border-radius: 999px; padding: 1px 8px; margin-top: 5px; }
+.bob-log .mc.ok { background: #E4FFF3; }
+.bob-chips { display: flex; gap: 6px; flex-wrap: wrap; margin: 4px 0 8px; }
+.bob-chips button { border: 1px solid var(--line); background: var(--bg); color: inherit; font: inherit; font-size: 13.5px; font-weight: 700; padding: 6px 12px; border-radius: 999px; cursor: pointer; }
+.bob-form { display: flex; gap: 8px; align-items: center; margin-bottom: 10px; }
+.bob-form input { flex: 1; min-width: 0; font: inherit; font-size: 16px; padding: 12px 14px; border-radius: 999px; border: 1px solid var(--line); background: var(--bg); color: inherit; }
+.bob-form button { flex: none; width: 46px; height: 46px; border-radius: 50%; border: 0; display: grid; place-items: center; cursor: pointer; font-size: 20px; }
+.bob-form #bob-mic { background: #FFE3F1; }
+.bob-form #bob-mic.rec { background: #ff6f8e; animation: bobrec 1s infinite; }
+@keyframes bobrec { 50% { box-shadow: 0 0 0 8px rgba(255,111,142,.25); } }
+.bob-tools { display: flex; gap: 8px; margin-bottom: 14px; }
+.bob-note { font-size: 12px; color: var(--muted, #7a6c9b); margin: 0 4px 12px; }
+.tabbar button { font-size: 11.5px; }
+
+/* v17 · La Place */
+.plaza { margin: 4px 0 10px; }
+.plaza-stage { position: relative; height: clamp(300px, 52vh, 480px); border-radius: 28px; overflow: hidden; background: linear-gradient(180deg, #BFE9FF 0%, #E9F7FF 45%, #D9F6EA 100%); box-shadow: var(--shadow); touch-action: manipulation; }
+.plaza-stage .scene3d { position: absolute; inset: 0; width: 100%; height: 100%; display: block; }
+.plaza-bar { display: flex; align-items: center; justify-content: space-between; gap: 8px; margin: 8px 2px 0; }
+.plaza-bar .pc { font-size: 13px; font-weight: 800; color: var(--muted, #7a6c9b); }
+.plaza-bar .em { display: flex; gap: 6px; }
+.plaza-bar .em button { border: 1px solid var(--line); background: var(--bg); border-radius: 999px; width: 40px; height: 40px; font-size: 20px; cursor: pointer; }
+.plaza-bar .em button:active { transform: scale(.9); }
+.plaza-hint { font-size: 12px; color: var(--muted, #7a6c9b); margin: 4px 4px 0; }
+
+/* v18 · anti-zoom iPhone + clavier */
+html { -webkit-text-size-adjust: 100%; text-size-adjust: 100%; touch-action: manipulation; }
+body { touch-action: manipulation; -webkit-tap-highlight-color: transparent; }
+button, .tabbar, .tabbar *, [role=button] { touch-action: manipulation; -webkit-touch-callout: none; }
+canvas, .scene3d, .bob-stage, .plaza-stage, .room-stage { touch-action: none; -webkit-user-select: none; user-select: none; -webkit-touch-callout: none; }
+input, select, textarea { font-size: 16px !important; }
+#mika-stage .st3-b { max-width: 72%; -webkit-line-clamp: 5; font-size: 13px; }
+#mika-stage .st3-b.ub { left: auto; right: 10px; bottom: 10px; top: auto; transform: none; max-width: 60%; background: #E7DDFF; animation: none; }
+.care-hint { margin: 2px 6px 6px; font-size: 12px; color: rgba(255,255,255,.75); text-align: center; }
+
+/* v18 · amis, visites, bâtiments */
+.tabbar button .tbadge { position: absolute; top: 0; right: 18%; min-width: 18px; height: 18px; padding: 0 5px; border-radius: 999px; background: #ff5fa8; color: #fff; font-size: 11px; font-weight: 800; line-height: 18px; text-align: center; box-shadow: 0 0 0 2px var(--bg, #fff); }
+.tabbar button .tbadge.fr { background: #ffb300; color: #3b2a00; animation: tbpulse 1.4s infinite; }
+@keyframes tbpulse { 50% { transform: scale(1.18); } }
+.friends-bar { display: flex; gap: 6px; flex-wrap: wrap; margin: 8px 2px 0; }
+.friends-bar:empty { display: none; }
+.friends-bar button { border: 0; background: #FFF1B8; color: #3b2a00; font: inherit; font-size: 13px; font-weight: 800; padding: 6px 12px; border-radius: 999px; cursor: pointer; }
+.plaza-pop { position: absolute; left: 50%; bottom: 12px; transform: translateX(-50%); z-index: 3; display: flex; gap: 6px; align-items: center; background: rgba(255,255,255,.95); border-radius: 999px; padding: 6px 8px 6px 14px; box-shadow: 0 4px 16px rgba(60,30,120,.25); max-width: 96%; flex-wrap: wrap; justify-content: center; }
+.plaza-pop b { font-size: 13px; color: #2A1B5E; max-width: 90px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.plaza-pop button { border: 0; background: #E7DDFF; color: #2A1B5E; font: inherit; font-size: 12.5px; font-weight: 800; padding: 6px 10px; border-radius: 999px; cursor: pointer; }
+.plaza-pop button.pr { background: #7C5CFF; color: #fff; }
+.hinv { position: fixed; left: 12px; right: 12px; top: calc(10px + env(safe-area-inset-top, 0px)); z-index: 30; background: #fff; color: #2A1B5E; border-radius: 22px; padding: 12px 14px; box-shadow: 0 8px 28px rgba(60,30,120,.35); display: flex; gap: 10px; align-items: center; max-width: 520px; margin: 0 auto; }
+.hinv[hidden] { display: none; }
+.hinv span { flex: 1; font-weight: 800; font-size: 14px; }
+.hinv button { border: 0; border-radius: 999px; padding: 8px 14px; font: inherit; font-weight: 800; cursor: pointer; background: #E7DDFF; color: #2A1B5E; }
+.hinv button.go { background: #5DE3B4; color: #05382A; }
+#visit { position: fixed; inset: 0; z-index: 40; background: linear-gradient(170deg, #E7DDFF, #FFE3F1); display: flex; flex-direction: column; }
+#visit[hidden] { display: none; }
+#visit .vh { display: flex; align-items: center; justify-content: space-between; padding: calc(10px + env(safe-area-inset-top, 0px)) 14px 8px; font-weight: 800; color: #2A1B5E; }
+#visit .vh button { border: 0; background: #fff; border-radius: 999px; padding: 8px 14px; font: inherit; font-weight: 800; cursor: pointer; color: #2A1B5E; }
+#visit-stage { position: relative; flex: 1; min-height: 0; margin: 0 10px; border-radius: 26px; overflow: hidden; background: #f3e6ff; touch-action: none; }
+#visit-stage .scene3d { position: absolute; inset: 0; width: 100%; height: 100%; display: block; }
+#visit .vemo { display: flex; gap: 6px; justify-content: center; padding: 8px 10px 0; }
+#visit .vemo button { border: 0; background: #fff; border-radius: 999px; width: 42px; height: 42px; font-size: 20px; cursor: pointer; }
+#visit form { display: flex; gap: 8px; padding: 8px 10px calc(10px + env(safe-area-inset-bottom, 0px)); }
+#visit form input { flex: 1; min-width: 0; font: inherit; font-size: 16px; padding: 12px 14px; border-radius: 999px; border: 1px solid var(--line); background: #fff; color: #2A1B5E; }
+#visit form button { width: 46px; height: 46px; border-radius: 50%; border: 0; font-size: 20px; cursor: pointer; }
+.vhint { text-align: center; font-size: 12px; color: #6c5a95; padding: 4px 12px 0; }
+.tuto { position: fixed; inset: 0; z-index: 50; }
+.tuto[hidden] { display: none; }
+.tuto .veil { position: absolute; inset: 0; background: rgba(30,15,70,.62); }
+.tuto .ring { position: absolute; border-radius: 22px; box-shadow: 0 0 0 9999px rgba(30,15,70,.62), 0 0 0 4px #FFE27A; pointer-events: none; transition: all .3s; }
+.tuto .card { position: absolute; left: 14px; right: 14px; background: #fff; color: #2A1B5E; border-radius: 24px; padding: 16px; box-shadow: 0 10px 34px rgba(0,0,0,.35); max-width: 460px; margin: 0 auto; }
+.tuto .card h3 { margin: 0 0 6px; font-size: 19px; }
+.tuto .card p { margin: 0 0 12px; font-size: 14.5px; line-height: 1.4; font-weight: 600; }
+.tuto .card .row { display: flex; align-items: center; justify-content: space-between; gap: 8px; }
+.tuto .card .dots { font-size: 12px; opacity: .6; font-weight: 800; }
+.tuto .card button { border: 0; border-radius: 999px; padding: 9px 16px; font: inherit; font-weight: 800; cursor: pointer; background: #E7DDFF; color: #2A1B5E; }
+.tuto .card button.go { background: #7C5CFF; color: #fff; }
+.langsel { display: flex; gap: 6px; flex-wrap: wrap; margin: 6px 0; }
+.langsel button { border: 1px solid var(--line); background: var(--bg); color: inherit; font: inherit; font-weight: 800; font-size: 13px; padding: 7px 13px; border-radius: 999px; cursor: pointer; }
+.langsel button.on { background: var(--violet, #7C5CFF); color: #fff; border-color: transparent; }
+.voices { display: flex; gap: 6px; flex-wrap: wrap; margin: 6px 0; }
+.voices button { border: 1px solid var(--line); background: var(--bg); color: inherit; font: inherit; font-size: 13px; font-weight: 800; padding: 7px 12px; border-radius: 999px; cursor: pointer; }
+.voices button.on { background: #FFE27A; color: #3b2a00; border-color: transparent; }
+body.kb .tabbar { display: none; }
+body.kb #pane-chambre, body.kb .tabpane { padding-bottom: 40vh; }
+body.kb #mika-fab { display: none; }
+
+/* v18b */
+.langseg button[aria-pressed="true"] { background: var(--mint, #5DE3B4); color: #05382A; }
+body.kb .tabbar, body.kb #mika-fab { display: none; }
+body.in-visit { overflow: hidden; }
+#visit { top: 0; left: 0; right: 0; bottom: auto; height: var(--vvh, 100%); }
+.hostbar { position: relative; background: linear-gradient(120deg, #E7DDFF, #FFE3F1); border-radius: 22px; padding: 10px 12px; margin: 6px 0 8px; display: grid; gap: 8px; box-shadow: var(--shadow); }
+.hostbar[hidden] { display: none; }
+.hostbar .hb-t { font-weight: 800; font-size: 14px; color: #2A1B5E; }
+.hostbar .hb-e { display: flex; gap: 6px; }
+.hostbar .hb-e button { border: 0; background: #fff; border-radius: 999px; width: 40px; height: 40px; font-size: 20px; cursor: pointer; }
+.hostbar .hb-f { display: flex; gap: 8px; }
+.hostbar .hb-f input { flex: 1; min-width: 0; font: inherit; padding: 10px 14px; border-radius: 999px; border: 1px solid var(--line); background: #fff; color: #2A1B5E; }
+.hostbar .hb-f button { width: 42px; height: 42px; border-radius: 50%; border: 0; cursor: pointer; }
+.hostbar .hb-x { border: 0; background: #fff; color: #c2285b; font: inherit; font-weight: 800; border-radius: 999px; padding: 8px 14px; cursor: pointer; justify-self: start; }
+.voxchip { border: 1px solid var(--line); background: var(--bg); color: inherit; font: inherit; font-size: 13px; font-weight: 800; border-radius: 999px; padding: 5px 11px; cursor: pointer; margin: 2px; }
+.voxchip[aria-pressed="true"] { background: var(--violet, #7C5CFF); color: #fff; border-color: transparent; }
+
+/* ---- v19 : Monde (chat), magasins 3D, chat de la place ---- */
+.plaza-say { display: flex; gap: 8px; margin: 10px 0 0; }
+.plaza-say input { flex: 1; min-width: 0; font: inherit; font-size: 16px; padding: 12px 16px; border-radius: 999px; border: 2px solid var(--line); background: var(--bg); color: inherit; }
+.plaza-say button { width: 48px; padding: 0; font-size: 18px; border-radius: 999px; }
+.st3-b { position: absolute; transform: translate(-50%, -100%); background: #fff; color: #2A1B5E; font-size: 13px; font-weight: 700; line-height: 1.25; padding: 6px 11px; border-radius: 16px; max-width: 150px; box-shadow: 0 3px 10px rgba(60,30,120,.2); pointer-events: none; z-index: 4; text-align: center; overflow-wrap: anywhere; }
+.st3-b::after { content: ''; position: absolute; left: 50%; bottom: -5px; width: 10px; height: 10px; background: #fff; transform: translateX(-50%) rotate(45deg); border-radius: 2px; }
+.store { position: fixed; inset: 0; z-index: 60; display: flex; flex-direction: column; background: var(--bg); }
+.store[hidden] { display: none; }
+.store-top { display: flex; align-items: center; gap: 10px; padding: calc(env(safe-area-inset-top, 0px) + 10px) 14px 8px; }
+.store-top b { flex: 1; font-family: var(--font-display); font-size: 20px; font-weight: 600; }
+.store-top button { width: 44px; height: 44px; border-radius: 50%; border: 0; background: var(--card, #fff); font-size: 20px; cursor: pointer; box-shadow: var(--shadow); }
+.store-top .pet { font-weight: 800; background: var(--card, #fff); border-radius: 999px; padding: 8px 14px; box-shadow: var(--shadow); }
+.store-stage { position: relative; flex: 1 1 auto; min-height: 220px; overflow: hidden; }
+.store-stage .scene3d { position: absolute; inset: 0; width: 100%; height: 100%; display: block; }
+.store-bot { padding: 10px 14px calc(env(safe-area-inset-bottom, 0px) + 12px); background: var(--card, #fff); border-radius: 26px 26px 0 0; box-shadow: 0 -6px 24px rgba(60,30,120,.12); }
+.store-msg { margin: 0 2px 8px; font-weight: 700; min-height: 22px; }
+.store-list { display: flex; gap: 10px; overflow-x: auto; padding: 4px 2px 10px; scroll-snap-type: x proximity; -webkit-overflow-scrolling: touch; }
+.store-list button { flex: 0 0 auto; scroll-snap-align: start; width: 92px; border: 2px solid var(--line); background: var(--bg); color: inherit; border-radius: 20px; padding: 8px 6px; font: inherit; cursor: pointer; display: flex; flex-direction: column; align-items: center; gap: 2px; }
+.store-list button.sel { border-color: var(--violet); background: rgba(124,92,255,.12); }
+.store-list button .em { font-size: 28px; line-height: 1.1; }
+.store-list button img { width: 52px; height: 52px; }
+.store-list button b { font-size: 12.5px; font-weight: 700; line-height: 1.15; }
+.store-list button small { font-size: 12px; opacity: .8; font-weight: 700; }
+.store-list button.locked { opacity: .65; }
+.store-act { display: flex; gap: 8px; }
+.store-act .primary { flex: 1; }
+
+/* ---- v19 : interface simplifiée ---- */
+.care-hint, .mika-ia, .salon-head .sub, #explore, .bob-prog, #mood-hint, .shop-hero .shop-top h2 { display: none !important; }
+.quests:not(.open) .q, .quests:not(.open) .qb { display: none; }
+.quests .qh { cursor: pointer; }
+.quests .qh b::after { content: ' ▾'; }
+.quests.open .qh b::after { content: ' ▴'; }
+.quests { padding: 10px 12px; }
+details.foot { margin: 14px 4px 24px; font-size: 12.5px; opacity: .85; }
+details.foot summary { cursor: pointer; font-weight: 800; }
+.me-sec details summary { cursor: pointer; list-style: none; }
+.me-sec details summary h3 { display: inline; }
+.me-sec details summary::after { content: ' ▾'; }
+.tipsrow { flex-wrap: wrap; gap: 6px; }
+.tipsrow .tips { display: flex; flex-wrap: wrap; gap: 6px; }
+.tipsrow[hidden], .tipsrow:has(#tips[hidden]) { display: none; }
 </style>
 </head>
 <body>
@@ -455,35 +985,78 @@ fieldset { border: 0; padding: 0; margin: 0; min-width: 0; display: flex; flex-d
       <div class="wrap">
         <div class="brand">
           <svg class="logo" viewBox="0 0 64 64" aria-hidden="true">
-            <rect x="2" y="5" width="38" height="28" rx="13" fill="#7C5CFF"/>
-            <path d="M10 31 L9 44 L22 32 Z" fill="#7C5CFF"/>
-            <rect x="24" y="22" width="38" height="28" rx="13" fill="#FF5CA8"/>
-            <path d="M54 48 L56 60 L42 49 Z" fill="#FF5CA8"/>
-            <circle cx="36" cy="36" r="3.3" fill="#fff"/><circle cx="43" cy="36" r="3.3" fill="#fff"/><circle cx="50" cy="36" r="3.3" fill="#fff"/>
+            <path d="M32 6c-16 0-27 10-27 23 0 8 4 14 10 18l-3 11 13-8c2 .3 5 .5 7 .5 16 0 27-10 27-22C59 16 48 6 32 6z" fill="#5DE3B4"/>
+            <path d="M32 8c3-7 11-8 14-5-2 6-8 9-14 5z" fill="#FFCF3F"/>
+            <ellipse cx="22" cy="31" rx="3.4" ry="4.6" fill="#2A1B5E"/><ellipse cx="42" cy="31" rx="3.4" ry="4.6" fill="#2A1B5E"/>
+            <circle cx="23.2" cy="29.3" r="1.2" fill="#fff"/><circle cx="43.2" cy="29.3" r="1.2" fill="#fff"/>
+            <ellipse cx="14.5" cy="38" rx="4" ry="2.6" fill="#FF8FC0" opacity=".8"/><ellipse cx="49.5" cy="38" rx="4" ry="2.6" fill="#FF8FC0" opacity=".8"/>
+            <path d="M28.5 38 Q32 43 35.5 38" stroke="#2A1B5E" stroke-width="2.6" fill="none" stroke-linecap="round"/>
           </svg>
           <h1>talkie</h1><span class="tag">bêta</span>
         </div>
-        <div id="live" class="live off" aria-live="polite"><span class="dot" aria-hidden="true"></span><span id="count">Connexion…</span></div>
+        <div class="barr"><div id="live" class="live off" aria-live="polite"><span class="dot" aria-hidden="true"></span><span id="count">Connexion…</span></div><button type="button" class="gear" id="btn-settings" aria-label="Réglages"><svg viewBox="0 0 24 24" aria-hidden="true"><circle cx="12" cy="12" r="3.2"/><path d="M12 2.8v2.6M12 18.6v2.6M2.8 12h2.6M18.6 12h2.6M5.5 5.5l1.8 1.8M16.7 16.7l1.8 1.8M5.5 18.5l1.8-1.8M16.7 7.3l1.8-1.8"/></svg></button></div>
       </div>
     </header>
 
     <main class="wrap page">
-      <section class="hero" aria-label="Commencer une discussion">
-        <span class="deco d1" aria-hidden="true">💬</span><span class="deco d2" aria-hidden="true">✨</span><span class="deco d3" aria-hidden="true">🍟</span>
-        <h2>Envie de papoter ?</h2>
-        <p class="sub">Choisis un thème : quelqu’un te rejoint, ou Mika te tient compagnie.</p>
-        <button type="button" class="ghost reconnect" id="btn-reconnect" hidden>Reprendre ici</button>
-
-        <div id="mika-hero" class="mika" role="group" aria-label="Mika, assistant Talkie">
-          <div class="mika-av" id="mika-av" aria-hidden="true"></div>
-          <div class="mika-body">
-            <div class="mika-name">Mika <span class="badge">IA</span> <small>ton assistant</small></div>
-            <div class="mika-bubble thinking" id="mika-say" aria-live="polite"><i></i><i></i><i></i></div>
-          </div>
-          <div class="mika-qr" id="mika-qr"></div>
+      <div id="pane-chambre" class="tabpane" data-pane="chambre">
+        <section class="hero room" aria-label="La chambre de Mika">
+          <div class="sky" aria-hidden="true">
+          <i class="orb"></i>
+          <i class="cloud c1"></i><i class="cloud c2"></i><i class="cloud c3"></i>
+          <i class="star t1"></i><i class="star t2"></i><i class="star t3"></i><i class="star t4"></i><i class="star t5"></i><i class="star t6"></i><i class="star t7"></i>
+          <i class="petal p1">🌸</i><i class="petal p2">✨</i><i class="petal p3">💚</i><i class="petal p4">🌸</i>
         </div>
+          <div class="room-head"><span class="rh-t" id="room-title">La chambre de Mika</span><span class="rh-p" id="petals-pill" title="Tes pétales">🌸 <b id="petals">0</b></span><span class="rh-b" id="bond" title="Votre lien">💚 <b id="bond-lv">Niv. 1</b><i class="bond-bar"><i id="bond-fill"></i></i></span></div>
+          <div class="needs" id="needs" aria-label="Besoins de ton Mika"></div>
+          <button type="button" class="ghost reconnect" id="btn-reconnect" hidden>Reprendre ici</button>
+          <div id="mika-hero" class="mika-world" role="group" aria-label="Mika">
+          <div class="mika-stage" id="mika-stage">
+            <button type="button" class="vbtn" id="btn-voice" aria-pressed="false" aria-label="Activer la voix de Mika" hidden><span id="voice-ico">🔇</span></button>
+            <div class="mika-shadow" id="mika-shadow" aria-hidden="true"></div>
+            <div class="mika-actor" id="mika-actor">
+              <button type="button" class="mika-av big" id="mika-av" aria-label="Faire coucou à Mika"></button>
+              <span class="mika-tag">Mika</span>
+              <div class="mika-fx" id="mika-fx" aria-hidden="true"></div>
+            </div>
+          </div>
+          <div class="mika-bubble thinking" id="mika-say" role="status" aria-live="polite"><i></i><i></i><i></i></div>
+          <div class="mika-ia">Mika est une IA 💚</div>
+        </div>
+          <div class="cmp" id="cmp">
+            <div class="care" id="care">
+              <button type="button" data-act="feed"><span>🍙</span>Nourrir</button><button type="button" data-act="nap"><span>😴</span>Sieste</button><button type="button" data-act="hug"><span>🤗</span>Câlin</button><button type="button" data-act="play"><span>🎈</span>Jouer</button>
+            </div>
+            <p class="care-hint" id="care-hint">Touche le frigo 🍙, les plantes 🌱, le bain 🛁, la porte 🚪 ou l’ordi 💻 : Mika y va tout seul.</p>
+            <div class="quests" id="quests"></div>
+            <div class="mood-row" id="mood-row" hidden>
+              <span class="mr-q">Ton humeur ?</span>
+              <button type="button" data-m="1" aria-label="Au plus bas">😞</button><button type="button" data-m="2" aria-label="Bof">😕</button><button type="button" data-m="3" aria-label="Neutre">😐</button><button type="button" data-m="4" aria-label="Bien">🙂</button><button type="button" data-m="5" aria-label="Rayonnant·e">🤩</button>
+            </div>
+            <div class="mika-qr" id="mika-qr"></div>
+            <div class="thread" id="thread" aria-live="polite"></div>
+            <form class="cmp-form" id="cmp-form" autocomplete="off">
+              <input type="text" id="cmp-in" maxlength="400" placeholder="Parle à Mika…" aria-label="Écrire à Mika" enterkeyhint="send">
+              <button type="submit" class="primary" id="cmp-send" aria-label="Envoyer" disabled><svg class="i" viewBox="0 0 24 24" aria-hidden="true"><path d="M5 12h14M13 6l6 6-6 6"/></svg></button>
+            </form>
+            <p class="cmp-note">Mika est une IA 💚 <button type="button" class="linkish" id="cmp-help">En cas de détresse</button></p>
+          </div>
+        </section>
+      </div>
 
-        <div class="compose" id="compose">
+      <div id="pane-monde" class="tabpane" data-pane="monde" hidden>
+        <section class="plaza" id="plaza" aria-label="La Place" hidden>
+          <div class="plaza-stage" id="plaza-stage"></div>
+          <div class="plaza-bar"><span class="pc" id="plaza-count"></span><div class="em" id="plaza-emotes"><button type="button" data-k="wave" aria-label="Saluer">👋</button><button type="button" data-k="heart" aria-label="Cœur">💗</button><button type="button" data-k="happy" aria-label="Content">😄</button><button type="button" data-k="dance" aria-label="Danser">💃</button><button type="button" data-k="wow" aria-label="Wow">😮</button></div></div>
+          <form class="plaza-say" id="plaza-form" autocomplete="off"><input type="text" id="plaza-say" maxlength="80" placeholder="Dis quelque chose…" aria-label="Écrire aux autres"><button type="submit" class="primary" aria-label="Envoyer">➤</button></form>
+        </section>
+      </div>
+
+      <div id="pane-salon" class="tabpane" data-pane="salon" hidden>
+        <section class="salon-head" aria-label="Commencer une discussion">
+          <h2>Le Salon</h2>
+          <p class="sub">Un thème, et quelqu’un te rejoint. Ton avatar papote avec le sien.</p>
+          <div class="compose" id="compose">
           <form id="invite-form">
             <div class="askrow">
               <input type="text" id="theme" maxlength="60" autocomplete="off" placeholder="Un thème, une envie…" aria-label="De quoi as-tu envie de parler ?">
@@ -511,24 +1084,10 @@ fieldset { border: 0; padding: 0; margin: 0; min-width: 0; display: flex; flex-d
                 </div>
               </div>
             </details>
-            <p class="hint" id="hint-ai" hidden>Personne n’arrive tout de suite ? Mika lance la discussion avec toi.</p>
           </form>
         </div>
       </section>
-
-      <section id="install-ios" class="notice" hidden aria-label="Installer sur iPhone">
-        <p><strong>Installe Talkie sur ton iPhone</strong>Touche Partager dans Safari, puis « Sur l’écran d’accueil ». Ouvre ensuite Talkie depuis son icône pour recevoir les notifications.</p>
-      </section>
-
-      <section id="install-android" class="notice" hidden aria-label="Installer l’app">
-        <p><strong>Ajoute Talkie à ton écran d’accueil</strong>Pour l’ouvrir comme une vraie app.</p>
-        <div class="actions"><button type="button" class="primary" id="btn-install">Installer</button></div>
-      </section>
-
-      <section id="notif" class="notice" hidden aria-label="Notifications">
-        <p><strong>Retrouvez-vous au même moment 🔔</strong>Reçois une notification quand quelqu’un publie un thème.</p>
-        <div class="actions"><button type="button" class="primary" id="btn-notif">Activer les notifications</button></div>
-      </section>
+        </section>
 
       <section aria-labelledby="inv-h">
         <div class="sec-head">
@@ -541,15 +1100,67 @@ fieldset { border: 0; padding: 0; margin: 0; min-width: 0; display: flex; flex-d
 
       <section id="explore" aria-labelledby="themes-h">
         <div class="sec-head">
-          <h2 id="themes-h">Thèmes du jour</h2>
-          <small id="themes-sub"></small>
+          <h2 id="themes-h">Ce qui se dit aujourd’hui</h2>
+          <button type="button" class="place" id="btn-place" aria-label="Changer de lieu"><span id="place-txt">📍 France</span></button>
         </div>
-        <div id="cats" class="cats" role="tablist" aria-label="Catégories"></div>
         <div id="themes" class="themes"></div>
+        <button type="button" class="more" id="btn-more" aria-expanded="false">Plus de thèmes <svg class="i" viewBox="0 0 24 24" aria-hidden="true"><path d="M6 9l6 6 6-6"/></svg></button>
+        <div id="more" hidden>
+          <div id="cats" class="cats" role="tablist" aria-label="Catégories"></div>
+          <div id="themes2" class="themes"></div>
+        </div>
       </section>
 
-      <p class="foot">Talkie est réservé aux 18 ans et plus. C’est un espace pour discuter, pas un service d’aide : si ça ne va vraiment pas, le 3114 répond jour et nuit, gratuitement (France).<span id="foot-ai" hidden> Mika est une IA : la modération automatique lit les messages pour protéger tout le monde. Quand tu lui écris, ou quand tu cherches des idées de thèmes, le texte est envoyé à Anthropic pour produire la réponse.</span><span id="foot-gif" hidden> Les GIF viennent de GIPHY : en les cherchant, ta recherche leur est transmise.</span></p>
+      <details class="foot"><summary>ℹ️ À propos et sécurité</summary><p>Talkie est réservé aux 18 ans et plus. Ton pays est deviné grâce à ton fuseau horaire pour choisir les thèmes. C’est un espace pour discuter, pas un service d’aide : si ça ne va vraiment pas, le 3114 répond jour et nuit, gratuitement (France).<span id="foot-ai" hidden> Mika est une IA : la modération automatique lit les messages pour protéger tout le monde. Quand tu lui écris, ou quand tu cherches des idées de thèmes, le texte est envoyé à Anthropic pour produire la réponse.</span><span id="foot-gif" hidden> Les GIF viennent de GIPHY : en les cherchant, ta recherche leur est transmise.</span></p></details>
+      </div>
+
+      <div id="pane-bobby" class="tabpane" data-pane="bobby" hidden>
+        <div class="bob-top"><h2>Classe</h2>
+          <div class="bob-sel"><select id="bob-lang" aria-label="Langue"></select><select id="bob-lvl" aria-label="Niveau"><option>A1</option><option>A2</option><option>B1</option><option>B2</option></select></div></div>
+        <div class="bob-stage" id="bob-stage"></div>
+        <div class="bob-scenes" id="bob-scenes"></div>
+        <div class="bob-prog" id="bob-prog"></div>
+        <div class="bob-log" id="bob-log" aria-live="polite"></div>
+        <div class="bob-chips" id="bob-chips"></div>
+        <form class="bob-form" id="bob-form" autocomplete="off">
+          <button type="button" id="bob-mic" aria-label="Parler">🎤</button>
+          <input type="text" id="bob-in" maxlength="300" placeholder="Écris ou parle à Bobby…" aria-label="Message à Bobby" enterkeyhint="send">
+          <button type="submit" class="primary" id="bob-send" aria-label="Envoyer" disabled>➤</button>
+        </form>
+        <div class="bob-tools"><button type="button" class="ghost" id="bob-book">📒 Mon carnet</button><button type="button" class="ghost" id="bob-new">🔄 Nouvelle leçon</button></div>
+        <p class="bob-note" id="bob-note">Bobby et Mika sont des IA : elles peuvent se tromper.</p>
+      </div>
+
+      <div id="pane-boutique" class="tabpane" data-pane="boutique" hidden>
+        <section class="shop-hero">
+          <div class="shop-prev" id="shop-prev"></div>
+          <div class="shop-top"><h2>Boutique</h2><span class="petal-bal">🌸 <b id="petals3">0</b></span></div>
+          <div class="shop-act" id="shop-act"></div>
+        </section>
+        <div class="seg shop-seg" id="shop-seg" role="tablist"><button type="button" data-seg="outfit" class="on">👗 Tenues</button><button type="button" data-seg="decor">🛋️ Maison</button><button type="button" data-seg="bobby">🎓 Classe</button><button type="button" data-seg="premium">💎 Premium</button></div>
+        <div class="wardrobe" id="shop-grid"></div>
+        <p class="me-hint" id="shop-hint">Gagne des pétales 🌸 en prenant soin de ton Mika. Tout s’obtient en jouant : rien n’est jamais obligatoire.</p>
+      </div>
+
+      <div id="pane-moi" class="tabpane" data-pane="moi" hidden>
+        <section class="me-card" aria-label="Mon avatar">
+          <div class="me-av" id="me-av"></div>
+          <div class="me-id"><input type="text" id="me-nick" maxlength="20" autocomplete="off" aria-label="Ton pseudo"><p id="me-sub">Niveau 1 · 1 jour</p></div>
+          <button type="button" class="ghost" id="btn-edit-av">✏️ Mon avatar</button>
+        </section>
+        <section class="me-sec" id="acct" hidden><h3>☁️ Compte</h3><div id="acct-body"></div></section>
+        <section class="me-sec"><h3>Mon humeur</h3><div class="mood-chart" id="mood-chart"></div><p class="me-hint" id="mood-hint">Dis-moi chaque jour comment tu te sens : Mika s’en souvient et veille sur toi 💚</p></section>
+        <section class="me-sec"><details><summary><h3>Ce que Mika sait de moi</h3></summary><ul class="facts" id="facts"></ul><p class="me-hint">Tout reste sur ton téléphone. Tu peux supprimer chaque souvenir.</p><button type="button" class="ghost danger" id="btn-forget">🗑️ Effacer toute la mémoire</button></details></section>
+        <section class="me-sec"><button type="button" class="ghost" id="btn-me-shop">🛍️ Boutique (classe, 💎)</button> <button type="button" class="ghost" id="btn-me-settings">⚙️ Réglages (voix, thème, notifications)</button></section>
+      </div>
     </main>
+    <nav class="tabbar" id="tabbar" aria-label="Navigation">
+      <button type="button" data-tab="chambre" aria-current="page"><span class="ti">🏠</span><span>Chambre</span></button>
+      <button type="button" data-tab="monde"><span class="ti">🌍</span><span>Monde</span></button>
+      <button type="button" data-tab="salon"><span class="ti">💬</span><span>Salon</span></button>
+      <button type="button" data-tab="bobby"><span class="ti">🎓</span><span>Classe</span></button>
+      <button type="button" data-tab="moi"><span class="ti">🫧</span><span>Moi</span></button>
+    </nav>
 
     <button type="button" id="mika-fab" aria-label="Demander des idées à Mika" hidden>
       <span class="lab" id="fab-lab">Besoin d’idées ?</span>
@@ -557,6 +1168,15 @@ fieldset { border: 0; padding: 0; margin: 0; min-width: 0; display: flex; flex-d
     </button>
   </div>
 
+  <div class="hinv" id="hinv" hidden><span id="hinv-t"></span><button type="button" class="go" id="hinv-go">Visiter</button><button type="button" id="hinv-no">Plus tard</button></div>
+  <section id="visit" hidden aria-label="Visite">
+    <div class="vh"><span id="visit-t">Visite</span><button type="button" id="visit-x">Quitter</button></div>
+    <div id="visit-stage"></div>
+    <p class="vhint" id="visit-hint">Touche le sol pour marcher. Les messages restent courts et polis 💚</p>
+    <div class="vemo" id="visit-emo"><button type="button" data-k="wave" aria-label="Saluer">👋</button><button type="button" data-k="heart" aria-label="Cœur">💗</button><button type="button" data-k="happy" aria-label="Content">😄</button><button type="button" data-k="dance" aria-label="Danser">💃</button><button type="button" data-k="wow" aria-label="Wow">😮</button></div>
+    <form id="visit-form" autocomplete="off"><input type="text" id="visit-in" maxlength="80" placeholder="Dis quelque chose…" aria-label="Message"><button type="submit" class="primary" id="visit-send" aria-label="Envoyer" disabled>➤</button></form>
+  </section>
+  <section class="tuto" id="tuto" hidden aria-label="Visite guidée"><div class="ring" id="tuto-ring"></div><div class="card" id="tuto-card"><h3 id="tuto-h"></h3><p id="tuto-p"></p><div class="row"><span class="dots" id="tuto-d"></span><span><button type="button" id="tuto-skip">Passer</button> <button type="button" class="go" id="tuto-next">Suivant</button></span></div></div></section>
   <section id="conv" hidden>
     <header class="chead">
       <div class="in">
@@ -568,21 +1188,24 @@ fieldset { border: 0; padding: 0; margin: 0; min-width: 0; display: flex; flex-d
           <h2 id="conv-theme"></h2>
           <p id="conv-sub"></p>
         </div>
+        <button type="button" class="icon-btn" id="btn-invite" aria-label="Inviter un·e ami·e">
+          <svg viewBox="0 0 24 24" aria-hidden="true"><circle cx="10" cy="8" r="3.4"/><path d="M3.5 19c.6-3.4 3.2-5.2 6.5-5.2 1.3 0 2.5.3 3.4.8"/><path d="M18 11v6M15 14h6"/></svg>
+        </button>
         <button type="button" class="icon-btn" id="btn-safety" aria-label="Sécurité et options">
           <svg viewBox="0 0 24 24" aria-hidden="true"><circle cx="12" cy="5" r="1.2"/><circle cx="12" cy="12" r="1.2"/><circle cx="12" cy="19" r="1.2"/></svg>
         </button>
       </div>
     </header>
+    <div id="perch" class="perch" aria-hidden="false">
+      <div class="perch-ground" aria-hidden="true"></div>
+      <button type="button" class="perch-mika mika-av" id="perch-mika" aria-label="Mika, touche-le pour lui parler"></button>
+      <span class="perch-thought" id="perch-thought" hidden></span>
+    </div>
     <p id="wait" class="wait" hidden></p>
     <div id="log" role="log" aria-live="polite" aria-label="Messages"></div>
     <div id="composer">
-    <div class="tip" id="mika-tip" hidden>
-      <div class="tipb" role="note">
-        <span class="tipav" data-mika aria-hidden="true"></span>
-        <span class="tiptx">Tape <b>@Mika</b> pour appeler l’assistant.</span>
-        <button type="button" class="tipgo" id="tip-go">Essayer</button>
-        <button type="button" class="tipx" id="tip-x" aria-label="Fermer l’astuce">×</button>
-      </div>
+    <div class="mika-row" id="mika-row" hidden>
+      <button type="button" class="mika-pill" id="mika-pill" aria-label="Appeler Mika dans la conversation"><span class="pav" data-mika aria-hidden="true"></span><span>@Mika</span></button>
     </div>
     <div class="mpop" id="mention-pop" hidden>
       <button type="button" id="mention-pick"><span class="tipav" data-mika aria-hidden="true"></span><span><b>@Mika</b> <small>assistant IA, répond à tout le monde</small></span></button>
@@ -622,7 +1245,9 @@ fieldset { border: 0; padding: 0; margin: 0; min-width: 0; display: flex; flex-d
       <div class="grab"></div>
       <h3 id="sheet-look-h">Ambiance</h3>
       <div class="swatches" id="swatches" role="group" aria-label="Fond d’écran du tchat"></div>
-      <div class="optrow"><span>Sons</span><button type="button" id="btn-sound" aria-pressed="true">Activés</button></div>
+      <div class="optrow"><span>Sons</span><button type="button" class="js-sound" aria-pressed="true">Activés</button></div>
+      <div class="optrow"><span>Apparence</span><span class="seg" role="group" aria-label="Apparence"><button type="button" data-scheme="light">Clair</button><button type="button" data-scheme="dark">Sombre</button><button type="button" data-scheme="auto">Auto</button></span></div>
+      <div class="optrow js-voicerow" hidden><span>Voix de Mika</span><button type="button" class="js-voice" aria-pressed="false">Coupée</button></div>
       <h3 id="sheet-safety-h">Sécurité</h3>
       <p>Tu peux quitter à tout moment, sans explication. Bloquer masque la personne et ses invitations, et elle ne verra plus les tiennes. Un signalement est enregistré avec les derniers messages pour être examiné.</p>
       <ul id="safety-list"></ul>
@@ -634,6 +1259,7 @@ fieldset { border: 0; padding: 0; margin: 0; min-width: 0; display: flex; flex-d
   <div id="sheet-age" class="scrim" hidden>
     <div class="sheet" role="dialog" aria-modal="true" aria-labelledby="sheet-age-h">
       <div class="grab"></div>
+      <div class="optrow" style="justify-content:flex-end"><span class="seg langseg" role="group" aria-label="Langue"><button type="button" class="js-lang" data-l="fr" aria-pressed="false">Français</button><button type="button" class="js-lang" data-l="en" aria-pressed="false">English</button></span></div>
       <h3 id="sheet-age-h">Bienvenue sur Talkie</h3>
       <p>Talkie met en relation des inconnus : il est réservé aux personnes de <strong>18 ans et plus</strong>. En continuant, tu acceptes que la modération automatique de Mika lit les messages pour protéger tout le monde. Les messages ne sont pas conservés.</p>
       <p id="age-no" class="hint" hidden>Désolé, Talkie n’est pas accessible aux mineurs. Reviens à tes 18 ans !</p>
@@ -658,6 +1284,87 @@ fieldset { border: 0; padding: 0; margin: 0; min-width: 0; display: flex; flex-d
     </div>
   </div>
 
+  <div id="sheet-food" class="scrim" hidden>
+    <div class="sheet" role="dialog" aria-modal="true" aria-labelledby="sheet-food-h">
+      <div class="grab"></div>
+      <h3 id="sheet-food-h">Le garde-manger</h3>
+      <p>Qu’est-ce que ton Mika va grignoter ? L’onigiri est toujours gratuit.</p>
+      <div class="foods" id="foods"></div>
+      <div class="stack"><button type="button" class="ghost" id="food-close">Fermer</button></div>
+    </div>
+  </div>
+
+  <div id="store" class="store" hidden>
+    <div class="store-top"><button type="button" id="store-x" aria-label="Sortir du magasin">←</button><b id="store-t"></b><span class="pet" id="store-pet">🌸 0</span></div>
+    <div class="store-stage" id="store-stage"></div>
+    <div class="store-bot">
+      <p class="store-msg" id="store-msg"></p>
+      <div class="store-list" id="store-list"></div>
+      <div class="store-act" id="store-act"></div>
+    </div>
+  </div>
+
+  <div id="sheet-av" class="scrim" hidden>
+    <div class="sheet" role="dialog" aria-modal="true" aria-labelledby="sheet-av-h">
+      <div class="grab"></div>
+      <h3 id="sheet-av-h">Crée ton Mika</h3>
+      <p id="av-intro">C’est toi, version mochi. Prends soin de lui : il prendra soin de toi 💚</p>
+      <div class="avcreator">
+        <div class="avrow"><span class="lbl">Prénom</span><input type="text" id="av-name" maxlength="20" autocomplete="off" placeholder="Comment il s’appelle ?" aria-label="Prénom de ton Mika"></div>
+        <div class="avprev" id="avprev"></div>
+        <div class="avrow"><span class="lbl">Forme</span><span id="av-shape"></span></div>
+        <div class="avrow"><span class="lbl">Couleur</span><span id="av-colors"></span></div>
+        <div class="avrow"><span class="lbl">Oreilles</span><span id="av-ears"></span></div>
+        <div class="avrow"><span class="lbl">Queue</span><span id="av-tail"></span></div>
+        <div class="avrow"><span class="lbl">Regard</span><span id="av-face"></span></div>
+        <div class="avrow"><span class="lbl">Style</span><span id="av-acc"></span></div>
+        <div class="avrow"><span class="lbl">Langue</span><span class="seg langseg" role="group" aria-label="Langue"><button type="button" class="js-lang" data-l="fr" aria-pressed="false">Français</button><button type="button" class="js-lang" data-l="en" aria-pressed="false">English</button></span></div>
+        <div class="avrow"><span class="lbl">Voix</span><span id="av-vox"></span></div>
+        <div class="stack"><button type="button" class="primary" id="av-save">Faire sa connaissance 💚</button><button type="button" class="ghost" id="av-rand">🎲 Au hasard</button></div>
+      </div>
+    </div>
+  </div>
+
+  <div id="sheet-settings" class="scrim" hidden>
+    <div class="sheet" role="dialog" aria-modal="true" aria-labelledby="sheet-settings-h">
+      <div class="grab"></div>
+      <h3 id="sheet-settings-h">Réglages</h3>
+      <div class="optrow"><span>Apparence</span>
+        <span class="seg" role="group" aria-label="Apparence">
+          <button type="button" data-scheme="light">Clair</button><button type="button" data-scheme="dark">Sombre</button><button type="button" data-scheme="auto">Auto</button>
+        </span>
+      </div>
+      <div class="optrow js-voicerow" hidden><span>Voix de Mika</span><button type="button" class="js-voice" aria-pressed="false">Coupée</button></div>
+      <div class="optrow"><span>Langue</span><span class="seg langseg" role="group" aria-label="Langue"><button type="button" class="js-lang" data-l="fr" aria-pressed="false">Français</button><button type="button" class="js-lang" data-l="en" aria-pressed="false">English</button></span></div>
+      <div class="optrow tipsrow"><div id="tips" class="tips" hidden>        <span id="share-app"><button type="button" class="tip" id="btn-share-app">💌 Inviter un·e ami·e</button></span>        <span id="notif" hidden><button type="button" class="tip" id="btn-notif">🔔 Me prévenir quand quelqu’un arrive</button></span>        <span id="install-android" hidden><button type="button" class="tip" id="btn-install">📲 Installer l’app</button></span>        <span id="install-ios" hidden><button type="button" class="tip" id="btn-install-ios">📲 Installer l’app</button></span>      </div></div>
+      <div class="optrow js-voxrow"><span>Voix</span><span id="vox-set"></span></div>
+      <div class="optrow"><span>Tester la voix</span><button type="button" id="btn-vox-test">▶︎ Écouter</button></div>
+      <p class="me-hint" id="vox-test-res" aria-live="polite"></p>
+      <div class="optrow"><span>Sons</span><button type="button" class="js-sound" aria-pressed="true">Activés</button></div>
+      <div class="optrow"><span>Ma ville</span><button type="button" id="btn-settings-place">Changer</button></div>
+      <div class="stack"><button type="button" class="ghost" id="btn-settings-close">Fermer</button></div>
+    </div>
+  </div>
+
+  <div id="sheet-place" class="scrim" hidden>
+    <div class="sheet" role="dialog" aria-modal="true" aria-labelledby="sheet-place-h">
+      <div class="grab"></div>
+      <h3 id="sheet-place-h">Où es-tu ?</h3>
+      <p>Les thèmes suivent ta ville : change-la et l’actualité change avec.</p>
+      <form id="place-form" class="place-form" autocomplete="off">
+        <input type="text" id="city" maxlength="40" placeholder="Ta ville, ex. Cologne" aria-label="Ta ville">
+        <button type="submit" class="primary">Ok</button>
+      </form>
+      <div id="place-results" class="place-results" hidden></div>
+      <label class="countryrow">Pays <select id="country" aria-label="Ton pays"></select></label>
+      <div class="stack">
+        <button type="button" class="ghost" id="btn-geo">📍 Utiliser ma position</button>
+        <button type="button" class="ghost" id="btn-place-close">Fermer</button>
+      </div>
+      <p class="hint">Ta position approximative est envoyée à BigDataCloud (service de géolocalisation) pour trouver ta ville. Seule la ville est gardée sur ton téléphone et transmise à Talkie.</p>
+    </div>
+  </div>
+
   <div id="sheet-leave" class="scrim" hidden>
     <div class="sheet" role="dialog" aria-modal="true" aria-labelledby="sheet-leave-h">
       <div class="grab"></div>
@@ -671,6 +1378,8 @@ fieldset { border: 0; padding: 0; margin: 0; min-width: 0; display: flex; flex-d
   </div>
 </div>
 <div id="toast" role="status" aria-live="polite" hidden></div>
-<script src="/app.js"></script>
+<script src="/i18n.js?v=19"></script>
+  <script src="/scene3d.js?v=19" defer></script>
+<script src="/app.js?v=19" defer></script>
 </body>
 </html>
