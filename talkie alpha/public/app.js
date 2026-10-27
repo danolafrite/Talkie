@@ -3438,7 +3438,7 @@
   $('btn-vox-test').addEventListener('click', function () {
     var out = $('vox-test-res'); out.textContent = uiLang() === 'en' ? 'Checking…' : 'Je vérifie…';
     fetch('/api/voice-check').then(function (r) { return r.json(); }).then(function (d) {
-      if (d.ok) { cloudTts = true; if (!voiceOn && canSpeak) { voiceOn = true; store('talkie.voice', '1'); renderVoice(); } out.textContent = '✅ ' + (uiLang() === 'en' ? 'OpenAI voice is working (' + d.ms + ' ms).' : 'La voix OpenAI fonctionne (' + d.ms + ' ms).'); previewVox(); }
+      if (d.ok) { cloudTts = true; if (!voiceOn && canSpeak) { voiceOn = true; store('talkie.voice', '1'); renderVoice(); } out.textContent = '✅ ' + (d.provider === 'elevenlabs' ? 'ElevenLabs' : 'OpenAI') + (uiLang() === 'en' ? ' voice is working (' : ' : la voix fonctionne (') + d.ms + ' ms).'; previewVox(); }
       else out.textContent = '⚠️ ' + d.msg + (uiLang() === 'en' ? ' → your phone’s robotic voice is used meanwhile.' : ' → en attendant, la voix du téléphone est utilisée.');
     }).catch(function () { out.textContent = '⚠️ ' + (uiLang() === 'en' ? 'Cannot reach the server.' : 'Serveur injoignable.'); });
   });

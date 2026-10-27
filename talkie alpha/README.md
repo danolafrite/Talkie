@@ -100,3 +100,6 @@ La chambre et Mika sont en 3D (three.js). Le code source est dans `src3d/scene3d
 - **Polices** : DynaPuff (titres) + Fredoka (texte), embarquées.
 - **Avatar** : code à 6 caractères (couleur ×12, oreilles ×6, regard ×5, accessoire ×12, forme ×4, queue ×4), anciens codes à 4 chiffres toujours valides.
 - **Compte Supabase** : lien magique par e-mail, sauvegarde du Mika (table `profiles`, voir `supabase.sql`), choix en cas de conflit, suppression de la sauvegarde.
+
+### Voix premium (ElevenLabs, facultatif)
+Sur Render, ajoute `ELEVENLABS_API_KEY`. Les voix du jeu (Kawaii, Douce, Pétillante, Calme, Grave) utilisent alors ElevenLabs, avec OpenAI en secours. Pour choisir tes voix : `ELEVEN_VOICE_KAWAII`, `ELEVEN_VOICE_DOUCE`, `ELEVEN_VOICE_PETILLANTE`, `ELEVEN_VOICE_CALME`, `ELEVEN_VOICE_GRAVE` (identifiants pris dans la Voice Library, ils ne sont pas secrets). `ELEVEN_MODEL` vaut `eleven_multilingual_v2` par défaut.
