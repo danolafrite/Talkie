@@ -537,7 +537,7 @@
     var on = talkFlags.t || talkFlags.v;
     Array.prototype.forEach.call(document.querySelectorAll('#mika-av, #fab-orb'), function (n) { n.classList.toggle('talking', on); });
   }
-  var ST = ['st-happy', 'st-wow', 'st-sleep', 'st-love', 'st-sad', 'st-worry', 'st-proud', 'st-shy'];
+  var ST = ['st-happy', 'st-wow', 'st-sleep', 'st-love', 'st-sad', 'st-worry', 'st-proud', 'st-shy', 'st-angry'];
   var moodT = null;
   function mood(name, ms) {
     var a = $('mika-av');
@@ -623,6 +623,28 @@
       bub.appendChild(cur);
       var i = 0;
       talkFlags.t = true; applyTalk();
+      if (audio && isFinite(audio.duration) && audio.duration > 0) {
+        // Le texte suit la voix à la milliseconde près (fini le décalage) : on lit la position réelle de l'audio.
+        var finished = false;
+        var endIt = function () {
+          if (finished) return; finished = true;
+          node.nodeValue = String(text);
+          if (cur.parentNode) cur.parentNode.removeChild(cur);
+          talkFlags.t = false; applyTalk();
+        };
+        var step = function () {
+          if (finished) return;
+          if (tok !== sayTok) { finished = true; return; }
+          if (audio.ended || (audio.paused && audio.currentTime > 0)) { endIt(); return; }
+          var p = Math.min(1, (audio.currentTime / audio.duration) * 1.04);
+          var n = Math.ceil(len * p);
+          if (node.nodeValue.length !== n) node.nodeValue = String(text).slice(0, n);
+          requestAnimationFrame(step);
+        };
+        audio.addEventListener('ended', endIt, { once: true });
+        requestAnimationFrame(step);
+        return;
+      }
       sayTimer = setInterval(function () {
         i += 2;
         node.nodeValue = String(text).slice(0, i);
@@ -2170,7 +2192,7 @@
     if (vv) { vv.addEventListener('resize', kbState); vv.addEventListener('scroll', kbState); }
     document.addEventListener('focusin', function (e) {
       if (!/^(INPUT|TEXTAREA)$/.test(e.target.tagName)) return;
-      setTimeout(function () { kbState(); try { e.target.scrollIntoView({ block: 'center', behavior: 'smooth' }); } catch (er) { /* ignore */ } }, 320);
+      setTimeout(function () { kbState(); try { if (e.target.id === 'cmp-in') window.scrollTo({ top: 0, behavior: 'smooth' }); else e.target.scrollIntoView({ block: 'center', behavior: 'smooth' }); } catch (er) { /* ignore */ } }, 320);
     });
     document.addEventListener('focusout', function () { setTimeout(function () { kbState(); if (!document.body.classList.contains('kb')) window.scrollTo(window.scrollX, window.scrollY); }, 120); });
   })();
@@ -2205,13 +2227,14 @@
   }
   function renderBond() { var l = level(); $('bond-lv').textContent = 'Niv. ' + l.lv; $('bond-fill').style.width = Math.max(6, l.pct) + '%'; }
 
-  var EMO = { happy: 'happy', love: 'love', wow: 'wow', sad: 'sad', worried: 'worry', sleepy: 'sleep', proud: 'proud', shy: 'shy', silly: 'happy', cheer: 'happy' };
+  var EMO = { happy: 'happy', love: 'love', wow: 'wow', sad: 'sad', worried: 'worry', sleepy: 'sleep', proud: 'proud', shy: 'shy', silly: 'happy', cheer: 'happy', angry: 'angry' };
   function feel(e) {
     mood(EMO[e] || 'happy', (e === 'sad' || e === 'worried') ? 9000 : 3600);
     if (e === 'cheer' || e === 'proud') { anim('jump'); burst(['🎉', '✨', '💚']); }
     else if (e === 'love') { anim('jump'); burst(['💖', '💚', '🌸']); }
     else if (e === 'shy') anim('shy');
     else if (e === 'worried' || e === 'sad') burst(['💧']);
+    else if (e === 'angry') { anim('jump'); burst(['💢', '🔥']); }
   }
   var pendingM = '';
   function pushDom(r, t) {
@@ -2232,10 +2255,10 @@
   function ctx(kind) {
     var last = prevVisit.last ? (Date.now() - prevVisit.last) / 3600000 : null;
     return {
-      kind: kind, ui: (window.I18N && I18N.lang === 'en') ? 'en' : 'fr', name: nick, hour: new Date().getHours(), day: new Date().toLocaleDateString(uiLang() === 'en' ? 'en-GB' : 'fr-FR', { weekday: 'long' }),
+      speak: !!(voiceOn && cloudTts && gesture), vox: vox().tts, kind: kind, ui: (window.I18N && I18N.lang === 'en') ? 'en' : 'fr', name: nick, hour: new Date().getHours(), day: new Date().toLocaleDateString(uiLang() === 'en' ? 'en-GB' : 'fr-FR', { weekday: 'long' }),
       awayH: kind === 'open' ? last : null, visits: mem.visits, streak: mem.streak, bond: cmp.bond,
       moods: cmp.moods.slice(-5).map(function (x) { return x.m; }), facts: cmp.facts, follow: cmp.follow, quests: questSummary(), pet: nick, needs: needsText(),
-      messages: cmp.thread.slice(-12).map(function (x) { return { r: x.r, t: x.t }; })
+      messages: cmp.thread.slice(-16).map(function (x) { return { r: x.r, t: x.t }; })
     };
   }
   function questSummary() {
@@ -2268,7 +2291,7 @@
       });
   }
   function applyReply(r, kind) {
-    var say = clean(r.say, 320);
+    var say = clean(r.say, 320).replace(/^\s*(say|voice)\s*:\s*/i, '').replace(/\s*\bvoice\s*:.*$/i, '').trim();
     if (!say) return;
     addThread('m', say);
     feel(r.e);
@@ -2278,7 +2301,7 @@
       f = clean(f, 90);
       if (f && cmp.facts.every(function (x) { return x.toLowerCase() !== f.toLowerCase(); })) cmp.facts.push(f);
     });
-    cmp.facts = cmp.facts.slice(-20);
+    cmp.facts = cmp.facts.slice(-30);
     if (kind !== 'nudge') cmp.follow = clean(r.follow, 100);
     saveCmp();
     var chips = (r.chips || []).slice(0, 3);
@@ -2290,6 +2313,7 @@
     setQr(qr);
     renderBond();
     bumpIdle();
+    if (talkMode && cmpSpoken) afterSpeech(cmpListen);
   }
   function cmpOpen() {
     if (!store('talkie.avset')) return;
@@ -2314,12 +2338,73 @@
     $('mood-row').hidden = true;
     setQr([]);
     callCompanion('reply');
+    backchannel(text);
   }
   function userBubble(text) {
     var host = $('mika-stage'); if (!host || !document.body.classList.contains('has3d')) return;
     var old = host.querySelector('.ub'); if (old) old.remove();
     var b = el('div', 'st3-b me ub', clean(text, 90)); host.appendChild(b);
     setTimeout(function () { if (b.parentNode) b.remove(); }, Math.min(6000, 2500 + text.length * 50));
+  }
+  /* ---------- Parler à Boubou : micro, conversation vocale, réaction immédiate ---------- */
+  var cmpRec = null, cmpRecTimer = 0, talkMode = false, cmpSpoken = false;
+  var CMP_SR = window.SpeechRecognition || window.webkitSpeechRecognition;
+  if (CMP_SR) $('cmp-mic').hidden = false;
+  function cmpMicUi(on) { $('cmp-mic').classList.toggle('rec', !!on); $('cmp-mic').classList.toggle('talk', talkMode); try { if (m3d && m3d.listening) m3d.listening(!!on); } catch (e) { /* ignore */ } }
+  function cmpMicStop(abort) {
+    clearTimeout(cmpRecTimer);
+    var r = cmpRec; cmpRec = null; cmpMicUi(false);
+    if (r) { r.onresult = r.onerror = r.onend = null; try { abort ? r.abort() : r.stop(); } catch (e) { /* ignore */ } }
+  }
+  function cmpListen() {
+    if (!CMP_SR || cmpRec || cmpBusy || curTab !== 'chambre' || document.hidden) return;
+    try { if (window.speechSynthesis) speechSynthesis.cancel(); } catch (e) { /* ignore */ }
+    stopSpeaking();
+    var rec; try { rec = new CMP_SR(); } catch (e) { return; }
+    cmpRec = rec; var final = '';
+    try { rec.lang = uiLang() === 'en' ? 'en-US' : 'fr-FR'; rec.interimResults = true; rec.continuous = false; rec.maxAlternatives = 1; } catch (e) { /* ignore */ }
+    cmpMicUi(true);
+    rec.onresult = function (ev) { try { var t = ''; for (var i = 0; i < ev.results.length; i++) t += ev.results[i][0].transcript; final = t; $('cmp-in').value = t; $('cmp-send').disabled = !t.trim(); } catch (e) { /* ignore */ } };
+    rec.onerror = function (ev) {
+      var er = ev && ev.error;
+      if (er === 'not-allowed' || er === 'service-not-allowed') toast('Autorise le micro pour parler à Boubou 🎤 (Réglages du navigateur)');
+      else if (er === 'no-speech') { if (talkMode) toast('Je ne t’entends plus : touche 🎤 pour reprendre'); }
+      else if (er !== 'aborted') toast('Le micro a eu un souci, tu peux écrire ✍️');
+      talkMode = false; cmpMicStop(true);
+    };
+    rec.onend = function () {
+      var t = clean(final, 400); cmpMicStop(true);
+      if (t) { cmpSpoken = true; $('cmp-in').value = ''; $('cmp-send').disabled = true; cmpSend(t); }
+      else talkMode = false, cmpMicUi(false);
+    };
+    cmpRecTimer = setTimeout(function () { if (cmpRec === rec) { try { rec.stop(); } catch (e) { cmpMicStop(true); } } }, 15000);
+    try { rec.start(); } catch (e) { cmpMicStop(true); talkMode = false; toast('Le micro n’a pas pu démarrer 🎤'); }
+  }
+  $('cmp-mic').addEventListener('click', function () {
+    if (cmpRec || talkMode) { talkMode = false; cmpMicStop(true); stopSpeaking(); return; }
+    talkMode = true; cmpListen();
+  });
+  document.addEventListener('visibilitychange', function () { if (document.hidden && cmpRec) { talkMode = false; cmpMicStop(true); } });
+  function afterSpeech(cb) {
+    var n = 0, iv = setInterval(function () {
+      n++;
+      if ((!talkFlags.v && !talkFlags.t && !cmpBusy) || n > 100) { clearInterval(iv); if (n <= 100) setTimeout(cb, 450); }
+      if (!talkMode) clearInterval(iv);
+    }, 300);
+  }
+  var BACK = {
+    sad: ['Oh… mmh.', 'Oh non…', 'Mmh… je suis là.'], angry: ['Quoi ?! Attends…', 'Non mais attends, quoi ?!'],
+    happy: ['Ooh !', 'Waaah, vraiment ?', 'Hihi, dis-moi !'], ask: ['Mmh… alors…', 'Hmm, bonne question…'], plain: ['Mmh.', 'Ah, d’accord…', 'Hmm, je vois.']
+  };
+  function backchannel(text) {
+    if (!voiceOn || !cloudTts || !voiceEl || !gesture || uiLang() === 'en') return;
+    var t = String(text).toLowerCase(), k = 'plain';
+    if (/triste|nul|fatigu|pleur|stress|angoiss|d[ée]prim|seul|mal |peur|d[ée]cu|craqu/.test(t)) k = 'sad';
+    else if (/[ée]nerv|rage|col[eè]re|marre|patron|chef|insupport|saoul|ras le bol|injuste/.test(t)) k = 'angry';
+    else if (/content|heureu|super|g[ée]nial|r[ée]ussi|gagn|bravo|youpi|trop bien|promu|!/.test(t)) k = 'happy';
+    else if (/\?\s*$/.test(t)) k = 'ask';
+    var line = pick(BACK[k]), emo = k === 'ask' || k === 'plain' ? 'neutral' : k;
+    cloudLine(line, emo).then(function (a) { if (cmpBusy) { setTalking(true); a.play().catch(function () { setTalking(false); }); } }).catch(function () {});
   }
   function cmpTouch() { if (!cmpBusy) callCompanion('nudge'); }
   $('cmp-in').addEventListener('input', function () { $('cmp-send').disabled = !clean($('cmp-in').value, 400); lastUserAt = Date.now(); });
@@ -3031,7 +3116,7 @@
   function syncMika3d() {
     if (!m3d) return;
     var c = $('mika-av').classList, emo = 'neutral';
-    ['happy', 'wow', 'sleep', 'love', 'sad', 'worry', 'proud', 'shy'].forEach(function (k) { if (c.contains('st-' + k)) emo = k; });
+    ['happy', 'wow', 'sleep', 'love', 'sad', 'worry', 'proud', 'shy', 'angry'].forEach(function (k) { if (c.contains('st-' + k)) emo = k; });
     if (c.contains('shy') && emo === 'neutral') emo = 'shy';
     if (emo !== m3dPrev.emo) { m3d.setEmotion(emo); m3dPrev.emo = emo; }
     var j = c.contains('jump'); if (j && !m3dPrev.jump) m3d.hop(4.4); m3dPrev.jump = j;
@@ -3085,7 +3170,7 @@
     document.addEventListener('focusin', function (e) {
       if (!isIn(e.target)) return;
       document.body.classList.add('kb');
-      setTimeout(function () { try { e.target.scrollIntoView({ block: 'center', behavior: 'smooth' }); } catch (er) { /* ignore */ } }, 320);
+      setTimeout(function () { try { if (e.target.id === 'cmp-in') window.scrollTo({ top: 0, behavior: 'smooth' }); else e.target.scrollIntoView({ block: 'center', behavior: 'smooth' }); } catch (er) { /* ignore */ } }, 320);
     });
     document.addEventListener('focusout', function () { setTimeout(function () { if (!isIn(document.activeElement)) { document.body.classList.remove('kb'); vh(); } }, 150); });
   })();
@@ -3513,7 +3598,7 @@
   }
   function initAuth(cfg) {
     if (!cfg || !cfg.url || !cfg.key) return;
-    var sc = document.createElement('script'); sc.src = '/supa.js?v=19';
+    var sc = document.createElement('script'); sc.src = '/supa.js?v=20';
     sc.onload = function () {
       try { sb = window.TalkieSupa.create(cfg.url, cfg.key); } catch (e) { sb = null; return; }
       renderAcct();

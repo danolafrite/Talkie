@@ -82,7 +82,8 @@ function ipOk(ip) {
   if (hits.size > 5000) hits.clear();
   return true;
 }
-async function elSynth(text, id, signal, emo, model) {
+async function elSynth(text, id, signal, emo, model, lang) {
+  if (process.env.TTS_DEBUG) console.log('[talkie] voix →', model, '|', emo || '-', '|', text);
   const e = EMO[emo] || EMO[guessEmo(text)] || EMO.neutral;
   const v3 = /v3/.test(model);
   let input = v3 ? text : untag(text);
@@ -93,16 +94,26 @@ async function elSynth(text, id, signal, emo, model) {
   const r = await fetch(EL_BASE + '/v1/text-to-speech/' + encodeURIComponent(id) + '?output_format=mp3_44100_128', {
     method: 'POST', signal,
     headers: { 'content-type': 'application/json', 'xi-api-key': EL_KEY },
-    body: JSON.stringify(vs ? { text: input, model_id: model, voice_settings: vs } : { text: input, model_id: model })
+    body: JSON.stringify(Object.assign({ text: input, model_id: model }, vs ? { voice_settings: vs } : {}, /v3|flash|turbo/.test(model) ? { language_code: lang || 'fr' } : {}))
   });
   if (!r.ok) { let detail = ''; try { detail = (await r.text()).slice(0, 240); } catch (e2) { /* ignore */ } throw Object.assign(new Error('API ElevenLabs ' + r.status), { code: 503, api: r.status, detail, provider: 'eleven' }); }
   return Buffer.from(await r.arrayBuffer());
 }
-async function elTry(text, id, signal, emo) {
-  try { return await elSynth(text, id, signal, emo, EL_MODEL); }
-  catch (e) { if (EL_MODEL !== EL_FALLBACK && e.api && e.api !== 401 && e.api !== 402 && e.api !== 429) return elSynth(text, id, signal, emo, EL_FALLBACK); throw e; }
+async function elTry(text, id, signal, emo, lang) {
+  try { return await elSynth(text, id, signal, emo, EL_MODEL, lang); }
+  catch (e) { if (EL_MODEL !== EL_FALLBACK && e.api && e.api !== 401 && e.api !== 402 && e.api !== 429) return elSynth(text, id, signal, emo, EL_FALLBACK, lang); throw e; }
 }
+const inflight = new Map(); // même phrase demandée deux fois en même temps : une seule synthèse
 async function synth(text, ip, opts) {
+  const o0 = opts || {}, key0 = speakable(text) + '|' + (o0.voice || '') + '|' + (o0.lang || '') + '|' + (o0.emo || '');
+  if (inflight.has(key0)) return inflight.get(key0);
+  const pr = synth1(text, ip, opts);
+  inflight.set(key0, pr);
+  const done = () => inflight.delete(key0);
+  pr.then(done, done);
+  return pr;
+}
+async function synth1(text, ip, opts) {
   opts = opts || {};
   const voice = VOICES.indexOf(opts.voice) >= 0 ? opts.voice : VOICE;
   const lang = opts.lang === 'en' ? 'en' : 'fr';
@@ -122,7 +133,7 @@ async function synth(text, ip, opts) {
   try {
     let buf = null, elErr = null;
     if (EL_KEY && EL_VOICES[voice]) {
-      try { buf = await elTry(t, EL_VOICES[voice], ctrl.signal, emo); } catch (e) { elErr = e; if (!KEY) throw e; }
+      try { buf = await elTry(t, EL_VOICES[voice], ctrl.signal, emo, lang); } catch (e) { elErr = e; if (!KEY) throw e; }
     }
     if (!buf) {
     const body = { model: MODEL, voice, input: untag(t), response_format: 'mp3' };

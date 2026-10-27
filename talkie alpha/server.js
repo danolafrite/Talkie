@@ -972,7 +972,12 @@ const server = http.createServer(async (req, res) => {
         return;
       }
       if (!ai.enabled()) { json(res, 200, companion.fallback(body)); return; }
-      try { json(res, 200, await companion.turn(body)); }
+      try {
+        const out = await companion.turn(body);
+        json(res, 200, out);
+        // On prépare déjà la voix pendant que le téléphone reçoit le texte : la phrase est prête (en cache) quand il la demande.
+        if (body.speak === true && tts.enabled()) tts.synth(out.voice || out.say, ip, { voice: String(body.vox || ''), lang: body.ui === 'en' ? 'en' : 'fr', emo: out.e }).catch(() => {});
+      }
       catch (e) { console.warn('[talkie] compagnon indisponible :', e.message); json(res, 200, companion.fallback(body)); }
     } catch (e) { json(res, 400, { error: 'requête invalide' }); }
     return;

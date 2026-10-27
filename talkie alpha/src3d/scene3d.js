@@ -204,6 +204,7 @@ export function createCharacter(o) {
     else if (e === 'wow') { E.forEach((x) => { x.g.scale.set(1.18, 1.18, 1); }); mouths.o.visible = true; }
     else if (e === 'sad') { E.forEach((x) => { x.brow.visible = true; x.brow.rotation.z = -x.s * 0.45; }); mouths.frown.visible = true; tear.visible = true; }
     else if (e === 'worry') { E.forEach((x) => { x.brow.visible = true; x.brow.rotation.z = -x.s * 0.4; }); mouths.o.visible = true; mouths.o.scale.set(0.8, 1, 0.4); sweat.visible = true; }
+    else if (e === 'angry') { E.forEach((x) => { x.brow.visible = true; x.brow.rotation.z = x.s * 0.5; x.g.scale.set(1.05, 0.85, 1); }); mouths.open.visible = true; mouths.open.scale.set(1.35, 1.1, 0.35); st.armsT = 0.9; sweat.visible = false; }
     else if (e === 'proud') { E.forEach((x) => { x.open.visible = false; x.happy.visible = true; }); mouths.open.visible = true; mouths.open.scale.set(1.2, 1, 0.35); st.armsT = 0.5; if (ch.fx) ch.fx('star', 5); }
     else if (e === 'shy') { E.forEach((x) => { x.open.visible = false; x.closed.visible = true; }); mouths.smile.visible = true; st.yawT = 0.5; }
     else if (e === 'sleep') { E.forEach((x) => { x.open.visible = false; x.closed.visible = true; }); mouths.o.visible = true; mouths.o.scale.set(0.6, 0.7, 0.4); st.sleeping = true; }
@@ -212,6 +213,7 @@ export function createCharacter(o) {
   };
   ch.hop = (p) => { if (st.y < 0.05) { st.vy = p || 4.2; st.squash = -0.2; } };
   ch.setTalking = (on) => { st.talking = !!on; };
+  ch.setListening = (on) => { st.listening = !!on; if (!on) st.yawT = 0; };
   ch.look = (x, y) => st.lookT.set(x, y);
   ch.face = (yaw) => { st.yawT = yaw; };
   ch.update = (dt, T, moving, hovered) => {
@@ -222,11 +224,13 @@ export function createCharacter(o) {
     const br = st.sleeping ? 0.04 * Math.sin(T * 1.4) : 0.022 * Math.sin(T * 2.3);
     bodyG.scale.set((1 - st.squash * 0.5 - br * 0.5) * SHX, (1 + st.squash + br) * SHY, (1 - st.squash * 0.5) * SHX);
     feet.forEach((f, i) => { f.position.y = 0.08 + (moving ? Math.max(0, Math.sin(T * 9 + i * Math.PI)) * 0.06 : 0); });
-    const droop = (st.emo === 'sad' || st.emo === 'worry') ? 0.35 : 0;
+    const droop = (st.emo === 'sad' || st.emo === 'worry') ? 0.35 : (st.listening ? -0.12 : 0);
     ears.forEach((e, i) => { const s = i ? 1 : -1; e.rotation.z = -s * ((e.userData.base || 0.28) + (st.talking ? 0.1 : 0) + droop) + Math.sin(T * 1.7 + i) * 0.05; });
     pom.rotation.z = Math.sin(T * 2.1) * 0.12; pom.rotation.x = Math.sin(T * 1.6) * 0.06;
     arms.forEach((a, i) => { const s = i ? 1 : -1; a.rotation.z = s * -(0.2 + st.armsT * 1.6) + (moving ? Math.sin(T * 9 + i * 3) * 0.3 : Math.sin(T * 2 + i) * 0.06); a.position.y = 0.5 + st.armsT * 0.28; });
     if (!hovered && T > st.nextLook) { st.lookT.set((Math.random() - 0.5) * 1.4, (Math.random() - 0.5) * 0.8); st.nextLook = T + 1.5 + Math.random() * 2.5; }
+    if (st.emo === 'angry') { root.rotation.z += Math.sin(T * 38) * 0.05; bodyG.position.x = Math.sin(T * 44) * 0.015; } else bodyG.position.x = 0;
+    if (st.listening && T > (st.nextNod || 0)) { st.squash = 0.09; st.nextNod = T + 1.6 + Math.random() * 1.6; st.yawT = (Math.random() - 0.5) * 0.4; }
     st.look.lerp(st.lookT, Math.min(1, dt * 6));
     eyes.forEach((e) => { e.open.position.x = st.look.x * 0.022; e.open.position.y = st.look.y * 0.018; });
     if (!st.sleeping && T > st.nextBlink) { st.blinkT = 0.13; st.nextBlink = T + 2 + Math.random() * 3.5; }
@@ -662,6 +666,7 @@ export function init(host, opts) {
     goTo(spotName) { const s2 = SPOTS_OBJ[spotName]; if (s2) { st.target.set(s2[0], 0, s2[1]); st.hold = 3; } },
     debug() { return { roll: mika.roll, baseY: mika.baseY, job: st.job ? st.job.kind + ':' + st.job.state : null }; },
     walkTo(x, z) { const f = freePoint(x, z); st.target.set(f[0], 0, f[1]); st.hold = 6; st.job = null; st.pending = null; },
+    listening(on) { mika.setListening(on); if (on) { mika.look(0, 0.3); if (!visit && !st.job) { st.target.set(0.2, 0, 1.2); st.hold = 3; } } },
     talking(on) { mika.setTalking(on); if (on && !visit && !st.job) { st.target.set(0.2, 0, 1.2); mika.face(0); st.hold = 2.5; } },
     look(dx, dy) { mika.look(dx, dy); },
     busy(on) { st.busy = !!on; if (on && !st.job) { st.target.set(0.2, 0, 1.2); st.hold = 3; } },

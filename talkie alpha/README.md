@@ -107,3 +107,11 @@ Sur Render, ajoute `ELEVENLABS_API_KEY`. Les voix du jeu (Kawaii, Douce, Pétill
 La voix ElevenLabs suit maintenant l’émotion de Boubou : modèle `eleven_v3` avec balises ([giggles], [sighs], [excited]…), repli automatique sur `eleven_multilingual_v2` (stabilité et vitesse selon l’humeur).
 
 Boubou écrit maintenant deux versions de chaque réplique : `say` (affichée) et `voice` (version parlée expressive : hésitations, rires, soupirs, majuscules, balises d’émotion). La voix lit `voice`.
+
+## v20
+- Fix: plus de "say:/voice:" dans les bulles (parse robuste + nettoyage client).
+- Zone d'écriture remontée sous la chambre (reste visible avec le clavier).
+- Texte révélé au rythme de l'audio (synchro voix/texte), TTS préchargé côté serveur.
+- Réaction instantanée ("mmh…") + mode conversation au micro dans la Chambre.
+- Personnalité façon Aggretsuko (émotion "angry" comique, jamais contre l'utilisateur), mémoire élargie.
+- Réglages voix ElevenLabs : ELEVEN_MODEL=eleven_v3, ELEVEN_STABILITY=0 pour plus d'expressivité.
