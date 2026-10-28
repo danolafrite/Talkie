@@ -999,6 +999,7 @@ body.kb #pane-chambre { padding-bottom: 8px; }
 .life-line.done{background:rgba(190,255,215,.7)}
 body.kb .life-line{display:none}
 #tabbar button[data-tab=salon],#tabbar button[data-tab=bobby]{display:none}
+#journal-list .jr{padding:6px 0;font-size:.85rem;border-bottom:1px solid rgba(120,90,200,.15)}#journal-list .jr b{display:block;text-transform:capitalize}
 </style>
 </head>
 <body>
@@ -1173,6 +1174,7 @@ body.kb .life-line{display:none}
           <div class="me-id"><input type="text" id="me-nick" maxlength="20" autocomplete="off" aria-label="Ton pseudo"><p id="me-sub">Niveau 1 · 1 jour</p></div>
           <button type="button" class="ghost" id="btn-edit-av">✏️ Mon avatar</button>
         </section>
+        <section class="me-sec" id="journal"><h3>📖 Le journal de Mika</h3><div id="journal-list"></div></section>
         <section class="me-sec" id="acct" hidden><h3>☁️ Compte</h3><div id="acct-body"></div></section>
         <section class="me-sec"><h3>Mon humeur</h3><div class="mood-chart" id="mood-chart"></div><p class="me-hint" id="mood-hint">Dis-moi chaque jour comment tu te sens : Mika s’en souvient et veille sur toi 💚</p></section>
         <section class="me-sec"><details><summary><h3>Ce que Mika sait de moi</h3></summary><ul class="facts" id="facts"></ul><p class="me-hint">Tout reste sur ton téléphone. Tu peux supprimer chaque souvenir.</p><button type="button" class="ghost danger" id="btn-forget">🗑️ Effacer toute la mémoire</button></details></section>
@@ -1403,8 +1405,8 @@ body.kb .life-line{display:none}
   </div>
 </div>
 <div id="toast" role="status" aria-live="polite" hidden></div>
-<script src="/i18n.js?v=23"></script>
-  <script src="/scene3d.js?v=23" defer></script>
-<script src="/app.js?v=23" defer></script>
+<script src="/i18n.js?v=24"></script>
+  <script src="/scene3d.js?v=24" defer></script>
+<script src="/app.js?v=24" defer></script>
 </body>
 </html>

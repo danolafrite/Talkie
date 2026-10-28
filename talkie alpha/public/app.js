@@ -595,13 +595,14 @@
     clearInterval(sayTimer);
     stopSpeaking();
     pet.lastSpoke = Date.now();
-    if (m3d && m3d.say && curTab === 'chambre') m3d.say(clean(text, 220), 'mk');
+    var say3d = function () { if (m3d && m3d.say && curTab === 'chambre') m3d.say(clean(text, 220), 'mk'); };
     if (pet.mode === 'roam') callHome();
     bub.setAttribute('aria-label', text);
     if (state !== false) mood(state || 'happy', 2600);
     var wantVoice = voiceOn && !silent && gesture;
     function start(audio) {
       if (tok !== sayTok) return;
+      say3d();
       bub.classList.remove('thinking', 'say');
       void bub.offsetWidth;
       bub.classList.add('say');
@@ -2467,6 +2468,18 @@
     b.appendChild(el('b', null, l.e + ' Mika ' + l.act));
     b.appendChild(el('small', null, l.wishDone ? '✅ Envie exaucée : ' + l.wish.t : 'Son envie du jour : ' + l.wish.e + ' ' + l.wish.t));
   }
+
+  function lifeDay(key) { var hs = hash(key + (nick || '')); return { evt: LIFE_EVT[hs % LIFE_EVT.length], wish: LIFE_WISH[(hs >> 3) % LIFE_WISH.length] }; }
+  function renderJournal() {
+    var box = $('journal-list'); if (!box) return; box.textContent = '';
+    for (var i = 0; i < 7; i++) {
+      var d = new Date(Date.now() - i * 86400000), k = d.toLocaleDateString('sv-SE'), L = lifeDay(k);
+      var row = el('div', 'jr');
+      row.appendChild(el('b', null, i === 0 ? 'Aujourd’hui' : d.toLocaleDateString('fr-FR', { weekday: 'long', day: 'numeric' })));
+      row.appendChild(el('span', null, 'Mika : ' + L.evt + '. Envie : ' + L.wish.e + ' ' + L.wish.t + '.'));
+      box.appendChild(row);
+    }
+  }
   function wishCheck(id) {
     var l = lifeNow();
     if (l.wishDone || l.wish.id !== id) return;
@@ -3056,6 +3069,7 @@
 
   /* ---------- Moi ---------- */
   function renderMoi() {
+    renderJournal();
     $('me-av').innerHTML = avatarSvg(myAv);
     if (document.activeElement !== $('me-nick')) $('me-nick').value = nick;
     var l = level();
@@ -3671,7 +3685,7 @@
   }
   function initAuth(cfg) {
     if (!cfg || !cfg.url || !cfg.key) return;
-    var sc = document.createElement('script'); sc.src = '/supa.js?v=23';
+    var sc = document.createElement('script'); sc.src = '/supa.js?v=24';
     sc.onload = function () {
       try { sb = window.TalkieSupa.create(cfg.url, cfg.key); } catch (e) { sb = null; return; }
       renderAcct();

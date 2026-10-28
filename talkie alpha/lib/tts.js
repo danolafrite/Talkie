@@ -66,6 +66,8 @@ function speakable(t) {
     .replace(/[\p{Extended_Pictographic}\u{FE0F}\u{200D}]/gu, '')
     .replace(/\b(?:a+w+h*|aww+e*)\b/gi, 'aaah')            // « aww » se lisait « A double V »
     .replace(/\b[uo]w[uo]\b/gi, 'hihi')
+    .replace(/\b(?:h?m{2,}h*|mh+m*|h+m+h*|hmm+)\b/gi, 'hum')   // « mmh » était épelé « EM EM ASH »
+    .replace(/\bm{1,}h+\b/gi, 'hum')
     .replace(/\bw{2,}\b/gi, '')
     .replace(/\bhi(hi)+\b/gi, 'hi hi')
     .replace(/\bhe(he)+\b/gi, 'hé hé')
@@ -119,7 +121,8 @@ async function edgeSynth(text, voice, lang, emo, signal) {
   const tts = new MsEdgeTTS({ connectionTimeoutMs: 8000, synthesisTimeoutMs: 15000 });
   try {
     await tts.setMetadata(v[0], OUTPUT_FORMAT.AUDIO_24KHZ_48KBITRATE_MONO_MP3);
-    const { audioStream } = tts.toStream(untag(text), { pitch: pct(num(v[1]) + em[0]), rate: pct(num(v[2]) + em[1]) });
+    const said = untag(text).replace(/\bhum\b/gi, 'hum…').replace(/\bhi hi\b/gi, 'hi hi hi').replace(/\bhé hé\b/gi, 'hé hé hé').replace(/\bahah\b/gi, 'ha ha ha').replace(/\bpfff?\b/gi, 'pfou');
+    const { audioStream } = tts.toStream(said, { pitch: pct(num(v[1]) + em[0]), rate: pct(num(v[2]) + em[1]) });
     const chunks = [];
     await new Promise((resolve, reject) => {
       const stop = () => reject(Object.assign(new Error('voix gratuite trop lente'), { code: 503 }));

@@ -127,3 +127,8 @@ Boubou écrit maintenant deux versions de chaque réplique : `say` (affichée) e
 - Quand ElevenLabs répond « plus de crédit », il n'est plus essayé pendant 30 min.
 - Réglage émotion (hauteur/vitesse) selon l'état de Mika. Après le déploiement, Render installera `msedge-tts` automatiquement (package.json).
 - Attention : service non officiel, peut changer ; prévoir une solution payante si l'app grandit.
+
+## v24
+- « mmh » n'est plus épelé : lu « hum ». Rires et soupirs écrits en sons lisibles (ha ha ha, hi hi hi, pfou).
+- Le texte de la bulle 3D n'apparaît plus avant la voix (il attend le début de l'audio).
+- Moi : « Le journal de Mika » (7 derniers jours : événement + envie).
