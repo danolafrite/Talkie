@@ -1,4 +1,4 @@
-/* Talkie · langue de l'interface (FR / EN pour l'instant).
+/* Mika · langue de l'interface (FR / EN pour l'instant).
    Principe : le texte français reste la référence dans le HTML et le JS ; en anglais, chaque texte exact trouvé dans
    le dictionnaire est remplacé à l'affichage (et restauré si on repasse en français). Les textes à variables passent par PATTERNS. */
 (function () {
@@ -49,8 +49,8 @@
     'Crée ton Mika': 'Create your buddy', 'C’est toi, version mochi. Prends soin de lui : il prendra soin de toi 💚': 'It’s you, mochi version. Take care of it: it will take care of you 💚',
     'Prénom': 'Name', 'Comment il s’appelle ?': 'What’s its name?', 'Prénom de ton Mika': 'Your buddy’s name', 'Couleur': 'Color', 'Oreilles': 'Ears', 'Regard': 'Eyes', 'Style': 'Style', 'Voix': 'Voice',
     'Faire sa connaissance 💚': 'Meet it 💚', '🎲 Au hasard': '🎲 Random', 'Parle-moi dans cette langue': 'Talk to me in this language',
-    'Bienvenue sur Talkie': 'Welcome to Talkie', 'J’ai 18 ans ou plus': 'I am 18 or older', 'J’ai moins de 18 ans': 'I am under 18',
-    'Désolé, Talkie n’est pas accessible aux mineurs. Reviens à tes 18 ans !': 'Sorry, Talkie is not available to minors. Come back when you’re 18!',
+    'Bienvenue sur Mika': 'Welcome to Mika', 'J’ai 18 ans ou plus': 'I am 18 or older', 'J’ai moins de 18 ans': 'I am under 18',
+    'Désolé, Mika n’est pas accessible aux mineurs. Reviens à tes 18 ans !': 'Sorry, Mika is not available to minors. Come back when you’re 18!',
     'Le garde-manger': 'The pantry', 'Qu’est-ce que ton Mika va grignoter ? L’onigiri est toujours gratuit.': 'What will your buddy snack on? The onigiri is always free.',
     'Besoins de ton Mika': 'Your buddy’s needs', 'Visite guidée': 'Guided tour', 'Visiter': 'Visit', 'Plus tard': 'Later', 'Quitter': 'Leave', 'Visite': 'Visit',
     'Saluer': 'Say hi', 'Cœur': 'Heart', 'Content': 'Happy', 'Danser': 'Dance', 'Wow': 'Wow',
@@ -165,7 +165,7 @@
   });
   function start() {
     document.documentElement.lang = lang;
-    apply(document.body); document.title = lang === 'en' ? 'Talkie · chat with real people' : document.title;
+    apply(document.body); document.title = lang === 'en' ? 'Mika · chat with real people' : document.title;
     mo.observe(document.body, { childList: true, subtree: true, characterData: true, attributes: true, attributeFilter: ['placeholder', 'aria-label', 'title'] });
   }
   window.I18N = {

@@ -135,3 +135,9 @@ Boubou écrit maintenant deux versions de chaque réplique : `say` (affichée) e
 
 ## v25
 - IA : « thinking: between_tools » (nouveau modèle), température retirée ; audio : clé de cache voix ed2 (fin du vieux « EM EM HASH » en cache).
+
+## v26 — Mika, Halloween
+- App renommée **Mika** (nom, logo, icônes, textes).
+- Voix : rythme par phrase (SSML : pauses, souffle sur les virgules, vitesse/hauteur selon ! ? … et rires), plus de « hmm je vois » automatique, visage qui change phrase par phrase.
+- IA : mode « réflexion coupée » appris par modèle (between_tools / disabled / aucun).
+- Monde : bâtiment **Dentiste** → cabinet dentaire d'Halloween. Chaque personne reçoit un déguisement différent (sorcière, diablotin, citrouille, vampire, momie, fantôme), visible par les autres dans la place (suffixe h0–h5 dans le code d'avatar). Menu pour changer ou retirer le costume.

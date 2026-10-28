@@ -142,7 +142,7 @@
   }
 
   function onMessage(m) {
-    if (m.t === 'plaza' || m.t === 'pj' || m.t === 'pl' || m.t === 'pm' || m.t === 'pe' || m.t === 'ps') { plazaMsg(m); return; }
+    if (m.t === 'plaza' || m.t === 'pa' || m.t === 'pj' || m.t === 'pl' || m.t === 'pm' || m.t === 'pe' || m.t === 'ps') { plazaMsg(m); return; }
     if (/^(hsent|hinv|hjoin|hg\+|hg-|hend|hp|he|hs)$/.test(m.t)) { homeMsg(m); return; }
     switch (m.t) {
       case 'welcome':
@@ -633,13 +633,14 @@
           if (cur.parentNode) cur.parentNode.removeChild(cur);
           talkFlags.t = false; applyTalk();
         };
+        var faceAt = faceTrack(text, vo && vo.emo);
         var step = function () {
           if (finished) return;
           if (tok !== sayTok) { finished = true; return; }
           if (audio.ended || (audio.paused && audio.currentTime > 0)) { endIt(); return; }
           var p = Math.min(1, (audio.currentTime / audio.duration) * 1.04);
           var n = Math.ceil(len * p);
-          if (node.nodeValue.length !== n) node.nodeValue = String(text).slice(0, n);
+          if (node.nodeValue.length !== n) { node.nodeValue = String(text).slice(0, n); faceAt(n); }
           requestAnimationFrame(step);
         };
         audio.addEventListener('ended', endIt, { once: true });
@@ -1024,8 +1025,8 @@
     var full = room.members && room.max && room.members.length >= room.max;
     if (full) { toast('La conversation est déjà complète (' + room.max + ' personnes).'); return; }
     var url = location.origin + '/?r=' + encodeURIComponent(room.id);
-    var text = 'Viens papoter de « ' + room.theme + ' » avec moi sur Talkie 💚';
-    if (navigator.share) { navigator.share({ title: 'Talkie', text: text, url: url }).catch(function () {}); return; }
+    var text = 'Viens papoter de « ' + room.theme + ' » avec moi sur Mika 💚';
+    if (navigator.share) { navigator.share({ title: 'Mika', text: text, url: url }).catch(function () {}); return; }
     var all = text + ' ' + url;
     if (navigator.clipboard && navigator.clipboard.writeText) navigator.clipboard.writeText(all).then(function () { toast('Lien copié ! Envoie-le à ton ami·e 💌'); }, function () { window.prompt('Copie ce lien :', all); });
     else window.prompt('Copie ce lien :', all);
@@ -1851,8 +1852,8 @@
   }
   $('btn-share-app').addEventListener('click', function () {
     var url = location.origin + '/';
-    var text = 'Viens papoter sur Talkie : un thème, quelqu’un te rejoint, et Mika met l’ambiance 💚';
-    if (navigator.share) { navigator.share({ title: 'Talkie', text: text, url: url }).catch(function () {}); return; }
+    var text = 'Viens papoter sur Mika : un thème, quelqu’un te rejoint, et Mika met l’ambiance 💚';
+    if (navigator.share) { navigator.share({ title: 'Mika', text: text, url: url }).catch(function () {}); return; }
     if (navigator.clipboard && navigator.clipboard.writeText) navigator.clipboard.writeText(text + ' ' + url).then(function () { toast('Lien copié ! 💌'); }, function () { window.prompt('Copie ce lien :', text + ' ' + url); });
     else window.prompt('Copie ce lien :', text + ' ' + url);
   });
@@ -2072,7 +2073,7 @@
   var AV_ACC = ['Rien', 'Nœud', 'Lunettes', 'Bonnet', 'Fleur', 'Couronne', 'Soleil', 'Casque', 'Bandana', 'Papillon', 'Ailes', 'Chapeau'];
   var AV_SHAPE = ['Rond', 'Grand', 'Potelé', 'Haricot'];
   var AV_TAIL = ['Aucune', 'Chat', 'Lapin', 'Renard'];
-  function normAv(c) { c = String(c == null ? '' : c); if (/^[0-7][0-3][0-2][0-4]$/.test(c)) c += '00'; return /^[0-9a-b][0-5][0-4][0-9a-b][0-3][0-3]$/.test(c) ? c : ''; }
+  function normAv(c) { c = String(c == null ? '' : c); if (/^[0-7][0-3][0-2][0-4]$/.test(c)) c += '00'; return /^[0-9a-b][0-5][0-4][0-9a-b][0-3][0-3](h[0-5])?$/.test(c) ? c : ''; }
   function hash(str) { var h = 0; str = String(str); for (var i = 0; i < str.length; i++) h = (h * 31 + str.charCodeAt(i)) | 0; return Math.abs(h); }
   function defaultAv(seed) { var h = hash(seed); return (h % 12).toString(12) + (Math.floor(h / 12) % 6) + (Math.floor(h / 72) % 5) + (Math.floor(h / 360) % 6).toString(12) + (Math.floor(h / 2160) % 4) + (Math.floor(h / 8640) % 4); }
   function avatarSvg(code) {
@@ -2243,6 +2244,27 @@
     else if (e === 'worried' || e === 'sad') burst(['💧']);
     else if (e === 'angry') { anim('jump'); burst(['💢', '🔥']); }
   }
+  // Le visage suit ce que Mika dit, phrase après phrase (surprise sur un « ? », joie sur « ! », tristesse sur « … », colère sur MAJUSCULES…).
+  function sentEmo(seg, base) {
+    var t = String(seg);
+    if (/\b[A-ZÉÈÀ]{4,}\b|argh|non mais/i.test(t) && /\b[A-ZÉÈÀ]{4,}\b|argh/.test(t)) return 'angry';
+    if (/hihi|haha|ahah|mdr|\bhé hé\b/i.test(t)) return 'happy';
+    if (/triste|dommage|courage|désolé|pleur|difficile|dur\b|fatigu|seul/i.test(t)) return 'sad';
+    if (/bravo|génial|super|youpi|trop bien|fière?|réussi/i.test(t)) return 'proud';
+    if (/merci|adore|câlin|aime|tendre|doux/i.test(t)) return 'love';
+    if (/\?\s*$/.test(t)) return 'wow';
+    if (/!\s*$/.test(t)) return 'happy';
+    if (/(\.{3}|…)\s*$/.test(t)) return base === 'happy' ? 'shy' : (base || 'shy');
+    return base || 'happy';
+  }
+  function faceTrack(text, base) {
+    var segs = [], re = /[^.!?…]+(?:\.{3}|[.!?…]+)?/g, m, pos = 0, str = String(text);
+    while ((m = re.exec(str))) { if (m[0].trim()) segs.push({ at: m.index, e: sentEmo(m[0], base) }); }
+    var k = -1;
+    return function (n) {
+      for (var i = segs.length - 1; i >= 0; i--) if (n >= segs[i].at) { if (i !== k) { k = i; var e = segs[i].e; mood(EMO[e] || 'happy', 4000); if (e === 'angry' || e === 'proud') anim('jump'); } return; }
+    };
+  }
   var pendingM = '';
   function pushDom(r, t) {
     var box = $('thread');
@@ -2411,8 +2433,8 @@
     else if (/[ée]nerv|rage|col[eè]re|marre|patron|chef|insupport|saoul|ras le bol|injuste/.test(t)) k = 'angry';
     else if (/content|heureu|super|g[ée]nial|r[ée]ussi|gagn|bravo|youpi|trop bien|promu|!/.test(t)) k = 'happy';
     else if (/\?\s*$/.test(t)) k = 'ask';
-    var line = pick(BACK[k]), emo = k === 'ask' || k === 'plain' ? 'neutral' : k;
-    cloudLine(line, emo).then(function (a) { if (cmpBusy) { setTalking(true); a.play().catch(function () { setTalking(false); }); } }).catch(function () {});
+    // plus de « mmh / je vois » parlé à chaque message : seule l'expression du visage réagit, tout de suite
+    mood(k === 'sad' ? 'sad' : k === 'angry' ? 'angry' : k === 'happy' ? 'happy' : 'wow', 1800);
   }
   function cmpTouch() { if (!cmpBusy) callCompanion('nudge'); }
   $('cmp-in').addEventListener('input', function () { $('cmp-send').disabled = !clean($('cmp-in').value, 400); lastUserAt = Date.now(); });
@@ -2837,6 +2859,7 @@
         (m.list || []).forEach(function (p) { var q = plazaP(p); plazaNames[q.pid] = q.nick; plazaScene.add(q); });
         plazaCount(); break;
       case 'pj': { var q = plazaP(m.p || {}); plazaNames[q.pid] = q.nick; plazaScene.add(q); plazaCount(); break; }
+      case 'pa': plazaScene.setCode(m.pid, normAv(m.av) || defaultAv(m.pid)); break;
       case 'pl': plazaScene.remove(m.pid); plazaCount(); break;
       case 'pm': plazaScene.moveTo(m.pid, Number(m.x) || 0, Number(m.z) || 0); break;
       case 'pe': plazaScene.emote(m.pid, clean(m.k, 8)); break;
@@ -3297,7 +3320,7 @@
   });
   function plazaBuilding(id) {
     if (id === 'home') { mikaSay('Retour à la maison ! 🏠', false, 'happy'); setTab('chambre'); }
-    else if (id === 'bakery' || id === 'thrift' || id === 'deco' || id === 'karaoke') openStore(id);
+    else if (id === 'bakery' || id === 'thrift' || id === 'deco' || id === 'karaoke' || id === 'dentist') openStore(id);
     else if (id === 'park') {
       if (plazaScene) plazaScene.rideWheel();
       var d = todayKey();
@@ -3311,7 +3334,8 @@
     bakery: { t: '🥐 Boulangerie', hi: 'Bonjour ! Choisis une douceur pour ton Mika 🥐' },
     thrift: { t: '👗 Friperie', hi: 'Bienvenue ! Essaie ce que tu veux, le miroir est à toi ✨' },
     deco: { t: '🪴 Déco', hi: 'Pose-toi, regarde : tout peut aller dans ta chambre 🏡' },
-    karaoke: { t: '🎤 Karaoké', hi: 'Choisis une chanson, on chante ensemble ! 🎶' }
+    karaoke: { t: '🎤 Karaoké', hi: 'Choisis une chanson, on chante ensemble ! 🎶' },
+    dentist: { t: '🦷 Cabinet dentaire', hi: 'Joyeux Halloween ! 🎃 Tu viens de te déguiser…' }
   };
   var BAKERY_EXTRA = [
     { id: 'croissant', e: '🥐', t: 'Croissant', d: 'Beurré et doré', price: 12, gain: 26 },
@@ -3356,8 +3380,18 @@
     { id: 'boba', t: 'Boba Dreams', e: '🧋', premium: '0,99 €' }
   ];
   var st = { theme: null, scene: null, sel: null, singing: false, timer: 0, srcs: [] };
+  var HW_LIST = [['🧙', 'Sorcière'], ['😈', 'Diablotin'], ['🎃', 'Citrouille'], ['🧛', 'Vampire'], ['🩹', 'Momie'], ['👻', 'Fantôme']];
+  function baseAv() { return String(myAv).slice(0, 6); }
+  function hwIndex() { return /h[0-5]$/.test(myAv) ? +String(myAv).slice(-1) : -1; }
+  function setCostume(i) {
+    myAv = i < 0 ? baseAv() : baseAv() + 'h' + i; store('talkie.av', myAv);
+    if (m3d) { try { m3d.setLook(Mika3DMod.avatarOpts(myAv)); } catch (e) { /* ignore */ } }
+    send({ t: 'nick', nick: nick, av: myAv });
+    if (plazaScene && plazaMe) { try { plazaScene.setCode(plazaMe, myAv); } catch (e) { /* ignore */ } }
+  }
   function storeItems() {
     var th = st.theme;
+    if (th === 'dentist') return HW_LIST.map(function (c, i) { return { kind: 'costume', id: 'hw' + i, idx: i, label: c[1], e: c[0], own: true, on: hwIndex() === i }; });
     if (th === 'bakery') return FOODS.concat(BAKERY_EXTRA).map(function (f) { return { kind: 'food', id: f.id, label: f.t, e: f.e, d: f.d, price: f.price, gain: f.gain, own: false }; });
     if (th === 'thrift') { shopSeg = 'outfit'; return items().filter(function (i) { return i.kind === 'outfit'; }); }
     if (th === 'deco') { shopSeg = 'decor'; return items(); }
@@ -3372,7 +3406,7 @@
       if (it.kind === 'outfit') { var img = (m3d && window.Mika3DMod) ? Mika3DMod.mikaPng(it.id) : ''; if (img) { var im = el('img'); im.alt = ''; im.src = img; b.appendChild(im); } else b.appendChild(el('span', 'em', '👗')); }
       else b.appendChild(el('span', 'em', it.e));
       b.appendChild(el('b', null, it.label.replace(/^Bobby : /, '')));
-      var sub = it.premium ? '💎 ' + it.premium : it.kind === 'song' ? 'Gratuit' : it.kind === 'food' ? (it.price ? '🌸 ' + it.price : 'Gratuit') : it.own ? (it.on ? 'Porté' : 'À toi') : '🌸 ' + it.price;
+      var sub = it.premium ? '💎 ' + it.premium : it.kind === 'costume' ? (it.on ? 'Porté' : 'Essayer') : it.kind === 'song' ? 'Gratuit' : it.kind === 'food' ? (it.price ? '🌸 ' + it.price : 'Gratuit') : it.own ? (it.on ? 'Porté' : 'À toi') : '🌸 ' + it.price;
       b.appendChild(el('small', null, sub));
       b.addEventListener('click', function () { storePick(it); });
       list.appendChild(b);
@@ -3383,7 +3417,8 @@
     var box = $('store-act'); box.textContent = '';
     var it = st.sel; if (!it) return;
     var lab;
-    if (it.kind === 'song') lab = it.premium ? '💎 Bientôt' : (st.singing ? '⏹ Arrêter' : '🎤 Chanter');
+    if (it.kind === 'costume') lab = it.on ? '🧹 Retirer le déguisement' : '🎃 Me déguiser';
+    else if (it.kind === 'song') lab = it.premium ? '💎 Bientôt' : (st.singing ? '⏹ Arrêter' : '🎤 Chanter');
     else if (it.kind === 'food') lab = it.price ? 'Offrir · 🌸 ' + it.price : 'Offrir (gratuit)';
     else lab = it.premium ? '💎 Bientôt' : it.own ? (it.on ? 'Retirer' : (it.kind === 'decor' ? 'Poser dans ma chambre' : 'Porter')) : 'Acheter · 🌸 ' + it.price;
     var b = el('button', 'primary', lab); b.type = 'button'; b.addEventListener('click', function () { storeDo(it); }); box.appendChild(b);
@@ -3391,12 +3426,19 @@
   function storePick(it) {
     st.sel = it;
     if (it.kind === 'outfit' || it.kind === 'decor') { shopSel = it; if (st.scene) { st.scene.setItem(it.kind, it.kind === 'decor' ? it.id : null); st.scene.rebuild(); } storeMsg(it.label + (it.own ? (it.on ? ' · il le porte' : ' · dans ton armoire') : ' · 🌸 ' + it.price)); }
+    else if (it.kind === 'costume') { storeDo(it); return; }
     else if (it.kind === 'food') { storeMsg(it.label + ' : ' + it.d); if (st.scene) st.scene.emote('happy'); }
     else storeMsg(it.premium ? it.label + ' · chanson originale, bientôt 💎' : it.label);
     renderStore();
   }
   function storeDo(it) {
     if (it.premium) { toast('💎 Bientôt disponible !'); return; }
+    if (it.kind === 'costume') {
+      setCostume(it.on ? -1 : it.idx);
+      if (st.scene) { st.scene.rebuild(); st.scene.emote('happy'); }
+      storeMsg(it.on ? 'Costume retiré. À l’année prochaine ! 🎃' : pick(['Booouh ! ' + it.e + ' Trop réussi !', 'Ça te va à merveille ' + it.e, 'Joyeux Halloween ! 🎃' + it.e]));
+      st.sel = null; renderStore(); return;
+    }
     if (it.kind === 'song') { if (st.singing) stopSong(); else playSong(it.song); return; }
     if (it.kind === 'food') {
       decayCare();
@@ -3416,6 +3458,7 @@
   }
   function openStore(theme) {
     if (!m3d || !window.Mika3DMod || !Mika3DMod.initInterior) { toast(uiLang() === 'en' ? 'The 3D shops need a more recent phone.' : 'Les magasins 3D demandent un téléphone plus récent.'); return; }
+    if (theme === 'dentist' && hwIndex() < 0) { setCostume(hash(String(nick) + String(cid)) % 6); }
     st.theme = theme; st.sel = null; shopSel = null;
     $('store').hidden = false; $('store-t').textContent = STORE[theme].t; storeMsg(STORE[theme].hi);
     var host = $('store-stage'); host.textContent = '';
@@ -3685,9 +3728,9 @@
   }
   function initAuth(cfg) {
     if (!cfg || !cfg.url || !cfg.key) return;
-    var sc = document.createElement('script'); sc.src = '/supa.js?v=25';
+    var sc = document.createElement('script'); sc.src = '/supa.js?v=26';
     sc.onload = function () {
-      try { sb = window.TalkieSupa.create(cfg.url, cfg.key); } catch (e) { sb = null; return; }
+      try { sb = window.MikaSupa.create(cfg.url, cfg.key); } catch (e) { sb = null; return; }
       renderAcct();
       sb.auth.getSession().then(function (r) { sbUser = r.data && r.data.session ? r.data.session.user : null; renderAcct(); if (sbUser) pullThenSync(); });
       sb.auth.onAuthStateChange(function (ev, session) {

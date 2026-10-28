@@ -74,7 +74,16 @@ export const AV_FACE = ['dot', 'happy', 'stars', 'big', 'sleepy'];
 export const AV_ACC = ['', 'bow', 'glasses', 'beanie', 'flower', 'crown', 'shades', 'phones', 'bandana', 'bowtie', 'wings', 'hat'];
 export const AV_SHAPE = ['round', 'tall', 'chubby', 'bean'];
 export const AV_TAIL = ['none', 'cat', 'bunny', 'fox'];
-const AV_RE = /^[0-9a-b][0-5][0-4][0-9a-b][0-3][0-3]$/;
+const AV_RE = /^[0-9a-b][0-5][0-4][0-9a-b][0-3][0-3](h[0-5])?$/;
+// Déguisements d'Halloween (suffixe h0…h5 : sorcière, diablotin, citrouille, vampire, momie, fantôme)
+const HW = [
+  { color: 0xb9a6ff, ears: 'none', eyes: 'stars', acc: ['hat'], tail: 'cat' },
+  { color: 0xff7a7a, ears: 'none', eyes: 'happy', acc: ['horns'], tail: 'fox' },
+  { color: 0xffa24a, ears: 'none', eyes: 'happy', acc: ['pumpkin'], tail: 'none' },
+  { color: 0xe0e4f2, ears: 'cat', eyes: 'big', acc: ['cape'], tail: 'none' },
+  { color: 0xf3f0e6, ears: 'none', eyes: 'dot', acc: ['mummy'], tail: 'none' },
+  { color: 0xffffff, ears: 'none', eyes: 'big', acc: ['ghost'], tail: 'none' }
+];
 /* codes à 6 caractères [couleur][oreilles][visage][accessoire][corps][queue] ; les anciens codes à 4 chiffres restent valides */
 export function normAv(code) {
   code = String(code == null ? '' : code);
@@ -84,7 +93,9 @@ export function normAv(code) {
 export function avatarOpts(code) {
   code = normAv(code) || '000000';
   const acc = AV_ACC[parseInt(code[3], 12)];
-  return { mika: true, color: AV_COLORS[parseInt(code[0], 12)], ears: AV_EARS[+code[1]], eyes: AV_FACE[+code[2]], topper: 'pom', acc: acc ? [acc] : [], shape: AV_SHAPE[+code[4]], tail: AV_TAIL[+code[5]] };
+  const o = { mika: true, color: AV_COLORS[parseInt(code[0], 12)], ears: AV_EARS[+code[1]], eyes: AV_FACE[+code[2]], topper: 'pom', acc: acc ? [acc] : [], shape: AV_SHAPE[+code[4]], tail: AV_TAIL[+code[5]] };
+  if (code[6] === 'h') return Object.assign(o, HW[+code[7]] || {});
+  return o;
 }
 function outline(m, color) {
   if (!m.isMesh) return m;
@@ -175,6 +186,13 @@ export function createCharacter(o) {
   acc.beanie = new THREE.Group(); { acc.beanie.add(sph(0.38, std(0xff6f8e), 1.05, 0.62, 1.0, 0, 0.05, 0)); const rim = mesh(new THREE.TorusGeometry(0.36, 0.07, 10, 28), std(0xffffff), 0, -0.04, 0); rim.rotation.x = Math.PI / 2; acc.beanie.add(rim); acc.beanie.add(sph(0.09, std(0xffffff), 1, 1, 1, 0, 0.36, 0)); acc.beanie.position.set(0, 1.0, 0); }
   acc.flower = new THREE.Group(); { for (let i = 0; i < 5; i++) { const a = i / 5 * Math.PI * 2; acc.flower.add(sph(0.07, std(0xffb3d1), 1, 1, 0.6, Math.cos(a) * 0.09, Math.sin(a) * 0.09, 0)); } acc.flower.add(sph(0.055, std(C.sun), 1, 1, 0.8, 0, 0, 0.03)); acc.flower.position.set(0.36, 1.08, 0.18); acc.flower.rotation.z = -0.3; }
   acc.bowtie = new THREE.Group(); { const m = std(0xe0457b); acc.bowtie.add(sph(0.1, m, 1.5, 0.9, 0.6, -0.12, 0, 0), sph(0.1, m, 1.5, 0.9, 0.6, 0.12, 0, 0), sph(0.05, std(0xffd1e3), 1, 1, 0.8, 0, 0, 0.02)); acc.bowtie.position.set(0, 0.34, 0.5); }
+
+  // Halloween
+  acc.horns = new THREE.Group(); { [-1, 1].forEach((s2) => { const h = mesh(new THREE.ConeGeometry(0.09, 0.3, 12), std(0xd62839), s2 * 0.24, 0, 0); h.rotation.z = -s2 * 0.35; acc.horns.add(h); }); acc.horns.position.set(0, 1.02, 0.05); }
+  acc.pumpkin = new THREE.Group(); { acc.pumpkin.add(sph(0.4, std(0xff8a1f), 1.15, 0.8, 1.1, 0, 0.0, 0)); acc.pumpkin.add(mesh(new THREE.CylinderGeometry(0.04, 0.06, 0.16, 8), std(0x3d7a2a), 0, 0.3, 0)); [-1, 1].forEach((s2) => acc.pumpkin.add(mesh(new THREE.ConeGeometry(0.06, 0.1, 3), std(0x2a1b5e), s2 * 0.14, 0.04, 0.4))); acc.pumpkin.position.set(0, 1.05, 0.02); }
+  acc.cape = new THREE.Group(); { acc.cape.add(mesh(rbox(1.0, 1.0, 0.06, 0.03), std(0xb0122e), 0, 0.35, -0.5)); acc.cape.add(mesh(new THREE.TorusGeometry(0.42, 0.06, 8, 24), std(0x2a1b5e), 0, 0.18, 0.1)).rotation.x = Math.PI / 2; [-1, 1].forEach((s2) => acc.cape.add(mesh(new THREE.ConeGeometry(0.035, 0.12, 8), std(0xffffff), s2 * 0.07, 0.22, 0.5))); }
+  acc.mummy = new THREE.Group(); { const m = std(0xfffaf0, { roughness: 0.9 }); [0.05, 0.28, 0.5, 0.72].forEach((y, i) => { const r = mesh(new THREE.TorusGeometry(0.5 - Math.abs(y - 0.4) * 0.12, 0.05, 8, 28), m, 0, y, 0); r.rotation.x = Math.PI / 2 + (i % 2 ? 0.14 : -0.14); acc.mummy.add(r); }); }
+  acc.ghost = new THREE.Group(); { acc.ghost.add(sph(0.62, std(0xffffff, { transparent: true, opacity: 0.72, roughness: 1 }), 1, 1.02, 1, 0, 0.42, 0)); [-1, 1].forEach((s2) => acc.ghost.add(sph(0.04, std(0x2a1b5e), 1, 1.4, 0.5, s2 * 0.2, 0.62, 0.55))); }
   acc.mortar = new THREE.Group(); { const m = std(0x2a1b5e); acc.mortar.add(mesh(new THREE.CylinderGeometry(0.26, 0.3, 0.16, 20), m, 0, 0.04, 0)); acc.mortar.add(mesh(rbox(0.8, 0.04, 0.8, 0.01), m, 0, 0.15, 0)); acc.mortar.add(mesh(new THREE.CylinderGeometry(0.012, 0.012, 0.3, 6), std(C.sun), 0.28, 0.0, 0.28)); acc.mortar.add(sph(0.05, std(C.sun), 1, 1, 1, 0.28, -0.14, 0.28)); acc.mortar.position.set(0, 1.08, 0); }
   acc.labcoat = new THREE.Group(); { const m = std(0xffffff, { roughness: 0.7 }); acc.labcoat.add(sph(0.58, m, 1.12, 0.7, 1.05, 0, 0.42, -0.02)); acc.labcoat.add(sph(0.07, std(0xe0457b), 1, 1, 0.6, 0.26, 0.42, 0.52)); acc.labcoat.add(sph(0.07, std(0xe0457b), 1, 1, 0.6, 0.26, 0.26, 0.54)); }
   acc.shades = new THREE.Group(); { const dk = std(0x1d1640, { roughness: 0.2 }); [-1, 1].forEach((s2) => { acc.shades.add(sph(0.14, dk, 1.05, 0.82, 0.3, s2 * 0.21, 0.66, surf(s2 * 0.21, 0.66) + 0.05)); }); acc.shades.add(mesh(rbox(0.12, 0.025, 0.03, 0.01), dk, 0, 0.68, surf(0, 0.68) + 0.06)); }
@@ -1080,6 +1098,7 @@ export function initPlaza(host) {
   building('bakery', -3.4, -5.2, 0xfff1d9, 0xff8fc0, '🥐', 'Boulangerie', 2.1, 1.7, [0xe8a95b, 0xffb3d1, 0xbdf3dc]);
   building('thrift', -1.0, -5.2, 0xd9f1e4, 0x5de3b4, '👗', 'Friperie', 2.0, 1.8, [0xff8fc0, 0x8edbff, 0xb9a6ff]);
   building('deco', 1.4, -5.2, 0xfff4cf, 0xffc24a, '🪴', 'Déco', 2.0, 1.7, [0x6bcf7a, 0xffb3d1]);
+  building('dentist', 4.7, -2.7, 0xffffff, 0x2f8fb0, '🦷', 'Dentiste', 2.1, 1.8, [0xff8a1f, 0x7c5cff, 0x56c6c0]);
   building('karaoke', 3.8, -5.2, 0xe0d4ff, 0x7c5cff, '🎤', 'Karaoké', 2.0, 1.9, [0xff6fc8, 0x7df9ff]);
   // parc d'attractions : grande roue
   const wheel = new THREE.Group(); wheel.position.set(6.4, 1.7, -6.2); wheel.scale.setScalar(0.62); wheel.userData.pick = 'park';
@@ -1110,6 +1129,12 @@ export function initPlaza(host) {
     c.ch.setTalking(true); setTimeout(() => c.ch && c.ch.setTalking(false), 1400);
   }
   function remove(pid) { const c = cast[pid]; if (!c) return; if (c.bub) c.bub.remove(); c.ch.dispose(); c.label.remove(); delete cast[pid]; }
+  function setCode(pid, code) {
+    const c = cast[pid]; if (!c || c.npc) return;
+    const pos = c.ch.root.position.clone(); c.ch.dispose();
+    const ch = createCharacter(avatarOpts(code)); ch.root.scale.setScalar(0.85); ch.root.position.copy(pos); scene.add(ch.root);
+    ch.fx = (k, n) => fx.emit(k, n, ch.root.position, 0.85); c.ch = ch; ch.hop(4);
+  }
   function moveTo(pid, x, z) { const c = cast[pid]; if (c) { c.tx = x; c.tz = z; } }
   function emote(pid, k) {
     const c = cast[pid]; if (!c) return;
@@ -1157,7 +1182,7 @@ export function initPlaza(host) {
   frame();
   function rideWheel() { ride = 4.5; }
   function reset() { Object.keys(cast).forEach((id) => { if (!cast[id].npc) remove(id); }); }
-  return { add, remove, reset, rideWheel, moveTo, emote, say, has: (pid) => !!cast[pid], count: () => Object.keys(cast).length, destroy() { running = false; Object.keys(cast).forEach(remove); renderer.dispose(); renderer.forceContextLoss && renderer.forceContextLoss(); canvas.remove(); ov.remove(); } };
+  return { add, remove, setCode, reset, rideWheel, moveTo, emote, say, has: (pid) => !!cast[pid], count: () => Object.keys(cast).length, destroy() { running = false; Object.keys(cast).forEach(remove); renderer.dispose(); renderer.forceContextLoss && renderer.forceContextLoss(); canvas.remove(); ov.remove(); } };
 }
 
 /* ================= Intérieurs de magasins (boulangerie, friperie, déco, karaoké) ================= */
@@ -1184,19 +1209,19 @@ export function initInterior(host, theme, getOpts) {
   let renderer; try { renderer = new THREE.WebGLRenderer({ antialias: true, alpha: false, powerPreference: 'low-power' }); } catch (e) { return null; }
   renderer.setPixelRatio(Math.min(window.devicePixelRatio || 1, 2));
   const canvas = renderer.domElement; canvas.className = 'scene3d'; host.insertBefore(canvas, host.firstChild);
-  const scene = new THREE.Scene(); const BG = { bakery: 0xffe9f0, thrift: 0xefe3d0, deco: 0xe6f3ee, karaoke: 0x241447 }[theme] || 0xffffff; scene.background = new THREE.Color(BG);
+  const scene = new THREE.Scene(); const BG = { bakery: 0xffe9f0, thrift: 0xefe3d0, deco: 0xe6f3ee, karaoke: 0x241447, dentist: 0xdff5ef }[theme] || 0xffffff; scene.background = new THREE.Color(BG);
   standardLights(scene);
   const camera = new THREE.PerspectiveCamera(34, 1, 0.1, 40); camera.position.set(0, 1.9, 6.6); camera.lookAt(0, 1.25, 0);
   const fx = createFx(scene), anim = [];
   const room = new THREE.Group(); scene.add(room);
   const add = (o) => { room.add(o); return o; };
-  const floorMat = { bakery: () => std(0xffffff, { map: checkTex('#fff4f8', '#ffc4dc', 5) }), thrift: () => std(0xd8a56e, { map: stripeTex('#d9a96f', '#c8935b', 14) }), deco: () => std(0xf3e6d3, { map: checkTex('#f6ece0', '#e9d9c3', 5) }), karaoke: () => std(0x3a2370, { roughness: 0.3 }) }[theme]();
+  const floorMat = { bakery: () => std(0xffffff, { map: checkTex('#fff4f8', '#ffc4dc', 5) }), thrift: () => std(0xd8a56e, { map: stripeTex('#d9a96f', '#c8935b', 14) }), deco: () => std(0xf3e6d3, { map: checkTex('#f6ece0', '#e9d9c3', 5) }), karaoke: () => std(0x3a2370, { roughness: 0.3 }), dentist: () => std(0xffffff, { map: checkTex('#ffffff', '#cfeee6', 6) }) }[theme]();
   const fl = mesh(new THREE.PlaneGeometry(26, 16), floorMat, 0, 0, 4.5, false); floorMat.map && floorMat.map.repeat.multiplyScalar(1.8); fl.rotation.x = -Math.PI / 2; add(fl);
-  const wallCol = { bakery: 0xffd6e6, thrift: 0xc7e3d4, deco: 0xfff3e0, karaoke: 0x2f1a63 }[theme];
+  const wallCol = { bakery: 0xffd6e6, thrift: 0xc7e3d4, deco: 0xfff3e0, karaoke: 0x2f1a63, dentist: 0xcdeee6 }[theme];
   const wallTex = theme === 'bakery' ? stripeTex('#ffd6e6', '#fff0f6', 14) : null; if (wallTex) wallTex.repeat.set(3.4, 1);
   add(mesh(rbox(26, 10, 0.2, 0.05), std(wallCol, wallTex ? { map: wallTex } : { emissive: wallCol, emissiveIntensity: theme === 'karaoke' ? 0.35 : 0.12 }), 0, 4.7, -3.0, false));
   add(mesh(rbox(14, 0.18, 0.2, 0.04), std(0xffffff), 0, 0.09, -2.88, false));
-  const sign = mesh(new THREE.PlaneGeometry(2.9, 0.9), new THREE.MeshBasicMaterial({ map: signTex({ bakery: 'Boulangerie', thrift: 'Friperie', deco: 'Déco', karaoke: 'Karaoké' }[theme], { bakery: '#e0457b', thrift: '#ff7ac8', deco: '#2f8f6b', karaoke: '#7df9ff' }[theme], { bakery: '#fffaf0', thrift: null, deco: '#fffaf0', karaoke: null }[theme], { thrift: '#ff3fa8', karaoke: '#18c8ff' }[theme]), transparent: true }), 0, 3.85, -2.86, false);
+  const sign = mesh(new THREE.PlaneGeometry(2.9, 0.9), new THREE.MeshBasicMaterial({ map: signTex({ bakery: 'Boulangerie', thrift: 'Friperie', deco: 'Déco', karaoke: 'Karaoké', dentist: 'Dentiste' }[theme], { bakery: '#e0457b', thrift: '#ff7ac8', deco: '#2f8f6b', karaoke: '#7df9ff', dentist: '#2f8fb0' }[theme], { bakery: '#fffaf0', thrift: null, deco: '#fffaf0', karaoke: null, dentist: '#fffaf0' }[theme], { thrift: '#ff3fa8', karaoke: '#18c8ff' }[theme]), transparent: true }), 0, 3.85, -2.86, false);
   add(sign);
   let item = null, decorG = null, ch = null, spinT = 0, singing = false, T = 0, running = true, camZ = 6.6, narrow = false;
   let pos = [0, 0, 1.4], sc = 1.25;
@@ -1249,6 +1274,43 @@ export function initInterior(host, theme, getOpts) {
     const arch = mesh(new THREE.TorusGeometry(0.9, 0.08, 8, 28, Math.PI), std(0xffffff), 2.2, 2.6, -2.85, false); add(arch); add(mesh(new THREE.CircleGeometry(0.9, 28, 0, Math.PI), new THREE.MeshBasicMaterial({ color: 0xbfe9ff }), 2.2, 2.6, -2.86, false));
     add(mesh(new THREE.CylinderGeometry(0.62, 0.7, 0.2, 28), std(0xffffff), 1.5, 0.1, 1.3)); // piédestal
     const pl = new THREE.PointLight(0xfff0d0, 0.8, 14); pl.position.set(0, 3.6, 2); scene.add(pl);
+  } else if (theme === 'dentist') {
+    pos = [1.5, 0, 1.5]; sc = 1.15;
+    const white = std(0xffffff, { roughness: 0.4 }), teal = std(0x56c6c0), grey = std(0xbfc9d6, { metalness: 0.5, roughness: 0.3 });
+    // fauteuil de dentiste (grand, incliné)
+    add(mesh(new THREE.CylinderGeometry(0.5, 0.6, 0.18, 24), grey, -1.7, 0.09, 0.4));
+    add(mesh(new THREE.CylinderGeometry(0.12, 0.12, 0.6, 12), grey, -1.7, 0.45, 0.4));
+    add(mesh(rbox(0.95, 0.22, 1.2, 0.1), teal, -1.7, 0.85, 0.4));
+    const back = add(mesh(rbox(0.9, 1.3, 0.2, 0.1), teal, -1.7, 1.35, -0.3)); back.rotation.x = -0.55;
+    add(mesh(rbox(0.5, 0.3, 0.16, 0.06), teal, -1.7, 2.0, -0.62));
+    [-1, 1].forEach((sd) => add(mesh(rbox(0.1, 0.1, 0.8, 0.04), white, -1.7 + sd * 0.55, 1.15, 0.35)));
+    // lampe articulée
+    add(mesh(new THREE.CylinderGeometry(0.05, 0.05, 2.2, 8), grey, -1.7, 2.9, 0.1, false));
+    const lampArm = add(mesh(rbox(1.4, 0.07, 0.07, 0.02), grey, -1.0, 3.9, 0.1, false));
+    const lamp = add(mesh(new THREE.CylinderGeometry(0.42, 0.3, 0.16, 20), std(0xfff6c9, { emissive: 0xfff2a8, emissiveIntensity: 0.9 }), -0.4, 3.7, 0.2, false));
+    const lampL = new THREE.PointLight(0xfff2c0, 0.7, 9); lampL.position.set(-0.6, 3.4, 1.0); scene.add(lampL);
+    // plateau d'outils
+    add(mesh(rbox(0.7, 0.9, 0.5, 0.06), white, -3.0, 0.45, 0.4));
+    add(mesh(rbox(0.6, 0.04, 0.4, 0.02), grey, -3.0, 0.92, 0.4));
+    [0, 1, 2].forEach((i) => add(mesh(new THREE.CylinderGeometry(0.015, 0.015, 0.34, 6), std([0xff6f8e, 0x56c6c0, 0xffe27a][i], { metalness: 0.4 }), -3.15 + i * 0.12, 1.1, 0.42)).rotation.z = 0.5 - i * 0.4);
+    // grande dent souriante sur piédestal
+    add(mesh(new THREE.CylinderGeometry(0.6, 0.7, 0.3, 24), white, 3.0, 0.15, 0.0));
+    const tooth = new THREE.Group(); tooth.add(sph(0.52, white, 1.15, 1, 0.95, 0, 1.2, 0)); [-1, 1].forEach((sd) => tooth.add(mesh(new THREE.ConeGeometry(0.26, 0.6, 16), white, sd * 0.3, 0.62, 0))); tooth.children.slice(-2).forEach((c) => { c.rotation.x = Math.PI; });
+    [-1, 1].forEach((sd) => tooth.add(sph(0.06, std(0x2a1b5e), 1, 1.4, 0.5, sd * 0.2, 1.3, 0.48))); tooth.add(mesh(new THREE.TorusGeometry(0.14, 0.025, 8, 16, Math.PI), std(0x2a1b5e), 0, 1.1, 0.5)).rotation.z = Math.PI;
+    [-1, 1].forEach((sd) => tooth.add(sph(0.07, std(0xff8fc0), 1.2, 0.7, 0.4, sd * 0.34, 1.12, 0.46)));
+    tooth.position.set(3.0, 0.3, 0.0); add(tooth); anim.push((t) => { tooth.position.y = 0.3 + Math.sin(t * 1.6) * 0.06; tooth.rotation.y = Math.sin(t * 0.8) * 0.25; });
+    // comptoir d'accueil
+    add(mesh(rbox(2.4, 1.0, 0.6, 0.08), std(0xffffff), 0.5, 0.5, -2.2));
+    add(mesh(rbox(2.5, 0.08, 0.7, 0.03), teal, 0.5, 1.02, -2.2));
+    // poster dent + bocaux
+    const poster = mesh(new THREE.PlaneGeometry(1.5, 1.9), new THREE.MeshBasicMaterial({ map: canvasTex(256, 330, (g, w, h) => { g.fillStyle = '#fff'; g.fillRect(0, 0, w, h); g.fillStyle = '#56c6c0'; g.fillRect(0, 0, w, 26); g.fillStyle = '#2a1b5e'; g.font = '700 34px DynaPuff, Fredoka, sans-serif'; g.textAlign = 'center'; g.fillText('Brosse-toi', w / 2, 80); g.fillText('les dents !', w / 2, 120); g.font = '120px serif'; g.fillText('🦷', w / 2, 250); }) }), 3.4, 3.2, -2.85, false); add(poster);
+    // déco Halloween
+    [[-3.6, -1.6, 0.5], [3.7, 1.9, 0.42], [0.0, -1.5, 0.3]].forEach((q) => { const pk = sph(q[2], std(0xff8a1f), 1.15, 0.85, 1.1, q[0], q[2] * 0.8, q[1]); add(pk); add(mesh(new THREE.CylinderGeometry(0.04, 0.06, 0.18, 8), std(0x3d7a2a), q[0], q[2] * 1.5, q[1])); [-1, 1].forEach((sd) => add(mesh(new THREE.ConeGeometry(0.07, 0.12, 3), std(0xfff2a8, { emissive: 0xffd24a, emissiveIntensity: 1 }), q[0] + sd * q[2] * 0.35, q[2] * 0.9, q[1] + q[2] * 0.95))); });
+    const ghostF = new THREE.Group(); ghostF.add(sph(0.38, std(0xffffff, { transparent: true, opacity: 0.85 }), 1, 1.2, 1, 0, 0, 0)); [-1, 1].forEach((sd) => ghostF.add(sph(0.05, std(0x2a1b5e), 1, 1.4, 0.5, sd * 0.13, 0.08, 0.34))); ghostF.add(sph(0.06, std(0x2a1b5e), 1, 1.2, 0.5, 0, -0.08, 0.35)); ghostF.position.set(-3.7, 2.6, -0.6); add(ghostF);
+    anim.push((t) => { ghostF.position.y = 2.6 + Math.sin(t * 1.3) * 0.25; ghostF.rotation.y = Math.sin(t * 0.7) * 0.4; });
+    const bats = []; for (let i = 0; i < 4; i++) { const b = new THREE.Group(); [-1, 1].forEach((sd) => { const w = sph(0.14, std(0x1d1640), 1.6, 0.4, 0.2, sd * 0.16, 0, 0); w.userData.sd = sd; b.add(w); }); b.add(sph(0.07, std(0x1d1640), 1, 1, 1, 0, 0, 0)); b.userData.i = i; bats.push(b); add(b); }
+    anim.push((t) => { bats.forEach((b, i) => { const a = t * 0.5 + i * 1.6; b.position.set(Math.sin(a) * 3.2, 3.3 + Math.sin(t * 2 + i) * 0.3, -1.2 + Math.cos(a) * 1.0); b.rotation.y = -a; b.children.forEach((c) => { if (c.userData.sd) c.rotation.z = c.userData.sd * Math.sin(t * 14 + i) * 0.7; }); }); });
+    const pl = new THREE.PointLight(0xffb36b, 0.7, 12); pl.position.set(2, 2.5, 2.5); scene.add(pl);
   } else {
     pos = [0, 0.34, 0.6]; sc = 1.3;
     add(mesh(rbox(5.6, 0.34, 2.8, 0.1), std(0x5b3fd6, { emissive: 0x3a2370, emissiveIntensity: 0.5 }), 0, 0.17, 0.6, false));

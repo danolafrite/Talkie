@@ -3,13 +3,13 @@
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, user-scalable=no, viewport-fit=cover">
-<title>Talkie</title>
+<title>Mika</title>
 <meta name="description" content="Parle de ce que tu veux, avec quelqu’un qui est là maintenant.">
 <meta name="theme-color" content="#FFF8EE">
 <script>try{var __s=localStorage.getItem("talkie.scheme")||"light";if(__s==="dark"||(__s==="auto"&&matchMedia("(prefers-color-scheme: dark)").matches))document.documentElement.setAttribute("data-scheme","dark")}catch(e){}</script>
 <meta name="apple-mobile-web-app-capable" content="yes">
 <meta name="mobile-web-app-capable" content="yes">
-<meta name="apple-mobile-web-app-title" content="Talkie">
+<meta name="apple-mobile-web-app-title" content="Mika">
 <meta name="apple-mobile-web-app-status-bar-style" content="default">
 <link rel="manifest" href="/manifest.webmanifest">
 <link rel="icon" type="image/png" href="/favicon.png">
@@ -23,7 +23,7 @@
 @font-face { font-family: 'Fredoka'; font-style: normal; font-weight: 300 700; font-display: swap; src: url(/fonts/fredoka-latin-ext-wght-normal.woff2) format('woff2'); unicode-range: U+0100-02BA, U+02BD-02C5, U+02C7-02CC, U+02CE-02D7, U+02DD-02FF, U+0304, U+0308, U+0329, U+1D00-1DBF, U+1E00-1E9F, U+1EF2-1EFF, U+2020, U+20A0-20AB, U+20AD-20C0, U+2113, U+2C60-2C7F, U+A720-A7FF; }
 @font-face { font-family: 'Fredoka'; font-style: normal; font-weight: 300 700; font-display: swap; src: url(/fonts/fredoka-latin-wght-normal.woff2) format('woff2'); unicode-range: U+0000-00FF, U+0131, U+0152-0153, U+02BB-02BC, U+02C6, U+02DA, U+02DC, U+0304, U+0308, U+0329, U+2000-206F, U+20AC, U+2122, U+2191, U+2193, U+2212, U+2215, U+FEFF, U+FFFD; }
 
-/* Talkie : raisin (texte), violet (ta voix), jaune soleil (action), rose, menthe et ciel pour les sourires. */
+/* Mika : raisin (texte), violet (ta voix), jaune soleil (action), rose, menthe et ciel pour les sourires. */
 :root {
   --ink: #2A1B5E;
   --bg: #FFF3FA;
@@ -1008,15 +1008,13 @@ body.kb .life-line{display:none}
     <header class="bar">
       <div class="wrap">
         <div class="brand">
-          <svg class="logo" viewBox="0 0 64 64" aria-hidden="true">
-            <path d="M32 6c-16 0-27 10-27 23 0 8 4 14 10 18l-3 11 13-8c2 .3 5 .5 7 .5 16 0 27-10 27-22C59 16 48 6 32 6z" fill="#5DE3B4"/>
-            <path d="M32 8c3-7 11-8 14-5-2 6-8 9-14 5z" fill="#FFCF3F"/>
-            <ellipse cx="22" cy="31" rx="3.4" ry="4.6" fill="#2A1B5E"/><ellipse cx="42" cy="31" rx="3.4" ry="4.6" fill="#2A1B5E"/>
-            <circle cx="23.2" cy="29.3" r="1.2" fill="#fff"/><circle cx="43.2" cy="29.3" r="1.2" fill="#fff"/>
-            <ellipse cx="14.5" cy="38" rx="4" ry="2.6" fill="#FF8FC0" opacity=".8"/><ellipse cx="49.5" cy="38" rx="4" ry="2.6" fill="#FF8FC0" opacity=".8"/>
-            <path d="M28.5 38 Q32 43 35.5 38" stroke="#2A1B5E" stroke-width="2.6" fill="none" stroke-linecap="round"/>
-          </svg>
-          <h1>talkie</h1><span class="tag">bêta</span>
+          <svg class="logo" viewBox="0 0 64 64" aria-hidden="true"><path d="M13 22 L9 4 L27 14z" fill="#43CFA0"/><path d="M51 22 L55 4 L37 14z" fill="#43CFA0"/><path d="M14 18 L12 9 L21 14z" fill="#FFB3D1"/><path d="M50 18 L52 9 L43 14z" fill="#FFB3D1"/>
+<ellipse cx="32" cy="36" rx="27" ry="23" fill="#5DE3B4"/><ellipse cx="32" cy="46" rx="17" ry="9" fill="#C9F7E6" opacity=".7"/>
+<ellipse cx="22" cy="34" rx="3.6" ry="4.8" fill="#2A1B5E"/><ellipse cx="42" cy="34" rx="3.6" ry="4.8" fill="#2A1B5E"/>
+<circle cx="23.3" cy="32.2" r="1.3" fill="#fff"/><circle cx="43.3" cy="32.2" r="1.3" fill="#fff"/>
+<ellipse cx="13.5" cy="41" rx="4.2" ry="2.7" fill="#FF8FC0" opacity=".85"/><ellipse cx="50.5" cy="41" rx="4.2" ry="2.7" fill="#FF8FC0" opacity=".85"/>
+<path d="M28 41 Q32 46 36 41" stroke="#2A1B5E" stroke-width="2.6" fill="none" stroke-linecap="round"/></svg>
+          <h1>Mika</h1><span class="tag">bêta</span>
         </div>
         <div class="barr"><div id="live" class="live off" aria-live="polite"><span class="dot" aria-hidden="true"></span><span id="count">Connexion…</span></div><button type="button" class="gear" id="btn-settings" aria-label="Réglages"><svg viewBox="0 0 24 24" aria-hidden="true"><circle cx="12" cy="12" r="3.2"/><path d="M12 2.8v2.6M12 18.6v2.6M2.8 12h2.6M18.6 12h2.6M5.5 5.5l1.8 1.8M16.7 16.7l1.8 1.8M5.5 18.5l1.8-1.8M16.7 7.3l1.8-1.8"/></svg></button></div>
       </div>
@@ -1137,7 +1135,7 @@ body.kb .life-line{display:none}
         </div>
       </section>
 
-      <details class="foot"><summary>ℹ️ À propos et sécurité</summary><p>Talkie est réservé aux 18 ans et plus. Ton pays est deviné grâce à ton fuseau horaire pour choisir les thèmes. C’est un espace pour discuter, pas un service d’aide : si ça ne va vraiment pas, le 3114 répond jour et nuit, gratuitement (France).<span id="foot-ai" hidden> Mika est une IA : la modération automatique lit les messages pour protéger tout le monde. Quand tu lui écris, ou quand tu cherches des idées de thèmes, le texte est envoyé à Anthropic pour produire la réponse.</span><span id="foot-gif" hidden> Les GIF viennent de GIPHY : en les cherchant, ta recherche leur est transmise.</span></p></details>
+      <details class="foot"><summary>ℹ️ À propos et sécurité</summary><p>Mika est réservé aux 18 ans et plus. Ton pays est deviné grâce à ton fuseau horaire pour choisir les thèmes. C’est un espace pour discuter, pas un service d’aide : si ça ne va vraiment pas, le 3114 répond jour et nuit, gratuitement (France).<span id="foot-ai" hidden> Mika est une IA : la modération automatique lit les messages pour protéger tout le monde. Quand tu lui écris, ou quand tu cherches des idées de thèmes, le texte est envoyé à Anthropic pour produire la réponse.</span><span id="foot-gif" hidden> Les GIF viennent de GIPHY : en les cherchant, ta recherche leur est transmise.</span></p></details>
       </div>
 
       <div id="pane-bobby" class="tabpane" data-pane="bobby" hidden>
@@ -1287,9 +1285,9 @@ body.kb .life-line{display:none}
     <div class="sheet" role="dialog" aria-modal="true" aria-labelledby="sheet-age-h">
       <div class="grab"></div>
       <div class="optrow" style="justify-content:flex-end"><span class="seg langseg" role="group" aria-label="Langue"><button type="button" class="js-lang" data-l="fr" aria-pressed="false">Français</button><button type="button" class="js-lang" data-l="en" aria-pressed="false">English</button></span></div>
-      <h3 id="sheet-age-h">Bienvenue sur Talkie</h3>
-      <p>Talkie met en relation des inconnus : il est réservé aux personnes de <strong>18 ans et plus</strong>. En continuant, tu acceptes que la modération automatique de Mika lit les messages pour protéger tout le monde. Les messages ne sont pas conservés.</p>
-      <p id="age-no" class="hint" hidden>Désolé, Talkie n’est pas accessible aux mineurs. Reviens à tes 18 ans !</p>
+      <h3 id="sheet-age-h">Bienvenue sur Mika</h3>
+      <p>Mika met en relation des inconnus : il est réservé aux personnes de <strong>18 ans et plus</strong>. En continuant, tu acceptes que la modération automatique de Mika lit les messages pour protéger tout le monde. Les messages ne sont pas conservés.</p>
+      <p id="age-no" class="hint" hidden>Désolé, Mika n’est pas accessible aux mineurs. Reviens à tes 18 ans !</p>
       <div class="stack">
         <button type="button" class="primary" id="btn-age-yes">J’ai 18 ans ou plus</button>
         <button type="button" class="ghost" id="btn-age-no">J’ai moins de 18 ans</button>
@@ -1388,7 +1386,7 @@ body.kb .life-line{display:none}
         <button type="button" class="ghost" id="btn-geo">📍 Utiliser ma position</button>
         <button type="button" class="ghost" id="btn-place-close">Fermer</button>
       </div>
-      <p class="hint">Ta position approximative est envoyée à BigDataCloud (service de géolocalisation) pour trouver ta ville. Seule la ville est gardée sur ton téléphone et transmise à Talkie.</p>
+      <p class="hint">Ta position approximative est envoyée à BigDataCloud (service de géolocalisation) pour trouver ta ville. Seule la ville est gardée sur ton téléphone et transmise à Mika.</p>
     </div>
   </div>
 
@@ -1405,8 +1403,8 @@ body.kb .life-line{display:none}
   </div>
 </div>
 <div id="toast" role="status" aria-live="polite" hidden></div>
-<script src="/i18n.js?v=25"></script>
-  <script src="/scene3d.js?v=25" defer></script>
-<script src="/app.js?v=25" defer></script>
+<script src="/i18n.js?v=26"></script>
+  <script src="/scene3d.js?v=26" defer></script>
+<script src="/app.js?v=26" defer></script>
 </body>
 </html>

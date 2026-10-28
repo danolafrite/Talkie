@@ -108,31 +108,57 @@ async function elTry(text, id, signal, emo, lang) {
 
 /* Voix gratuite (Microsoft Edge, voix neuronales) : filet de sécurité quand ElevenLabs n'a plus de crédit. Désactivable : TTS_EDGE=0. */
 const EDGE_ON = process.env.TTS_EDGE !== '0';
-const EDGE_FR = { coral: ['fr-FR-EloiseNeural', '+12%', '+8%'], shimmer: ['fr-FR-DeniseNeural', '+6%', '-2%'], nova: ['fr-FR-VivienneMultilingualNeural', '+9%', '+8%'], sage: ['fr-FR-DeniseNeural', '-4%', '-6%'], onyx: ['fr-FR-HenriNeural', '-3%', '-4%'] };
-const EDGE_EN = { coral: ['en-US-AnaNeural', '+10%', '+6%'], shimmer: ['en-US-JennyNeural', '+6%', '0%'], nova: ['en-US-AriaNeural', '+8%', '+8%'], sage: ['en-GB-SoniaNeural', '-3%', '-4%'], onyx: ['en-US-GuyNeural', '-3%', '-2%'] };
+const EDGE_FR = { coral: ['fr-FR-EloiseNeural', '+14%', '+6%'], shimmer: ['fr-FR-DeniseNeural', '+3%', '-8%'], nova: ['fr-FR-VivienneMultilingualNeural', '+10%', '+14%'], sage: ['fr-FR-DeniseNeural', '-8%', '-10%'], onyx: ['fr-FR-HenriNeural', '-6%', '-6%'] };
+const EDGE_EN = { coral: ['en-US-AnaNeural', '+10%', '+6%'], shimmer: ['en-US-JennyNeural', '+2%', '-6%'], nova: ['en-US-AriaNeural', '+10%', '+12%'], sage: ['en-GB-SoniaNeural', '-5%', '-8%'], onyx: ['en-US-GuyNeural', '-4%', '-4%'] };
 const EDGE_EMO = { happy: [6, 8], excited: [10, 14], sad: [-8, -12], angry: [8, 14], shy: [-2, -6], sleepy: [-6, -16], wow: [8, 8], love: [4, -2] };
 const pct = (n) => (n >= 0 ? '+' : '') + Math.round(n) + '%';
+
+/* Rythme vivant : chaque phrase a sa vitesse, sa hauteur et sa pause (excitée, hésitante, soupir, rire…). */
+const xml = (x) => x.replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;');
+function ssmlBody(text) {
+  const parts = text.match(/[^.!?…]+(?:\.{3}|[.!?…]+)?/g) || [text];
+  return parts.map((raw, i) => {
+    const seg = raw.trim(); if (!seg) return '';
+    let rate = 0, pitch = 0, pause = 220;
+    if (/!+$/.test(seg)) { rate += 8; pitch += 7; pause = 180; }
+    else if (/\?$/.test(seg)) { pitch += 5; rate -= 2; pause = 260; }
+    else if (/(\.{3}|…)$/.test(seg)) { rate -= 14; pitch -= 4; pause = 520; }
+    else { rate -= 2; pause = 320; }
+    if (/\b(ha ha|hi hi|hé hé)\b/i.test(seg)) { rate += 12; pitch += 8; pause = 160; }
+    if (/\b(pfou|hum…|hum)\b/i.test(seg)) { rate -= 10; pitch -= 6; pause = 450; }
+    if (/^[A-ZÉÈÀ]{3,}[^a-z]*$/.test(seg) || /\b[A-ZÉÈÀ]{4,}\b/.test(seg)) { rate += 6; pitch += 6; }
+    // les virgules deviennent de vraies respirations
+    const body = xml(seg).replace(/,\s*/g, ', <break time="140ms"/>');
+    return '<prosody rate="' + pct(rate) + '" pitch="' + pct(pitch) + '">' + body + '</prosody>' + (i < parts.length - 1 ? '<break time="' + pause + 'ms"/>' : '');
+  }).join('');
+}
 let elDownUntil = 0; // ElevenLabs sans crédit : on arrête de l'essayer pendant 30 min
-async function edgeSynth(text, voice, lang, emo, signal) {
+async function edgeOnce(input, voiceName, pitch, rate, signal) {
   const { MsEdgeTTS, OUTPUT_FORMAT } = require('msedge-tts');
-  const v = (lang === 'en' ? EDGE_EN : EDGE_FR)[voice] || (lang === 'en' ? EDGE_EN : EDGE_FR).coral;
-  const em = EDGE_EMO[emo] || [0, 0];
-  const num = (x) => parseFloat(x);
   const tts = new MsEdgeTTS({ connectionTimeoutMs: 8000, synthesisTimeoutMs: 15000 });
   try {
-    await tts.setMetadata(v[0], OUTPUT_FORMAT.AUDIO_24KHZ_48KBITRATE_MONO_MP3);
-    const said = untag(text).replace(/\bhum\b/gi, 'hum…').replace(/\bhi hi\b/gi, 'hi hi hi').replace(/\bhé hé\b/gi, 'hé hé hé').replace(/\bahah\b/gi, 'ha ha ha').replace(/\bpfff?\b/gi, 'pfou');
-    const { audioStream } = tts.toStream(said, { pitch: pct(num(v[1]) + em[0]), rate: pct(num(v[2]) + em[1]) });
+    await tts.setMetadata(voiceName, OUTPUT_FORMAT.AUDIO_24KHZ_48KBITRATE_MONO_MP3);
+    const { audioStream } = tts.toStream(input, { pitch, rate });
     const chunks = [];
     await new Promise((resolve, reject) => {
-      const stop = () => reject(Object.assign(new Error('voix gratuite trop lente'), { code: 503 }));
-      if (signal) signal.addEventListener('abort', stop, { once: true });
+      if (signal) signal.addEventListener('abort', () => reject(Object.assign(new Error('voix gratuite trop lente'), { code: 503 })), { once: true });
       audioStream.on('data', (c) => chunks.push(c));
       audioStream.on('end', resolve);
       audioStream.on('error', reject);
     });
     return Buffer.concat(chunks);
   } finally { try { tts.close(); } catch (e) { /* ignore */ } }
+}
+async function edgeSynth(text, voice, lang, emo, signal) {
+  const v = (lang === 'en' ? EDGE_EN : EDGE_FR)[voice] || (lang === 'en' ? EDGE_EN : EDGE_FR).coral;
+  const em = EDGE_EMO[emo] || [0, 0];
+  const num = (x) => parseFloat(x);
+  const pitch = pct(num(v[1]) + em[0]), rate = pct(num(v[2]) + em[1]);
+  const said = untag(text).replace(/\bhum\b/gi, 'hum…').replace(/\bhi hi\b/gi, 'hi hi hi').replace(/\bhé hé\b/gi, 'hé hé hé').replace(/\bahah\b/gi, 'ha ha ha').replace(/\bpfff?\b/gi, 'pfou');
+  let buf = null;
+  try { buf = await edgeOnce(ssmlBody(said), v[0], pitch, rate, signal); } catch (e) { buf = null; }
+  if (!buf || buf.length < 200) buf = await edgeOnce(xml(said), v[0], pitch, rate, signal); // SSML refusé : lecture simple
+  return buf;
 }
 const inflight = new Map(); // même phrase demandée deux fois en même temps : une seule synthèse
 async function synth(text, ip, opts) {

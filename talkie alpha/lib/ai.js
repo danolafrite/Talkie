@@ -5,6 +5,7 @@ const KEY = process.env.ANTHROPIC_API_KEY || '';
 const MODEL = process.env.AI_MODEL || 'claude-haiku-5-5';
 const DAILY_CAP = parseInt(process.env.AI_DAILY_CAP, 10) || 1000;
 
+const thinkMode = {};
 let thinkingOff = process.env.AI_THINKING_OFF !== '0';
 let day = '';
 let used = 0;
@@ -45,13 +46,15 @@ async function complete(opts) {
       body: JSON.stringify(Object.assign({ model: mdl, max_tokens: maxTokens || 220, system, messages }, tools ? { tools } : {}, withTemp && opts.temperature != null ? { temperature: opts.temperature } : {}, withThinkingOff ? { thinking: { type: withThinkingOff === 'dis' ? 'disabled' : 'between_tools' } } : {}))
     });
     // Un modèle récent peut refuser un réglage (température, réflexion désactivée) : on retire les options une à une, puis on retombe sur le modèle de base.
-    const off = thinkingOff ? 'bt' : false; // les modèles récents veulent « between_tools », les anciens « disabled »
-    const tries = [[model, off, false], [model, off && 'dis', false], [model, false, false], [model, off, true], [model, false, true]];
-    if (model !== MODEL) tries.push([MODEL, off, false], [MODEL, off && 'dis', false], [MODEL, false, false]);
+    // Chaque modèle veut sa propre forme pour couper la réflexion (between_tools, disabled, ou rien) : on l'apprend une fois et on s'en souvient.
+    const modes = (mdl) => (thinkMode[mdl] !== undefined ? [thinkMode[mdl]] : thinkingOff ? ['bt', 'dis', false] : [false]);
+    const tries = [];
+    for (const mdl of model !== MODEL ? [model, MODEL] : [model]) for (const m of modes(mdl)) tries.push([mdl, m, false]);
+    tries.push([MODEL, false, false]);
     let r = null;
     for (const t of tries) {
       r = await send(t[0], t[1], t[2]);
-      if (r.status !== 400) break;
+      if (r.status !== 400) { if (r.ok && thinkMode[t[0]] === undefined) thinkMode[t[0]] = t[1]; break; }
       let d = ''; try { d = (await r.text()).slice(0, 200); } catch (e) { /* ignore */ }
       console.warn('[talkie] API 400 (' + t[0] + ', pensée coupée=' + t[1] + ', température=' + t[2] + ') : ' + d);
     }
@@ -59,7 +62,7 @@ async function complete(opts) {
     let j = await r.json();
     if (!(j.content || []).some((b) => b.type === 'text') && (j.content || []).some((b) => b.type === 'thinking') && !opts._r) {
       // La réflexion a mangé toute la réponse : on recommence avec la réflexion coupée.
-      const r2 = await send(MODEL, 'dis', false).then((x) => (x.ok ? x : send(MODEL, 'bt', false)));
+      const r2 = await send(MODEL, thinkMode[MODEL] || 'dis', false).then((x) => (x.ok ? x : send(MODEL, 'bt', false)));
       if (r2.ok) j = await r2.json();
     }
     const out = (j.content || []).filter((b) => b.type === 'text').map((b) => b.text).join('').trim();

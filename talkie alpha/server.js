@@ -1,6 +1,6 @@
 'use strict';
 /*
- * Talkie : serveur temps réel.
+ * Mika : serveur temps réel.
  * - Fichiers statiques (public/)
  * - WebSocket : salon, invitations, conversations de 2 à 4 personnes
  * - Web Push : notification quand quelqu'un publie un thème
@@ -206,7 +206,7 @@ function broadcastLobby() {
 /* ---------- Notifications ---------- */
 function notifyInvite(room, hostPid) {
   const payload = JSON.stringify({
-    title: 'Talkie',
+    title: 'Mika',
     body: room.hostNick + ' veut parler de : ' + room.theme,
     url: '/'
   });
@@ -311,7 +311,7 @@ async function companionTurn(room, kind) {
     const system = COMPANION_SYSTEM + ' Thème choisi par la personne : « ' + room.theme + ' ». Son pseudo : ' + room.hostNick + '.';
     let messages;
     if (kind === 'open') {
-      messages = [{ role: 'user', content: '[Système] La conversation vient de commencer. Écris ton premier message : salue ' + room.hostNick + ' avec chaleur, dis en une phrase que tu es Mika, l’IA de Talkie, et que tu tiens compagnie en attendant que quelqu’un arrive, puis pose une question facile et fun sur le thème. 30 mots maximum.' }];
+      messages = [{ role: 'user', content: '[Système] La conversation vient de commencer. Écris ton premier message : salue ' + room.hostNick + ' avec chaleur, dis en une phrase que tu es Mika, l’IA de l’app, et que tu tiens compagnie en attendant que quelqu’un arrive, puis pose une question facile et fun sur le thème. 30 mots maximum.' }];
     } else {
       messages = ai.normalize(
         room.log.slice(-14).map((e) => ({ role: e.ai ? 'assistant' : 'user', content: e.text })),
@@ -624,7 +624,7 @@ function handle(ws, msg) {
     case 'hleave': { homeLeave(ws); return; }
     case 'plaza': {
       if (!msg.on) { plazaLeave(ws); return; }
-      if (!c.adult) { send(ws, { t: 'error', code: 'adult', text: 'Talkie est réservé aux personnes majeures (18 ans et plus).' }); return; }
+      if (!c.adult) { send(ws, { t: 'error', code: 'adult', text: 'Mika est réservé aux personnes majeures (18 ans et plus).' }); return; }
       plazaJoin(ws, c);
       return;
     }
@@ -663,6 +663,7 @@ function handle(ws, msg) {
       if (!n) return;
       c.nick = n;
       if (msg.av !== undefined) c.av = avOf(msg.av);
+      { const sh = plazaOf(ws); const pm = sh && sh.get(ws); if (pm && msg.av !== undefined && pm.av !== c.av) { pm.av = c.av; plazaSend(sh, ws, { t: 'pa', pid: pm.pid, av: pm.av }); } }
       if (c.roomId) {
         const room = rooms.get(c.roomId);
         const m = room && room.members.get(c.cid);
@@ -686,7 +687,7 @@ function handle(ws, msg) {
     }
     case 'invite': {
       if (c.roomId) return;
-      if (!c.adult) { send(ws, { t: 'error', code: 'adult', text: 'Talkie est réservé aux personnes majeures (18 ans et plus).' }); return; }
+      if (!c.adult) { send(ws, { t: 'error', code: 'adult', text: 'Mika est réservé aux personnes majeures (18 ans et plus).' }); return; }
       if (!isVerified(c.cid)) { send(ws, { t: 'needverify' }); send(ws, { t: 'error', text: 'Vérification en cours, réessaie dans un instant.' }); return; }
       const now = Date.now();
       if (c.lastInvite && now - c.lastInvite < INVITE_COOLDOWN_MS) { send(ws, { t: 'error', text: 'Attends quelques secondes avant de publier un autre thème.' }); return; }
@@ -713,7 +714,7 @@ function handle(ws, msg) {
     }
     case 'join': {
       if (c.roomId) return;
-      if (!c.adult) { send(ws, { t: 'error', code: 'adult', text: 'Talkie est réservé aux personnes majeures (18 ans et plus).' }); return; }
+      if (!c.adult) { send(ws, { t: 'error', code: 'adult', text: 'Mika est réservé aux personnes majeures (18 ans et plus).' }); return; }
       if (!isVerified(c.cid)) { send(ws, { t: 'needverify' }); send(ws, { t: 'error', text: 'Vérification en cours, réessaie dans un instant.' }); return; }
       const room = rooms.get(clean(msg.id, 20));
       if (!room || room.members.size === 0) { send(ws, { t: 'error', text: 'Cette invitation n’est plus disponible.' }); scheduleLobby(); return; }
@@ -757,7 +758,7 @@ function handle(ws, msg) {
       const refuse = (why, text) => {
         const st = mod.addStrike(c.cid);
         modLog('refus', c, { why, strikes: st.n, texte: text.slice(0, 120) });
-        send(ws, { t: 'error', text: (why === 'coordonnées' ? 'Pour ta sécurité, les liens et coordonnées (e-mail, téléphone) ne sont pas autorisés ici.' : 'Ce message ne respecte pas les règles de respect de Talkie.') + (st.n >= 2 ? ' Avertissement ' + st.n + '.' : '') });
+        send(ws, { t: 'error', text: (why === 'coordonnées' ? 'Pour ta sécurité, les liens et coordonnées (e-mail, téléphone) ne sont pas autorisés ici.' : 'Ce message ne respecte pas les règles de respect de Mika.') + (st.n >= 2 ? ' Avertissement ' + st.n + '.' : '') });
       };
       const deliver = () => {
         const entry = { t: 'chat', pid: c.pid, nick: c.nick, av: c.av, text, ts: Date.now() };
@@ -875,7 +876,7 @@ function renderAdmin(live, snap) {
     '</td><td>' + d.invites + '</td><td>' + d.joins + '</td><td>' + d.convos + '</td><td>' + d.avgConvoMin + '</td><td>' + d.messages + '</td><td>' + d.aiMessages + '</td><td>' + d.pushes + '</td></tr>').join('');
   const kpi = (label, value) => '<div class="k"><div class="v">' + esc(value) + '</div><div class="l">' + esc(label) + '</div></div>';
   return '<!doctype html><html lang="fr"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">' +
-    '<meta name="robots" content="noindex"><title>Talkie · statistiques</title><style>' +
+    '<meta name="robots" content="noindex"><title>Mika · statistiques</title><style>' +
     ':root{color-scheme:light dark;--bg:#FFF6CC;--fg:#14213D;--card:#fff;--line:#E3D27A;--acc:#2459E0}' +
     '@media(prefers-color-scheme:dark){:root{--bg:#0F1B3D;--fg:#F4F7FF;--card:#172A5C;--line:#2D478F;--acc:#8FB2FF}}' +
     'body{margin:0;padding:20px 16px;background:var(--bg);color:var(--fg);font:15px/1.5 system-ui,sans-serif}main{max-width:980px;margin:0 auto}' +
@@ -884,7 +885,7 @@ function renderAdmin(live, snap) {
     '.t{overflow-x:auto;background:var(--card);border:1px solid var(--line);border-radius:14px}table{border-collapse:collapse;width:100%;font-variant-numeric:tabular-nums}' +
     'th,td{padding:8px 10px;text-align:right;white-space:nowrap}th:first-child,td:first-child{text-align:left}th{font-size:12px;opacity:.75;border-bottom:1px solid var(--line)}' +
     'tr+tr td{border-top:1px solid var(--line)}small{display:block;margin-top:14px;opacity:.7}</style></head><body><main>' +
-    '<h1>Talkie</h1><p>Statistiques anonymes (aucun message n’est lu ni conservé).</p><div class="g">' +
+    '<h1>Mika</h1><p>Statistiques anonymes (aucun message n’est lu ni conservé).</p><div class="g">' +
     kpi('En ligne maintenant', live.online) + kpi('Invitations ouvertes', live.openInvites) + kpi('Abonnés aux notifications', live.subscribers) +
     kpi('Assistant IA', live.aiEnabled ? 'actif' : 'sans clé') + kpi('Appels IA aujourd’hui', live.aiUsedToday + ' / ' + live.aiDailyCap) + kpi('Thèmes du jour', live.themesSource === 'trends' ? 'tendances' : 'liste fixe') +
     '</div><div class="t"><table><thead><tr><th>Jour</th><th>Visiteurs</th><th>Revenants</th><th>Visites</th><th>Pages vues</th><th>Invitations</th><th>Rejoints</th><th>Conversations</th><th>Durée moy. (min)</th><th>Messages</th><th>Réponses IA</th><th>Notifications</th></tr></thead><tbody>' +
