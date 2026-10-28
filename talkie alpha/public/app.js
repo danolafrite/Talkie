@@ -256,13 +256,18 @@
   ];
   var equip = (function () { try { var e = JSON.parse(store('talkie.equip') || 'null'); if (Array.isArray(e)) return e.slice(0, 8); } catch (er) { /* ignore */ } return null; })();
   var game = (function () {
-    var g = { petals: 0, q: { d: '', ids: [], done: [] }, owned: [], decorOwn: [], decorOn: [], bown: [], bobOn: [] };
+    var g = { petals: 0, q: { d: '', ids: [], done: [] }, owned: [], decorOwn: [], decorOn: [], bown: [], bobOn: [], inv: {}, garden: [null, null, null, null, null, null], seeds: { d: '', n: 0 }, orders: [], fs: {} };
     try {
       var j = JSON.parse(store('talkie.game') || '{}');
       g.petals = Math.max(0, Number(j.petals) || 0);
       if (j.q && typeof j.q.d === 'string') g.q = { d: j.q.d, ids: Array.isArray(j.q.ids) ? j.q.ids.slice(0, 5) : [], done: Array.isArray(j.q.done) ? j.q.done.slice(0, 5) : [] };
       if (typeof j.park === 'string') g.park = j.park.slice(0, 12);
       if (j.sing && typeof j.sing === 'object') { g.sing = {}; Object.keys(j.sing).slice(0, 12).forEach(function (x) { if (typeof j.sing[x] === 'string') g.sing[x.slice(0, 12)] = j.sing[x].slice(0, 12); }); }
+      if (j.inv && typeof j.inv === 'object') { g.inv = {}; Object.keys(j.inv).slice(0, 12).forEach(function (x) { g.inv[x.slice(0, 12)] = Math.max(0, Math.min(99, parseInt(j.inv[x], 10) || 0)); }); }
+      if (Array.isArray(j.garden)) g.garden = j.garden.slice(0, 6).map(function (x) { return x && typeof x.c === 'string' ? { c: x.c.slice(0, 12), t0: Number(x.t0) || Date.now(), w: Math.min(2, parseInt(x.w, 10) || 0) } : null; });
+      if (j.seeds && typeof j.seeds.d === 'string') g.seeds = { d: j.seeds.d.slice(0, 12), n: Math.max(0, Math.min(9, parseInt(j.seeds.n, 10) || 0)) };
+      if (Array.isArray(j.orders)) g.orders = j.orders.slice(0, 3).map(function (x) { return x && typeof x.id === 'string' ? { id: x.id.slice(0, 12), at: Number(x.at) || Date.now(), eta: Math.max(20, Math.min(300, Number(x.eta) || 60)), got: !!x.got } : null; }).filter(Boolean);
+      if (j.fs && typeof j.fs === 'object') { g.fs = {}; ['talk', 'feed', 'garden', 'monde'].forEach(function (k) { if (j.fs[k]) g.fs[k] = 1; }); }
       ['owned', 'decorOwn', 'decorOn', 'bown', 'bobOn'].forEach(function (k) { if (Array.isArray(j[k])) g[k] = j[k].filter(function (x) { return typeof x === 'string'; }).slice(0, 20); });
     } catch (er) { /* ignore */ }
     return g;
@@ -2168,18 +2173,21 @@
   function closeAvSheet() { if (avPrev) { avPrev.destroy(); avPrev = null; } $('avprev').classList.remove('is3d'); $('avprev').textContent = ''; $('sheet-av').hidden = true; }
   function openAvEditor() {
     closeSheets(); avDraft = myAv; $('sheet-av').hidden = false;
-    $('av-name').value = store('talkie.avset') ? nick : ''; $('sheet-av-h').textContent = store('talkie.avset') ? 'Le look de ton Mika' : 'Crée ton Mika'; $('av-intro').hidden = !!store('talkie.avset');
+    $('av-name').value = store('talkie.avset') ? nick : ''; $('sheet-av-h').textContent = store('talkie.avset') ? 'Ton look' : 'Crée ton avatar'; $('av-intro').hidden = !!store('talkie.avset');
+    renderAvEditor(false); // aperçu 2D immédiat, remplacé par la 3D dès qu'elle est prête
     if (m3d && window.Mika3DMod && Mika3DMod.initPreview) {
-      $('avprev').classList.add('is3d'); $('avprev').textContent = '';
-      avPrev = Mika3DMod.initPreview($('avprev'), function () { return Mika3DMod.avatarOpts(avDraft); });
-      if (!avPrev) $('avprev').classList.remove('is3d');
+      setTimeout(function () {
+        if ($('sheet-av').hidden || avPrev) return;
+        $('avprev').classList.add('is3d'); $('avprev').textContent = '';
+        try { avPrev = Mika3DMod.initPreview($('avprev'), function () { return Mika3DMod.avatarOpts(avDraft); }); } catch (e) { avPrev = null; }
+        if (!avPrev) { $('avprev').classList.remove('is3d'); renderAvEditor(false); }
+      }, 80);
     }
-    renderAvEditor(false);
   }
   function saveAv() {
     var first = !store('talkie.avset');
     var nm = clean($('av-name').value, 20);
-    if (first && !nm) { toast('Donne-lui un prénom pour continuer 💚'); $('av-name').focus(); return; }
+    if (first && !nm) { toast('Écris ton prénom pour continuer 💚'); $('av-name').focus(); return; }
     myAv = avDraft; store('talkie.av', myAv); store('talkie.avset', '1');
     if (nm) { nick = nm; store('tablee.nick', nick); $('nick').value = nick; }
     send({ t: 'nick', nick: nick, av: myAv });
@@ -2233,7 +2241,9 @@
     var vv = window.visualViewport;
     function kbState() {
       var open = vv ? window.innerHeight - vv.height > 140 : false;
-      document.body.classList.toggle('kb', open && /^(INPUT|TEXTAREA)$/.test((document.activeElement || {}).tagName || ''));
+      var isK = open && /^(INPUT|TEXTAREA)$/.test((document.activeElement || {}).tagName || '');
+      document.body.classList.toggle('kb', isK);
+      document.documentElement.style.setProperty('--kbh', isK && vv ? Math.max(0, window.innerHeight - vv.height - vv.offsetTop) + 'px' : '0px');
     }
     if (vv) { vv.addEventListener('resize', kbState); vv.addEventListener('scroll', kbState); }
     document.addEventListener('focusin', function (e) {
@@ -2388,7 +2398,7 @@
   }
   function cmpOpen() {
     if (!store('talkie.avset')) return;
-    cmpOpened = true; renderLife(); scheduleStory(); setInterval(renderLife, 60000);
+    cmpOpened = true; renderLife(); renderSteps(); scheduleStory(); setInterval(renderLife, 60000);
     renderQuests(); renderNeeds();
     $('thread').textContent = '';
     pendingM = '';
@@ -2401,7 +2411,7 @@
     text = clean(text, 400);
     if (!text || cmpBusy) return;
     lastUserAt = Date.now();
-    dir.engaged = true; cmpNudges = 0; bump('s', 2);
+    dir.engaged = true; cmpNudges = 0; bump('s', 2); fsMark('talk');
     addThread('u', text);
     userBubble(text);
     cmp.bond++;
@@ -2557,6 +2567,192 @@
       if (!room && !document.hidden && curTab === 'chambre' && !cmpBusy && cmpOpened && !asleep() && !document.body.classList.contains('kb')) callCompanion('story');
       scheduleStory();
     }, 110000 + Math.random() * 70000);
+  }
+
+  /* ---------- Cuisine, jardin, livraison : Mika a de quoi s'occuper ---------- */
+  var CROPS = {
+    herbe: { e: '🌿', t: 'Basilic', min: 20, price: 2 }, tomate: { e: '🍅', t: 'Tomate', min: 45, price: 3 }, carotte: { e: '🥕', t: 'Carotte', min: 60, price: 3 },
+    fraise: { e: '🍓', t: 'Fraise', min: 90, price: 4 }, citrouille: { e: '🎃', t: 'Citrouille', min: 120, price: 5 }
+  };
+  var RECIPES = [
+    { id: 'onigiri', e: '🍙', t: 'Onigiri', need: {}, h: 22, s: 4 },
+    { id: 'salade', e: '🥗', t: 'Salade fraîche', need: { tomate: 2 }, h: 32, s: 8 },
+    { id: 'soupe', e: '🍲', t: 'Soupe douce', need: { carotte: 2, herbe: 1 }, h: 38, en: 10 },
+    { id: 'tartine', e: '🍞', t: 'Tartine fraise', need: { fraise: 2 }, h: 30, s: 12 },
+    { id: 'potage', e: '🎃', t: 'Soupe de citrouille', need: { citrouille: 1, herbe: 1 }, h: 45, s: 14 }
+  ];
+  var MENU = [
+    { id: 'ramen', e: '🍜', t: 'Ramen', r: 'Mochi Express', price: 12, h: 40, eta: 55 }, { id: 'sushi', e: '🍣', t: 'Sushis', r: 'Sakura Sushi', price: 14, h: 36, eta: 70 },
+    { id: 'pizza', e: '🍕', t: 'Pizza', r: 'Pizza Luigi', price: 10, h: 34, eta: 60 }, { id: 'bubble', e: '🧋', t: 'Bubble tea', r: 'Boba Dreams', price: 6, h: 8, en: 18, eta: 40 },
+    { id: 'crepe', e: '🥞', t: 'Crêpes', r: 'Maison Crêpe', price: 8, h: 28, s: 10, eta: 45 }, { id: 'burger', e: '🍔', t: 'Burger', r: 'Burger Club', price: 12, h: 38, eta: 65 }
+  ];
+  function fsMark(k) { if (!game.fs) game.fs = {}; if (!game.fs[k]) { game.fs[k] = 1; saveGame(); renderSteps(); } }
+  function inv(k) { return (game.inv && game.inv[k]) || 0; }
+  function addInv(k, n) { game.inv = game.inv || {}; game.inv[k] = Math.max(0, Math.min(99, inv(k) + n)); saveGame(); }
+  var lifeMode = 'talk', lifeTick = null, liveFns = [];
+  function tickLife() { liveFns.slice().forEach(function (f) { f(); }); }
+  function setLifeMode(m) {
+    lifeMode = m;
+    var c = $('cmp'); c.classList.toggle('lm', m !== 'talk');
+    Array.prototype.forEach.call(document.querySelectorAll('#lifetabs button'), function (b) { b.setAttribute('aria-pressed', String(b.getAttribute('data-m') === m)); });
+    clearInterval(lifeTick); lifeTick = null;
+    if (m === 'talk') { $('lifepanel').hidden = true; return; }
+    $('lifepanel').hidden = false; renderLife2();
+    if (m === 'garden' || m === 'food') lifeTick = setInterval(tickLife, 1000);
+  }
+  function renderLife2() {
+    var box = $('lifepanel'), scroll = box.scrollTop; box.textContent = ''; liveFns = [];
+    if (lifeMode === 'cook') renderKitchen(box); else if (lifeMode === 'garden') renderGarden(box); else if (lifeMode === 'food') renderDelivery(box);
+    box.scrollTop = scroll;
+  }
+  /* — Jardin — */
+  var gSeed = null;
+  function plotInfo(pl) {
+    var cr = CROPS[pl.c], dur = cr.min * 60000, prog = (Date.now() - pl.t0 + pl.w * 0.18 * dur) / dur;
+    return { cr: cr, prog: Math.min(1, Math.max(0, prog)), left: Math.max(0, Math.ceil((dur - (Date.now() - pl.t0) - pl.w * 0.18 * dur) / 60000)) };
+  }
+  function freeSeeds() { var d = todayKey(); if (!game.seeds || game.seeds.d !== d) { game.seeds = { d: d, n: 0 }; saveGame(); } return Math.max(0, 4 - game.seeds.n); }
+  function renderGarden(box) {
+    var head = el('div', 'lp-h'); head.appendChild(el('b', null, '🌱 Le jardin de Mika'));
+    head.appendChild(el('small', null, freeSeeds() + ' graine' + (freeSeeds() > 1 ? 's' : '') + ' offerte' + (freeSeeds() > 1 ? 's' : '') + ' aujourd’hui'));
+    box.appendChild(head);
+    var grid = el('div', 'plots');
+    for (var i = 0; i < 6; i++) (function (i) {
+      var pl = game.garden && game.garden[i], b = el('button', 'plot' + (pl ? '' : ' empty')); b.type = 'button';
+      if (!pl) { b.appendChild(el('span', 'pe', '➕')); b.appendChild(el('small', null, 'Planter')); b.addEventListener('click', function () { gSeed = i; renderLife2(); }); }
+      else {
+        var f = plotInfo(pl), done = f.prog >= 1, stage0 = f.prog < 0.34 ? 0 : f.prog < 0.67 ? 1 : 2;
+        b.classList.add(done ? 'ready' : 'grow');
+        b.appendChild(el('span', 'pe', done ? f.cr.e : f.prog < 0.34 ? '🌱' : f.prog < 0.67 ? '🪴' : '🌿'));
+        b.appendChild(el('small', null, done ? 'Récolter ✨' : (pl.w >= 2 ? '' : '💧 ') + f.left + ' min'));
+        var bar = el('i', 'pbar'); var fill = el('i'); fill.style.width = Math.round(f.prog * 100) + '%'; bar.appendChild(fill); b.appendChild(bar);
+        var smallEl = b.querySelector('small'), fillEl = bar.firstChild;
+        liveFns.push(function () { var g = plotInfo(pl), d2 = g.prog >= 1, st2 = g.prog < 0.34 ? 0 : g.prog < 0.67 ? 1 : 2; if (d2 !== done || (!d2 && st2 !== stage0)) { renderLife2(); return; } if (!d2) { smallEl.textContent = (pl.w >= 2 ? '' : '💧 ') + g.left + ' min'; fillEl.style.width = Math.round(g.prog * 100) + '%'; } });
+        b.addEventListener('click', function () {
+          if (done) { addInv(pl.c, 1); game.garden[i] = null; earn(1); saveGame(); toast('+1 ' + f.cr.e + ' ' + f.cr.t + ' · +1 🌸'); sfx.join(); if (m3d) m3d.emit && m3d.emit('heart', 4); renderLife2(); }
+          else if (pl.w < 2) { pl.w++; saveGame(); progressQuest('water'); toast('💦 Arrosé ! Ça pousse plus vite.'); mood('happy', 1800); renderLife2(); }
+          else toast('Elle a assez bu, patience ' + f.cr.e);
+        });
+      }
+      grid.appendChild(b);
+    })(i);
+    box.appendChild(grid);
+    if (gSeed != null) {
+      var pick2 = el('div', 'seeds'); pick2.appendChild(el('b', null, 'Quelle graine ?'));
+      Object.keys(CROPS).forEach(function (k) {
+        var cr = CROPS[k], free = freeSeeds() > 0, b = el('button', null, cr.e + ' ' + cr.t); b.type = 'button';
+        b.appendChild(el('small', null, free ? 'gratuit' : '🌸 ' + cr.price));
+        b.addEventListener('click', function () {
+          if (!free) { if (game.petals < cr.price) { toast('Il te manque ' + (cr.price - game.petals) + ' 🌸'); return; } game.petals -= cr.price; renderPetals(); } else game.seeds.n++;
+          game.garden[gSeed] = { c: k, t0: Date.now(), w: 0 }; gSeed = null; saveGame(); fsMark('garden'); mood('happy', 1500); renderLife2();
+        });
+        pick2.appendChild(b);
+      });
+      var x = el('button', 'ghost', 'Annuler'); x.type = 'button'; x.addEventListener('click', function () { gSeed = null; renderLife2(); }); pick2.appendChild(x);
+      box.appendChild(pick2);
+    }
+    box.appendChild(el('p', 'lp-n', 'Arrose chaque plante (jusqu’à 2 fois) pour accélérer. Les récoltes servent à la cuisine 🍳'));
+  }
+  /* — Cuisine — */
+  function serveDish(d, line) {
+    decayCare();
+    if (care.h >= 94) { toast('Mika n’a plus faim… garde-le pour plus tard 🥹'); mikaSay('Oh, c’est tellement beau… mais je suis tout rond 🥹 Tout à l’heure, promis !', false, 'shy'); return false; }
+    bump('h', d.h); if (d.s) bump('s', d.s); if (d.en) bump('e', d.en); progressQuest('feed'); fsMark('feed');
+    setLifeMode('talk');
+    if (m3d && m3d.emote) { try { m3d.emote('love'); } catch (e) { /* ignore */ } }
+    setTimeout(function () { mikaSay(line || pick(['Miam ! ' + d.e + ' C’est trop bon, merci 🥹', 'Itadakimasu ! ' + d.e + ' Tu cuisines mieux que moi 💚', 'Ça sent le bonheur ' + d.e + ' Je vais en rêver cette nuit.']), false, 'love'); }, 400);
+    return true;
+  }
+  function renderKitchen(box) {
+    var head = el('div', 'lp-h'); head.appendChild(el('b', null, '🍳 La cuisine')); head.appendChild(el('small', null, 'Récolte au jardin, puis cuisine !')); box.appendChild(head);
+    var stock = Object.keys(CROPS).filter(function (k) { return inv(k) > 0; }).map(function (k) { return CROPS[k].e + '×' + inv(k); }).join('  ');
+    box.appendChild(el('p', 'lp-stock', stock ? 'Ton panier : ' + stock : 'Ton panier est vide : va planter quelque chose 🌱'));
+    RECIPES.forEach(function (r) {
+      var ok = Object.keys(r.need).every(function (k) { return inv(k) >= r.need[k]; });
+      var row = el('div', 'rec' + (ok ? '' : ' no'));
+      row.appendChild(el('span', 'ri', r.e)); var mid = el('div', 'rm'); mid.appendChild(el('b', null, r.t));
+      mid.appendChild(el('small', null, Object.keys(r.need).length ? Object.keys(r.need).map(function (k) { return CROPS[k].e + ' ' + Math.min(inv(k), r.need[k]) + '/' + r.need[k]; }).join('  ') : 'Riz du placard · toujours possible'));
+      row.appendChild(mid);
+      var b = el('button', ok ? 'primary' : 'ghost', 'Cuisiner'); b.type = 'button'; b.disabled = !ok;
+      b.addEventListener('click', function () { cookDish(r); }); row.appendChild(b); box.appendChild(row);
+    });
+  }
+  function cookDish(r) {
+    decayCare(); if (care.h >= 94) { toast('Mika n’a pas faim pour l’instant 🥹'); return; }
+    var ov = $('cookfx'); ov.hidden = false; ov.querySelector('.cf-t').textContent = 'Mika cuisine : ' + r.t + '…'; ov.querySelector('.cf-e').textContent = '🍳';
+    var steps = ['🔪', '🥄', '🔥', r.e], i = 0;
+    var iv = setInterval(function () {
+      ov.querySelector('.cf-e').textContent = steps[Math.min(i++, 3)];
+      if (i >= 4) {
+        clearInterval(iv); setTimeout(function () {
+          ov.hidden = true;
+          Object.keys(r.need).forEach(function (k) { addInv(k, -r.need[k]); });
+          serveDish(r);
+        }, 700);
+      }
+    }, 800);
+  }
+  /* — Livraison — */
+  function renderDelivery(box) {
+    var head = el('div', 'lp-h'); head.appendChild(el('b', null, '🛵 Livraison')); head.appendChild(el('small', null, 'Commande, puis va la chercher dehors')); box.appendChild(head);
+    (game.orders || []).forEach(function (o, idx) {
+      var m = MENU.filter(function (x) { return x.id === o.id; })[0]; if (!m || o.got) return;
+      var left = Math.max(0, Math.ceil((o.at + o.eta * 1000 - Date.now()) / 1000)), prog = Math.min(1, (Date.now() - o.at) / (o.eta * 1000));
+      var card = el('div', 'track'); card.appendChild(el('b', null, m.e + ' ' + m.t + ' · ' + m.r));
+      var road = el('div', 'road'); var sc = el('span', 'scoot', prog < 0.25 ? '👩‍🍳' : '🛵'); sc.style.left = (prog < 0.25 ? 4 : 4 + (prog - 0.25) / 0.75 * 84) + '%'; road.appendChild(sc); road.appendChild(el('span', 'home', '🏠')); card.appendChild(road);
+      var phase0 = left <= 0 ? 2 : prog < 0.25 ? 0 : 1, sm = null;
+      if (left > 0) { sm = el('small', null, prog < 0.25 ? 'En préparation…' : 'En route ! Arrivée dans ' + left + ' s'); card.appendChild(sm); }
+      else { var b = el('button', 'primary', '🚪 Aller chercher dehors'); b.type = 'button'; b.addEventListener('click', function () { openDoor(o); }); card.appendChild(b); }
+      liveFns.push(function () { var l2 = Math.max(0, Math.ceil((o.at + o.eta * 1000 - Date.now()) / 1000)), p2 = Math.min(1, (Date.now() - o.at) / (o.eta * 1000)), ph = l2 <= 0 ? 2 : p2 < 0.25 ? 0 : 1; if (ph !== phase0) { renderLife2(); return; } if (sm) sm.textContent = ph === 0 ? 'En préparation…' : 'En route ! Arrivée dans ' + l2 + ' s'; if (ph === 1) sc.style.left = (4 + (p2 - 0.25) / 0.75 * 84) + '%'; });
+      box.appendChild(card);
+    });
+    var menu = el('div', 'menu');
+    MENU.forEach(function (m) {
+      var b = el('button', null); b.type = 'button'; b.appendChild(el('span', 'me', m.e)); b.appendChild(el('b', null, m.t)); b.appendChild(el('small', null, m.r)); b.appendChild(el('em', null, '🌸 ' + m.price));
+      b.addEventListener('click', function () { orderFood(m); }); menu.appendChild(b);
+    });
+    box.appendChild(menu);
+  }
+  function orderFood(m) {
+    var pending = (game.orders || []).filter(function (o) { return !o.got; });
+    if (pending.length >= 2) { toast('Deux commandes à la fois, c’est déjà beaucoup 🛵'); return; }
+    if (game.petals < m.price) { toast('Il te manque ' + (m.price - game.petals) + ' 🌸 : cultive ou joue pour en gagner !'); return; }
+    game.petals -= m.price; renderPetals();
+    game.orders = (game.orders || []).filter(function (o) { return !o.got; }); game.orders.push({ id: m.id, at: Date.now(), eta: m.eta, got: false }); saveGame();
+    mood('wow', 1600); toast('📦 Commande passée : ' + m.t + ' !'); renderLife2();
+  }
+  var doorO = null, doorWatch = null;
+  function openDoor(o) {
+    var m = MENU.filter(function (x) { return x.id === o.id; })[0]; if (!m) return;
+    doorO = o; var ov = $('doorfx'); ov.hidden = false; ov.className = 'doorfx go';
+    ov.querySelector('.df-bag').textContent = '🛍️'; ov.querySelector('.df-t').textContent = 'Ding dong ! Le livreur est devant la porte…';
+    ov.querySelector('.df-bag').onclick = function () {
+      if (!doorO) return; var oo = doorO; doorO = null; ov.className = 'doorfx got'; ov.querySelector('.df-t').textContent = 'Merci ! Bon appétit ' + m.e;
+      oo.got = true; saveGame();
+      setTimeout(function () { ov.hidden = true; serveDish(m, 'Ça sent trop bon ! ' + m.e + ' Merci de m’avoir gâtée 💚'); }, 1500);
+    };
+  }
+  function doorClose() { $('doorfx').hidden = true; doorO = null; }
+  document.addEventListener('click', function (e) { var t = e.target; if (t && t.id === 'door-x') doorClose(); });
+  (function () {
+    Array.prototype.forEach.call(document.querySelectorAll('#lifetabs button'), function (b) { b.addEventListener('click', function () { var m = b.getAttribute('data-m'); setLifeMode(lifeMode === m ? 'talk' : m); }); });
+    setInterval(function () { // la sonnette : sa commande est arrivée
+      (game.orders || []).forEach(function (o) {
+        if (!o.got && !o.rang && Date.now() > o.at + o.eta * 1000) { o.rang = true; var m = MENU.filter(function (x) { return x.id === o.id; })[0]; toast('🛵 Ding dong ! ' + (m ? m.t : 'La commande') + ' est arrivée'); if (typeof sfx !== 'undefined' && sfx.join) sfx.join(); if (lifeMode === 'food') renderLife2(); }
+      });
+      if (lifeMode === 'food' && !document.hidden) tickLife();
+    }, 1000);
+  })();
+  /* — Premiers pas — */
+  function renderSteps() {
+    var box = $('steps'); if (!box) return; var fs = game.fs || {};
+    var list = [['talk', '💬 Écris un mot à Mika'], ['feed', '🍙 Donne-lui à manger'], ['garden', '🌱 Plante une graine au jardin'], ['monde', '🌍 Fais un tour dans le Monde']];
+    var n = list.filter(function (x) { return fs[x[0]]; }).length;
+    if (n >= list.length || store('talkie.steps') === 'x') { box.hidden = true; return; }
+    box.hidden = false; box.textContent = '';
+    box.appendChild(el('b', null, '🌟 Premiers pas · ' + n + '/' + list.length));
+    list.forEach(function (x) { box.appendChild(el('span', fs[x[0]] ? 'ok' : '', (fs[x[0]] ? '✅ ' : '⬜ ') + x[1].slice(3))); });
+    var h = el('button', 'ghost', '🎓 Revoir le tuto'); h.type = 'button'; h.addEventListener('click', function () { tutoStart(); }); box.appendChild(h);
   }
   function nudge() {
     if (room || document.hidden || curTab !== 'chambre' || cmpBusy || asleep()) return;
@@ -2861,6 +3057,7 @@
   function plazaCount() { if (plazaScene) { var n = plazaScene.count() - 1 - 1; $('plaza-count').textContent = n > 0 ? '🌍 ' + n + ' autre' + (n > 1 ? 's' : '') + ' sur la Place' : '🌍 Tu es seul·e sur la Place… pour l’instant 💚'; } }
   function plazaP(p) { return { pid: p.pid, nick: clean(p.nick, 14), code: normAv(p.av) || defaultAv(p.nick || p.pid), x: Number(p.x) || 0, z: Number(p.z) || 0 }; }
   function openPlaza() {
+    fsMark('monde');
     if (!m3d || !window.Mika3DMod || !Mika3DMod.initPlaza) return;
     $('plaza').hidden = false;
     if (!plazaScene) {
@@ -3641,11 +3838,10 @@
 
   /* tutoriel */
   var TUTO = [
-    { tab: 'chambre', sel: '#mika-stage', h: 'Ta chambre 🏠', p: 'Ton Mika vit ici. Touche un objet : il y va tout seul. Écris-lui en bas pour papoter.' },
-    { tab: 'monde', sel: '#plaza-stage', h: 'Monde 🌍', p: 'Marche, écris, salue les autres. Les boutiques et le karaoké sont dans les bâtiments : touche-en un.' },
-    { tab: 'salon', sel: '#compose', h: 'Salon 💬', p: 'Écris un thème : dès que quelqu’un le rejoint, vous papotez à deux, trois ou quatre.' },
-    { tab: 'bobby', sel: '#bob-stage', h: 'Classe 🎓', p: 'Professeur Bobby te fait pratiquer une langue. Mika corrige et t’explique.' },
-    { tab: 'moi', sel: '#me-av', h: 'Moi 🫧', p: 'Ton avatar, tes réglages et ton compte. Tu peux tout effacer quand tu veux.' }
+    { tab: 'chambre', sel: '#mika-stage', h: 'Voici Mika 🏠', p: 'Elle vit ici. Écris-lui dans la barre sous la chambre, ou touche le micro pour lui parler. Elle te raconte aussi sa journée.' },
+    { tab: 'chambre', sel: '#lifetabs', h: 'Cuisine, jardin, livraison 🍳', p: 'Plante des légumes, cuisine pour Mika, ou commande un repas : le livreur arrive devant sa porte !' },
+    { tab: 'monde', sel: '#plaza-stage', h: 'Le Monde 🌍', p: 'Marche, écris, croise les autres. Les boutiques, le karaoké et le cabinet dentaire sont dans les bâtiments : touche-en un.' },
+    { tab: 'moi', sel: '#me-av', h: 'Moi 🫧', p: 'Ton avatar, ton prénom, tes réglages et ton compte. Le tuto est toujours ici si tu veux le revoir.' }
   ];
   var tutoI = 0;
   function tutoShow() {
@@ -3668,7 +3864,7 @@
   function tutoEnd() { $('tuto').hidden = true; store('talkie.tuto', '1'); setTab('chambre'); }
   function tutoStart() { tutoI = 0; tutoShow(); }
   $('tuto-next').addEventListener('click', function () { tutoI++; if (tutoI >= TUTO.length) tutoEnd(); else tutoShow(); });
-  $('tuto-skip').addEventListener('click', tutoEnd);
+  $('tuto-skip').addEventListener('click', function () { if (tutoI === 0 && store('talkie.tuto') !== '1') { toast('Le tuto ne dure que 20 secondes 💚'); tutoI = 1; tutoShow(); return; } tutoEnd(); });
   (function () {
     var sec = $('btn-me-settings').parentNode, b = el('button', 'ghost', '🎓 Revoir le tutoriel'); b.type = 'button'; b.addEventListener('click', tutoStart); sec.appendChild(b);
   })();
@@ -3769,7 +3965,7 @@
   }
   function initAuth(cfg) {
     if (!cfg || !cfg.url || !cfg.key) return;
-    var sc = document.createElement('script'); sc.src = '/supa.js?v=27';
+    var sc = document.createElement('script'); sc.src = '/supa.js?v=28';
     sc.onload = function () {
       try { sb = window.MikaSupa.create(cfg.url, cfg.key); } catch (e) { sb = null; return; }
       renderAcct();

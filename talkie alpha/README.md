@@ -145,3 +145,11 @@ Boubou écrit maintenant deux versions de chaque réplique : `say` (affichée) e
 ## v27
 - Rire et soupir synthétisés côté navigateur (voix gratuite) : rires/soupirs écrits retirés de la synthèse vocale et joués au bon moment par WebAudio.
 - IA : Haiku essaie « disabled » en premier (plus de 400 dans les logs).
+
+## v28
+- Création d'avatar : aperçu 3D/2D toujours visible (collé en haut), champ « Ton prénom » clair (Mika = nom de l'app).
+- Tutoriel en 4 étapes + carte « Premiers pas » dans la Chambre tant que tout n'est pas fait.
+- Champs de texte : couleurs forcées lisibles, barres du Monde/Classe remontées au-dessus du clavier (--kbh).
+- Voix gratuite FR : si la voix demandée est indisponible, les suivantes sont essayées automatiquement (Eloise → Denise → Vivienne → Rémy → Henri).
+- IA : réponses courtes (accueil, anecdotes) via le modèle rapide, tokens réduits.
+- **Cuisine / Jardin / Livraison** (onglets sous la bulle de Mika) : 6 parcelles à croissance en temps réel, 5 recettes avec récoltes, menu de livraison avec scooter et récupération du sac devant la porte.

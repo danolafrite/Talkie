@@ -119,7 +119,8 @@ async function turn(body) {
   const first = c.kind === 'reply' ? '(Elle vient de te répondre.)' : c.kind === 'story' ? '(Elle est là, en silence.)' : '(Elle est là.)';
   const messages = ai.normalize(c.messages, first);
   if (messages[messages.length - 1].role !== 'user') messages.push({ role: 'user', content: first });
-  const raw = await ai.complete({ system, messages, maxTokens: 900, timeoutMs: 25000, model: ai.CHAT_MODEL, temperature: 0.9 });
+  // Les réponses courtes (anecdotes, relances, accueil) passent par le modèle rapide ; les vraies conversations par le plus fin.
+  const raw = await ai.complete({ system, messages, maxTokens: c.kind === 'reply' ? 520 : 360, timeoutMs: 20000, model: c.kind === 'reply' || c.kind === 'mood' ? ai.CHAT_MODEL : undefined, temperature: 0.9 });
   return parse(raw);
 }
 

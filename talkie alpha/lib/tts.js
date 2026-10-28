@@ -150,6 +150,9 @@ async function edgeOnce(input, voiceName, pitch, rate, signal) {
     return Buffer.concat(chunks);
   } finally { try { tts.close(); } catch (e) { /* ignore */ } }
 }
+const edgeBad = {}; // voix qui a échoué récemment -> jusqu'à quand on l'évite
+const EDGE_FALL = { fr: ['fr-FR-DeniseNeural', 'fr-FR-VivienneMultilingualNeural', 'fr-FR-RemyMultilingualNeural', 'fr-FR-HenriNeural'], en: ['en-US-JennyNeural', 'en-US-AriaNeural'] };
+let edgeWhy = '';
 async function edgeSynth(text, voice, lang, emo, signal) {
   const v = (lang === 'en' ? EDGE_EN : EDGE_FR)[voice] || (lang === 'en' ? EDGE_EN : EDGE_FR).coral;
   const em = EDGE_EMO[emo] || [0, 0];
@@ -157,10 +160,24 @@ async function edgeSynth(text, voice, lang, emo, signal) {
   const pitch = pct(num(v[1]) + em[0]), rate = pct(num(v[2]) + em[1]);
   let said = untag(text).replace(/\bhum\b/gi, 'hum…').replace(/\bhi hi\b/gi, 'hi hi hi').replace(/\bhé hé\b/gi, 'hé hé hé').replace(/\bahah\b/gi, 'ha ha ha').replace(/\bpfff?\b/gi, 'pfou');
   said = said.replace(/\b(?:hi hi hi?|hé hé hé?|ha ha ha|ahah+|haha+|hihi+|héhé+|pfou|pff+)\b\s*[.!…,]*/gi, ' §B§ ').replace(/\s+/g, ' ').trim(); // rires et soupirs : le client les joue en son synthétisé
-  let buf = null;
-  try { buf = await edgeOnce(ssmlBody(said), v[0], pitch, rate, signal); } catch (e) { buf = null; }
-  if (!buf || buf.length < 200) buf = await edgeOnce(xml(said.replace(/§B§/g, '...')), v[0], pitch, rate, signal); // SSML refusé : lecture simple
-  return buf;
+  // Si la voix demandée est indisponible (retirée, bloquée…), on essaie les suivantes : la voix française ne doit jamais disparaître.
+  const names = [v[0]].concat(EDGE_FALL[lang === 'en' ? 'en' : 'fr']).filter((n, i, a) => a.indexOf(n) === i);
+  const ok = names.filter((n) => !(edgeBad[n] > Date.now()));
+  let lastErr = null;
+  for (const name of (ok.length ? ok : names)) {
+    if (signal && signal.aborted) break;
+    try {
+      let buf = null;
+      try { buf = await edgeOnce(ssmlBody(said), name, pitch, rate, signal); } catch (e) { buf = null; }
+      if (!buf || buf.length < 200) buf = await edgeOnce(xml(said.replace(/§B§/g, '...')), name, pitch, rate, signal);
+      if (buf && buf.length >= 200) { edgeWhy = ''; return buf; }
+      throw new Error('audio vide');
+    } catch (e) {
+      lastErr = e; edgeBad[name] = Date.now() + 10 * 60000; edgeWhy = name + ' : ' + (e.message || e);
+      console.warn('[talkie] voix gratuite ' + name + ' indisponible (' + (e.message || e) + ') → essai de la suivante');
+    }
+  }
+  throw lastErr || new Error('voix gratuite indisponible');
 }
 const inflight = new Map(); // même phrase demandée deux fois en même temps : une seule synthèse
 async function synth(text, ip, opts) {
