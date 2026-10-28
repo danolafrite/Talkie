@@ -207,5 +207,5 @@ async function check() {
     return { ok: false, why: 'other', status: e.api || null, msg: 'Erreur voix : ' + (e.message || 'inconnue') + (d ? ' — ' + d : '') };
   }
 }
-const provider = () => (EL_KEY && Date.now() > elDownUntil ? 'el2:' + EL_MODEL + ':' + Object.values(EL_VOICES).join('').slice(0, 24) : EDGE_ON ? 'ed1' : 'oa');
+const provider = () => (EL_KEY && Date.now() > elDownUntil ? 'el2:' + EL_MODEL + ':' + Object.values(EL_VOICES).join('').slice(0, 24) : EDGE_ON ? 'ed2' : 'oa');
 module.exports = { provider, check, enabled, VOICES, PITCH, synth, usedToday: () => { budgetLeft(); return used; }, DAILY_CAP };

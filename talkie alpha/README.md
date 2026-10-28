@@ -132,3 +132,6 @@ Boubou écrit maintenant deux versions de chaque réplique : `say` (affichée) e
 - « mmh » n'est plus épelé : lu « hum ». Rires et soupirs écrits en sons lisibles (ha ha ha, hi hi hi, pfou).
 - Le texte de la bulle 3D n'apparaît plus avant la voix (il attend le début de l'audio).
 - Moi : « Le journal de Mika » (7 derniers jours : événement + envie).
+
+## v25
+- IA : « thinking: between_tools » (nouveau modèle), température retirée ; audio : clé de cache voix ed2 (fin du vieux « EM EM HASH » en cache).

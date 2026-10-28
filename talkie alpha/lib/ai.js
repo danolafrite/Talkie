@@ -42,11 +42,12 @@ async function complete(opts) {
       method: 'POST',
       signal: ctrl.signal,
       headers: { 'content-type': 'application/json', 'x-api-key': KEY, 'anthropic-version': '2023-06-01' },
-      body: JSON.stringify(Object.assign({ model: mdl, max_tokens: maxTokens || 220, system, messages }, tools ? { tools } : {}, withTemp && opts.temperature != null ? { temperature: opts.temperature } : {}, withThinkingOff ? { thinking: { type: 'disabled' } } : {}))
+      body: JSON.stringify(Object.assign({ model: mdl, max_tokens: maxTokens || 220, system, messages }, tools ? { tools } : {}, withTemp && opts.temperature != null ? { temperature: opts.temperature } : {}, withThinkingOff ? { thinking: { type: withThinkingOff === 'dis' ? 'disabled' : 'between_tools' } } : {}))
     });
     // Un modèle récent peut refuser un réglage (température, réflexion désactivée) : on retire les options une à une, puis on retombe sur le modèle de base.
-    const tries = [[model, thinkingOff, true], [model, false, true], [model, thinkingOff, false], [model, false, false]];
-    if (model !== MODEL) tries.push([MODEL, thinkingOff, false], [MODEL, false, false]);
+    const off = thinkingOff ? 'bt' : false; // les modèles récents veulent « between_tools », les anciens « disabled »
+    const tries = [[model, off, false], [model, off && 'dis', false], [model, false, false], [model, off, true], [model, false, true]];
+    if (model !== MODEL) tries.push([MODEL, off, false], [MODEL, off && 'dis', false], [MODEL, false, false]);
     let r = null;
     for (const t of tries) {
       r = await send(t[0], t[1], t[2]);
@@ -58,7 +59,7 @@ async function complete(opts) {
     let j = await r.json();
     if (!(j.content || []).some((b) => b.type === 'text') && (j.content || []).some((b) => b.type === 'thinking') && !opts._r) {
       // La réflexion a mangé toute la réponse : on recommence avec la réflexion coupée.
-      const r2 = await send(MODEL, true, false);
+      const r2 = await send(MODEL, 'dis', false).then((x) => (x.ok ? x : send(MODEL, 'bt', false)));
       if (r2.ok) j = await r2.json();
     }
     const out = (j.content || []).filter((b) => b.type === 'text').map((b) => b.text).join('').trim();

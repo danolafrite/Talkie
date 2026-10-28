@@ -3685,7 +3685,7 @@
   }
   function initAuth(cfg) {
     if (!cfg || !cfg.url || !cfg.key) return;
-    var sc = document.createElement('script'); sc.src = '/supa.js?v=24';
+    var sc = document.createElement('script'); sc.src = '/supa.js?v=25';
     sc.onload = function () {
       try { sb = window.TalkieSupa.create(cfg.url, cfg.key); } catch (e) { sb = null; return; }
       renderAcct();
