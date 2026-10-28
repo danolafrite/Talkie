@@ -53,7 +53,7 @@ let used = 0;
 let running = 0;
 const hits = new Map(); // ip -> [timestamps]
 
-function enabled() { return !!KEY || !!EL_KEY; }
+function enabled() { return !!KEY || !!EL_KEY || EDGE_ON; }
 function budgetLeft() {
   const d = new Date().toLocaleDateString('sv-SE', { timeZone: 'Europe/Paris' });
   if (d !== day) { day = d; used = 0; }
@@ -103,6 +103,34 @@ async function elTry(text, id, signal, emo, lang) {
   try { return await elSynth(text, id, signal, emo, EL_MODEL, lang); }
   catch (e) { if (EL_MODEL !== EL_FALLBACK && e.api && e.api !== 401 && e.api !== 402 && e.api !== 429) return elSynth(text, id, signal, emo, EL_FALLBACK, lang); throw e; }
 }
+
+/* Voix gratuite (Microsoft Edge, voix neuronales) : filet de sécurité quand ElevenLabs n'a plus de crédit. Désactivable : TTS_EDGE=0. */
+const EDGE_ON = process.env.TTS_EDGE !== '0';
+const EDGE_FR = { coral: ['fr-FR-EloiseNeural', '+12%', '+8%'], shimmer: ['fr-FR-DeniseNeural', '+6%', '-2%'], nova: ['fr-FR-VivienneMultilingualNeural', '+9%', '+8%'], sage: ['fr-FR-DeniseNeural', '-4%', '-6%'], onyx: ['fr-FR-HenriNeural', '-3%', '-4%'] };
+const EDGE_EN = { coral: ['en-US-AnaNeural', '+10%', '+6%'], shimmer: ['en-US-JennyNeural', '+6%', '0%'], nova: ['en-US-AriaNeural', '+8%', '+8%'], sage: ['en-GB-SoniaNeural', '-3%', '-4%'], onyx: ['en-US-GuyNeural', '-3%', '-2%'] };
+const EDGE_EMO = { happy: [6, 8], excited: [10, 14], sad: [-8, -12], angry: [8, 14], shy: [-2, -6], sleepy: [-6, -16], wow: [8, 8], love: [4, -2] };
+const pct = (n) => (n >= 0 ? '+' : '') + Math.round(n) + '%';
+let elDownUntil = 0; // ElevenLabs sans crédit : on arrête de l'essayer pendant 30 min
+async function edgeSynth(text, voice, lang, emo, signal) {
+  const { MsEdgeTTS, OUTPUT_FORMAT } = require('msedge-tts');
+  const v = (lang === 'en' ? EDGE_EN : EDGE_FR)[voice] || (lang === 'en' ? EDGE_EN : EDGE_FR).coral;
+  const em = EDGE_EMO[emo] || [0, 0];
+  const num = (x) => parseFloat(x);
+  const tts = new MsEdgeTTS({ connectionTimeoutMs: 8000, synthesisTimeoutMs: 15000 });
+  try {
+    await tts.setMetadata(v[0], OUTPUT_FORMAT.AUDIO_24KHZ_48KBITRATE_MONO_MP3);
+    const { audioStream } = tts.toStream(untag(text), { pitch: pct(num(v[1]) + em[0]), rate: pct(num(v[2]) + em[1]) });
+    const chunks = [];
+    await new Promise((resolve, reject) => {
+      const stop = () => reject(Object.assign(new Error('voix gratuite trop lente'), { code: 503 }));
+      if (signal) signal.addEventListener('abort', stop, { once: true });
+      audioStream.on('data', (c) => chunks.push(c));
+      audioStream.on('end', resolve);
+      audioStream.on('error', reject);
+    });
+    return Buffer.concat(chunks);
+  } finally { try { tts.close(); } catch (e) { /* ignore */ } }
+}
 const inflight = new Map(); // même phrase demandée deux fois en même temps : une seule synthèse
 async function synth(text, ip, opts) {
   const o0 = opts || {}, key0 = speakable(text) + '|' + (o0.voice || '') + '|' + (o0.lang || '') + '|' + (o0.emo || '');
@@ -118,10 +146,10 @@ async function synth1(text, ip, opts) {
   const voice = VOICES.indexOf(opts.voice) >= 0 ? opts.voice : VOICE;
   const lang = opts.lang === 'en' ? 'en' : 'fr';
   const emo = EMO[opts.emo] ? opts.emo : '';
-  if (!KEY && !EL_KEY) throw Object.assign(new Error('voix indisponible'), { code: 503 });
+  if (!KEY && !EL_KEY && !EDGE_ON) throw Object.assign(new Error('voix indisponible'), { code: 503 });
   const t = speakable(text);
   if (t.length < 2) throw Object.assign(new Error('texte vide'), { code: 400 });
-  const ck = (EL_KEY ? 'e' : 'o') + voice + '|' + lang + '|' + emo + '|' + t;
+  const ck = (EL_KEY && Date.now() > elDownUntil ? 'e' : EDGE_ON ? 'd' : 'o') + voice + '|' + lang + '|' + emo + '|' + t;
   const hit = cache.get(ck);
   if (hit) { cache.delete(ck); cache.set(ck, hit); return hit; }
   if (!ipOk(ip || '')) throw Object.assign(new Error('trop de demandes'), { code: 429 });
@@ -132,10 +160,14 @@ async function synth1(text, ip, opts) {
   const timer = setTimeout(() => ctrl.abort(), 20000);
   try {
     let buf = null, elErr = null;
-    if (EL_KEY && EL_VOICES[voice]) {
-      try { buf = await elTry(t, EL_VOICES[voice], ctrl.signal, emo, lang); } catch (e) { elErr = e; if (!KEY) throw e; }
+    if (EL_KEY && EL_VOICES[voice] && Date.now() > elDownUntil) {
+      try { buf = await elTry(t, EL_VOICES[voice], ctrl.signal, emo, lang); } catch (e) { elErr = e; if (e.api === 401 || e.api === 402 || e.api === 429 || /quota|limit/i.test(String(e.detail || ''))) elDownUntil = Date.now() + 30 * 60000; if (!KEY && !EDGE_ON) throw e; }
+    }
+    if (!buf && EDGE_ON) {
+      try { buf = await edgeSynth(t, voice, lang, emo, ctrl.signal); if (buf && buf.length < 200) buf = null; } catch (e) { if (!KEY) throw Object.assign(new Error('voix gratuite indisponible : ' + (e.message || '')), { code: 503 }); }
     }
     if (!buf) {
+    if (!KEY) throw Object.assign(new Error('voix indisponible'), { code: 503 });
     const body = { model: MODEL, voice, input: untag(t), response_format: 'mp3' };
     if (/gpt-4o/.test(MODEL)) body.instructions = lang === 'en' ? INSTRUCTIONS_EN : INSTRUCTIONS;
     const r = await fetch(BASE + '/v1/audio/speech', {
@@ -154,13 +186,14 @@ async function synth1(text, ip, opts) {
 }
 /* Diagnostic pour le bouton « Tester la voix » : dit exactement pourquoi la vraie voix ne marche pas. */
 async function check() {
-  if (!KEY && !EL_KEY) return { ok: false, why: 'no_key', msg: 'La clé OPENAI_API_KEY est absente sur Render (ou le service n’a pas redémarré).' };
+  if (!KEY && !EL_KEY && !EDGE_ON) return { ok: false, why: 'no_key', msg: 'La clé OPENAI_API_KEY est absente sur Render (ou le service n’a pas redémarré).' };
   const t0 = Date.now(); let elWhy = '';
   try {
     if (EL_KEY) {
       try { await elTry('Coucou, c’est moi !', EL_VOICES.coral, AbortSignal.timeout(15000), 'happy'); return { ok: true, ms: Date.now() - t0, model: EL_MODEL, provider: 'elevenlabs', msg: 'Voix ElevenLabs active ✅' }; }
-      catch (e) { const dd = String(e.detail || ''); const why = e.api === 401 ? 'La clé ElevenLabs est refusée (401) : recopie-la.' : e.api === 402 || e.api === 429 || /quota|limit/i.test(dd) ? 'ElevenLabs dit que le quota est atteint : ajoute du crédit ou passe à un abonnement.' : e.api === 404 || /voice/i.test(dd) ? 'ElevenLabs refuse cette voix (' + (e.api || '?') + ') : ajoute-la d’abord à « My Voices », vérifie l’identifiant, et sache que les voix de la bibliothèque exigent un abonnement payant (le plan gratuit ne les autorise pas via l’API).' : 'Erreur ElevenLabs : ' + (e.message || '') + (dd ? ' — ' + dd : ''); elWhy = why; if (!KEY) return { ok: false, why: 'eleven', status: e.api || null, msg: why }; }
+      catch (e) { if (EDGE_ON) { try { await edgeSynth('Coucou, c’est moi !', 'coral', 'fr', 'happy', AbortSignal.timeout(15000)); return { ok: true, ms: Date.now() - t0, provider: 'edge', msg: 'Voix gratuite active ✅ (ElevenLabs indisponible : ' + (e.api === 402 || e.api === 429 ? 'plus de crédit' : 'erreur ' + (e.api || '?')) + ')' }; } catch (e2) { /* on continue vers le diagnostic ElevenLabs */ } } const dd = String(e.detail || ''); const why = e.api === 401 ? 'La clé ElevenLabs est refusée (401) : recopie-la.' : e.api === 402 || e.api === 429 || /quota|limit/i.test(dd) ? 'ElevenLabs dit que le quota est atteint : ajoute du crédit ou passe à un abonnement.' : e.api === 404 || /voice/i.test(dd) ? 'ElevenLabs refuse cette voix (' + (e.api || '?') + ') : ajoute-la d’abord à « My Voices », vérifie l’identifiant, et sache que les voix de la bibliothèque exigent un abonnement payant (le plan gratuit ne les autorise pas via l’API).' : 'Erreur ElevenLabs : ' + (e.message || '') + (dd ? ' — ' + dd : ''); elWhy = why; if (!KEY) return { ok: false, why: 'eleven', status: e.api || null, msg: why }; }
     }
+    if (!KEY && EDGE_ON && !EL_KEY) { await edgeSynth('Coucou, c’est moi !', 'coral', 'fr', 'happy', AbortSignal.timeout(15000)); return { ok: true, ms: Date.now() - t0, provider: 'edge', msg: 'Voix gratuite active ✅' }; }
     await synth('Coucou, c’est moi !', 'check', { voice: 'shimmer', lang: 'fr' });
     return { ok: true, ms: Date.now() - t0, model: MODEL, provider: 'openai', msg: 'Voix OpenAI active ✅' + (EL_KEY ? ' ⚠️ ElevenLabs ne marche PAS, OpenAI a pris le relais. Raison : ' + (elWhy || 'inconnue') : '') };
   } catch (e) {
@@ -171,5 +204,5 @@ async function check() {
     return { ok: false, why: 'other', status: e.api || null, msg: 'Erreur voix : ' + (e.message || 'inconnue') + (d ? ' — ' + d : '') };
   }
 }
-const provider = () => (EL_KEY ? 'el2:' + EL_MODEL + ':' + Object.values(EL_VOICES).join('').slice(0, 24) : 'oa');
+const provider = () => (EL_KEY && Date.now() > elDownUntil ? 'el2:' + EL_MODEL + ':' + Object.values(EL_VOICES).join('').slice(0, 24) : EDGE_ON ? 'ed1' : 'oa');
 module.exports = { provider, check, enabled, VOICES, PITCH, synth, usedToday: () => { budgetLeft(); return used; }, DAILY_CAP };

@@ -6,5 +6,5 @@
   "main": "server.js",
   "scripts": { "start": "node server.js", "keys": "node -e \"const w=require('web-push');console.log(JSON.stringify(w.generateVAPIDKeys(),null,2))\"" },
   "engines": { "node": ">=18" },
-  "dependencies": { "web-push": "3.6.7", "ws": "8.18.0" }
+  "dependencies": { "msedge-tts": "2.1.1", "web-push": "3.6.7", "ws": "8.18.0" }
 }

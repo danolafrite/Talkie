@@ -121,3 +121,9 @@ Boubou écrit maintenant deux versions de chaque réplique : `say` (affichée) e
 - Mika a une journée (activité selon l'heure), un événement du jour et une envie du jour ; l'exaucer = +5 pétales.
 - Elle raconte spontanément des anecdotes (kind "story") au lieu de toujours demander « comment ça va ».
 - Voix : plus de repli sur la voix par défaut du téléphone (une relance, sinon silence).
+
+## v23 — Voix gratuite
+- Chaîne de voix : ElevenLabs (si crédit) → voix neuronale gratuite Microsoft Edge (`msedge-tts`, TTS_EDGE=0 pour couper) → OpenAI → silence (jamais la voix du téléphone).
+- Quand ElevenLabs répond « plus de crédit », il n'est plus essayé pendant 30 min.
+- Réglage émotion (hauteur/vitesse) selon l'état de Mika. Après le déploiement, Render installera `msedge-tts` automatiquement (package.json).
+- Attention : service non officiel, peut changer ; prévoir une solution payante si l'app grandit.
