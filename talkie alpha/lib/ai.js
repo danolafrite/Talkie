@@ -47,7 +47,7 @@ async function complete(opts) {
     });
     // Un modèle récent peut refuser un réglage (température, réflexion désactivée) : on retire les options une à une, puis on retombe sur le modèle de base.
     // Chaque modèle veut sa propre forme pour couper la réflexion (between_tools, disabled, ou rien) : on l'apprend une fois et on s'en souvient.
-    const modes = (mdl) => (thinkMode[mdl] !== undefined ? [thinkMode[mdl]] : thinkingOff ? ['bt', 'dis', false] : [false]);
+    const modes = (mdl) => (thinkMode[mdl] !== undefined ? [thinkMode[mdl]] : thinkingOff ? (/haiku/.test(mdl) ? ['dis', 'bt', false] : ['bt', 'dis', false]) : [false]);
     const tries = [];
     for (const mdl of model !== MODEL ? [model, MODEL] : [model]) for (const m of modes(mdl)) tries.push([mdl, m, false]);
     tries.push([MODEL, false, false]);

@@ -118,7 +118,8 @@ const xml = (x) => x.replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, 
 function ssmlBody(text) {
   const parts = text.match(/[^.!?…]+(?:\.{3}|[.!?…]+)?/g) || [text];
   return parts.map((raw, i) => {
-    const seg = raw.trim(); if (!seg) return '';
+    let seg = raw.trim(); if (!seg) return '';
+    if (seg === '§B§') return '<break time="650ms"/>';
     let rate = 0, pitch = 0, pause = 220;
     if (/!+$/.test(seg)) { rate += 8; pitch += 7; pause = 180; }
     else if (/\?$/.test(seg)) { pitch += 5; rate -= 2; pause = 260; }
@@ -128,7 +129,7 @@ function ssmlBody(text) {
     if (/\b(pfou|hum…|hum)\b/i.test(seg)) { rate -= 10; pitch -= 6; pause = 450; }
     if (/^[A-ZÉÈÀ]{3,}[^a-z]*$/.test(seg) || /\b[A-ZÉÈÀ]{4,}\b/.test(seg)) { rate += 6; pitch += 6; }
     // les virgules deviennent de vraies respirations
-    const body = xml(seg).replace(/,\s*/g, ', <break time="140ms"/>');
+    const body = xml(seg).replace(/§B§/g, '<break time="650ms"/>').replace(/,\s*/g, ', <break time="140ms"/>');
     return '<prosody rate="' + pct(rate) + '" pitch="' + pct(pitch) + '">' + body + '</prosody>' + (i < parts.length - 1 ? '<break time="' + pause + 'ms"/>' : '');
   }).join('');
 }
@@ -154,10 +155,11 @@ async function edgeSynth(text, voice, lang, emo, signal) {
   const em = EDGE_EMO[emo] || [0, 0];
   const num = (x) => parseFloat(x);
   const pitch = pct(num(v[1]) + em[0]), rate = pct(num(v[2]) + em[1]);
-  const said = untag(text).replace(/\bhum\b/gi, 'hum…').replace(/\bhi hi\b/gi, 'hi hi hi').replace(/\bhé hé\b/gi, 'hé hé hé').replace(/\bahah\b/gi, 'ha ha ha').replace(/\bpfff?\b/gi, 'pfou');
+  let said = untag(text).replace(/\bhum\b/gi, 'hum…').replace(/\bhi hi\b/gi, 'hi hi hi').replace(/\bhé hé\b/gi, 'hé hé hé').replace(/\bahah\b/gi, 'ha ha ha').replace(/\bpfff?\b/gi, 'pfou');
+  said = said.replace(/\b(?:hi hi hi?|hé hé hé?|ha ha ha|ahah+|haha+|hihi+|héhé+|pfou|pff+)\b\s*[.!…,]*/gi, ' §B§ ').replace(/\s+/g, ' ').trim(); // rires et soupirs : le client les joue en son synthétisé
   let buf = null;
   try { buf = await edgeOnce(ssmlBody(said), v[0], pitch, rate, signal); } catch (e) { buf = null; }
-  if (!buf || buf.length < 200) buf = await edgeOnce(xml(said), v[0], pitch, rate, signal); // SSML refusé : lecture simple
+  if (!buf || buf.length < 200) buf = await edgeOnce(xml(said.replace(/§B§/g, '...')), v[0], pitch, rate, signal); // SSML refusé : lecture simple
   return buf;
 }
 const inflight = new Map(); // même phrase demandée deux fois en même temps : une seule synthèse

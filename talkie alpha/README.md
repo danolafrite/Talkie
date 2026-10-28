@@ -141,3 +141,7 @@ Boubou écrit maintenant deux versions de chaque réplique : `say` (affichée) e
 - Voix : rythme par phrase (SSML : pauses, souffle sur les virgules, vitesse/hauteur selon ! ? … et rires), plus de « hmm je vois » automatique, visage qui change phrase par phrase.
 - IA : mode « réflexion coupée » appris par modèle (between_tools / disabled / aucun).
 - Monde : bâtiment **Dentiste** → cabinet dentaire d'Halloween. Chaque personne reçoit un déguisement différent (sorcière, diablotin, citrouille, vampire, momie, fantôme), visible par les autres dans la place (suffixe h0–h5 dans le code d'avatar). Menu pour changer ou retirer le costume.
+
+## v27
+- Rire et soupir synthétisés côté navigateur (voix gratuite) : rires/soupirs écrits retirés de la synthèse vocale et joués au bon moment par WebAudio.
+- IA : Haiku essaie « disabled » en premier (plus de 400 dans les logs).

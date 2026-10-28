@@ -1151,6 +1151,44 @@
     g.gain.exponentialRampToValueAtTime(0.0001, t0 + dur);
     o.start(t0); o2.start(t0); o.stop(t0 + dur + 0.03); o2.stop(t0 + dur + 0.03);
   }
+  // Rire et soupir synthétisés (voix gratuite) : petites voyelles qui montent et descendent + souffle, jouées au bon moment de la phrase.
+  function fxNoise(t0, dur, f0, f1, vol) {
+    var n = Math.max(1, Math.floor(actx.sampleRate * dur)), buf = actx.createBuffer(1, n, actx.sampleRate), d = buf.getChannelData(0);
+    for (var i = 0; i < n; i++) d[i] = Math.random() * 2 - 1;
+    var src = actx.createBufferSource(); src.buffer = buf;
+    var bp = actx.createBiquadFilter(); bp.type = 'bandpass'; bp.Q.value = 0.9; bp.frequency.setValueAtTime(f0, t0); bp.frequency.exponentialRampToValueAtTime(f1, t0 + dur);
+    var g = actx.createGain(); g.gain.setValueAtTime(0.0001, t0); g.gain.exponentialRampToValueAtTime(vol, t0 + dur * 0.3); g.gain.exponentialRampToValueAtTime(0.0001, t0 + dur);
+    src.connect(bp); bp.connect(g); g.connect(actx.destination); src.start(t0); src.stop(t0 + dur + 0.02);
+  }
+  function fxLaugh() {
+    if (!audioReady()) return;
+    var t = actx.currentTime + 0.02, base = 600 + Math.random() * 80, n = 4;
+    for (var i = 0; i < n; i++) {
+      var t0 = t + i * 0.145, f = base * (1 - i * 0.045);
+      var o = actx.createOscillator(), o2 = actx.createOscillator(), g = actx.createGain();
+      var f1 = actx.createBiquadFilter(), f2 = actx.createBiquadFilter(), mix = actx.createGain();
+      o.type = 'sawtooth'; o2.type = 'triangle';
+      o.frequency.setValueAtTime(f * 1.12, t0); o.frequency.exponentialRampToValueAtTime(f * 0.86, t0 + 0.1);
+      o2.frequency.setValueAtTime(f * 2.24, t0); o2.frequency.exponentialRampToValueAtTime(f * 1.72, t0 + 0.1);
+      f1.type = 'bandpass'; f1.frequency.value = 900; f1.Q.value = 3; f2.type = 'bandpass'; f2.frequency.value = 2300; f2.Q.value = 4;
+      mix.gain.value = 0.5; o.connect(f1); o2.connect(f2); f1.connect(mix); f2.connect(mix); mix.connect(g); g.connect(actx.destination);
+      g.gain.setValueAtTime(0.0001, t0); g.gain.exponentialRampToValueAtTime(0.32 - i * 0.04, t0 + 0.02); g.gain.exponentialRampToValueAtTime(0.0001, t0 + 0.115);
+      o.start(t0); o2.start(t0); o.stop(t0 + 0.14); o2.stop(t0 + 0.14);
+      fxNoise(t0 - 0.01, 0.05, 3200, 1800, 0.07);
+    }
+    setTalking(true); setTimeout(function () { if (!voiceEl || voiceEl.paused) setTalking(false); }, 800);
+  }
+  function fxSigh() {
+    if (!audioReady()) return;
+    var t0 = actx.currentTime + 0.02;
+    fxNoise(t0, 0.75, 1900, 520, 0.22);
+    var o = actx.createOscillator(), g = actx.createGain(), lp = actx.createBiquadFilter();
+    o.type = 'sine'; o.frequency.setValueAtTime(330, t0); o.frequency.exponentialRampToValueAtTime(210, t0 + 0.7); lp.type = 'lowpass'; lp.frequency.value = 900;
+    o.connect(lp); lp.connect(g); g.connect(actx.destination);
+    g.gain.setValueAtTime(0.0001, t0); g.gain.exponentialRampToValueAtTime(0.07, t0 + 0.2); g.gain.exponentialRampToValueAtTime(0.0001, t0 + 0.75);
+    o.start(t0); o.stop(t0 + 0.8);
+  }
+  window.__fx = { laugh: fxLaugh, sigh: fxSigh };
   var SCALE = [0, 2, 4, 7, 9, 12, 14, 16];
   // Un petit gazouillis par groupe de 2 lettres, au rythme de la machine à écrire.
   function chirpSeq(text, tickMs) {
@@ -2260,8 +2298,11 @@
   function faceTrack(text, base) {
     var segs = [], re = /[^.!?…]+(?:\.{3}|[.!?…]+)?/g, m, pos = 0, str = String(text);
     while ((m = re.exec(str))) { if (m[0].trim()) segs.push({ at: m.index, e: sentEmo(m[0], base) }); }
-    var k = -1;
+    var k = -1, fxs = [], fre = /(hi ?hi+|ha ?ha+|ahah+|hé ?hé+|mdr)|(pfff*|pfou)/gi, fm;
+    while ((fm = fre.exec(str))) fxs.push({ at: fm.index, laugh: !!fm[1], done: false });
+    var free = /^ed/.test(cloudProv || '');
     return function (n) {
+      if (free) for (var q = 0; q < fxs.length; q++) if (!fxs[q].done && n >= fxs[q].at) { fxs[q].done = true; if (fxs[q].laugh) fxLaugh(); else fxSigh(); }
       for (var i = segs.length - 1; i >= 0; i--) if (n >= segs[i].at) { if (i !== k) { k = i; var e = segs[i].e; mood(EMO[e] || 'happy', 4000); if (e === 'angry' || e === 'proud') anim('jump'); } return; }
     };
   }
@@ -3728,7 +3769,7 @@
   }
   function initAuth(cfg) {
     if (!cfg || !cfg.url || !cfg.key) return;
-    var sc = document.createElement('script'); sc.src = '/supa.js?v=26';
+    var sc = document.createElement('script'); sc.src = '/supa.js?v=27';
     sc.onload = function () {
       try { sb = window.MikaSupa.create(cfg.url, cfg.key); } catch (e) { sb = null; return; }
       renderAcct();
