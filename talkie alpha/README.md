@@ -168,3 +168,9 @@ Boubou écrit maintenant deux versions de chaque réplique : `say` (affichée) e
 ## v31 — Refonte Ghibli des scènes 3D
 - Kit commun (`src3d/scene3d.js`) : tone mapping doux, vignette + grain, textures « gouache », fumée/vapeur en sprites, halos, rayons de soleil, poussière dorée.
 - Chambre (tableaux, tasse qui fume, lampe qui rayonne, fenêtre peinte), Cuisine (casserole + théière qui fument), Salle de bain (vapeur, bougies, fenêtre), Jardin (ciel peint, haie bouffante, fleurs, pollen, rayons).
+
+## v32 — Mika vit dans ses pièces
+- Le costume (Halloween) n'apparaît plus que dans le Monde ; la chambre et les pièces montrent l'avatar normal.
+- Animations 3D : bain (Mika entre dans la baignoire et se lave), jardin (planter, arroser, récolter), cuisine (va chercher, cuisine, pose le plat sur la table puis mange), livraison (commande sur le téléphone dans le salon, puis la porte s'ouvre sur le livreur et le colis).
+- La baignoire et le frigo de la chambre ouvrent les nouvelles pièces.
+- Vie de Mika : plusieurs événements par jour, envies qui changent toutes les 4 h, ennui si personne ne joue, humeurs en plus (ennuyée, curieuse, joueuse, câline), messages spontanés par thèmes (journée, envie, curiosité, rêve, confidence, jeu, souvenir) avec bouton « go » vers l'activité.
