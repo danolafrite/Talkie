@@ -1303,24 +1303,26 @@ export function initInterior(host, theme, getOpts, hooks) {
   renderer.setPixelRatio(Math.min(window.devicePixelRatio || 1, 2));
   ghibli(renderer); vignette(host);
   const canvas = renderer.domElement; canvas.className = 'scene3d'; host.insertBefore(canvas, host.firstChild);
-  const scene = new THREE.Scene(); const BG = { bakery: 0xffe9f0, thrift: 0xefe3d0, deco: 0xe6f3ee, karaoke: 0x241447, dentist: 0xdff5ef, kitchen: 0xfff1dc, garden: 0xbfe8ff, bath: 0xdff3ff }[theme] || 0xffffff; scene.background = new THREE.Color(BG);
+  const scene = new THREE.Scene(); const BG = { bakery: 0xffe9f0, thrift: 0xefe3d0, deco: 0xe6f3ee, karaoke: 0x241447, dentist: 0xdff5ef, kitchen: 0xfff1dc, garden: 0xbfe8ff, bath: 0xdff3ff, living: 0xffefd8, entry: 0xcfe9ff }[theme] || 0xffffff; scene.background = new THREE.Color(BG);
   standardLights(scene);
   const camera = new THREE.PerspectiveCamera(34, 1, 0.1, 40); camera.position.set(0, 1.9, 6.6); camera.lookAt(0, 1.25, 0);
   const fx = createFx(scene), anim = [];
   const room = new THREE.Group(); scene.add(room);
   const add = (o) => { room.add(o); return o; };
-  const floorMat = { bakery: () => std(0xffffff, { map: checkTex('#fff4f8', '#ffc4dc', 5) }), thrift: () => std(0xd8a56e, { map: stripeTex('#d9a96f', '#c8935b', 14) }), deco: () => std(0xf3e6d3, { map: checkTex('#f6ece0', '#e9d9c3', 5) }), karaoke: () => std(0x3a2370, { roughness: 0.3 }), dentist: () => std(0xffffff, { map: checkTex('#ffffff', '#cfeee6', 6) }), kitchen: () => std(0xd9a56e, { map: stripeTex('#e0b078', '#cf9b62', 12) }), garden: () => std(0x86cf62, { roughness: 1 }), bath: () => std(0xffffff, { map: checkTex('#f4fbff', '#cfe6f7', 7) }) }[theme]();
+  const floorMat = { bakery: () => std(0xffffff, { map: checkTex('#fff4f8', '#ffc4dc', 5) }), thrift: () => std(0xd8a56e, { map: stripeTex('#d9a96f', '#c8935b', 14) }), deco: () => std(0xf3e6d3, { map: checkTex('#f6ece0', '#e9d9c3', 5) }), karaoke: () => std(0x3a2370, { roughness: 0.3 }), dentist: () => std(0xffffff, { map: checkTex('#ffffff', '#cfeee6', 6) }), kitchen: () => std(0xd9a56e, { map: stripeTex('#e0b078', '#cf9b62', 12) }), garden: () => std(0x86cf62, { roughness: 1 }), bath: () => std(0xffffff, { map: checkTex('#f4fbff', '#cfe6f7', 7) }), living: () => std(0xd9a56e), entry: () => std(0xd9a56e) }[theme]();
   const fl = mesh(new THREE.PlaneGeometry(26, 16), floorMat, 0, 0, 4.5, false); floorMat.map && floorMat.map.repeat.multiplyScalar(1.8); fl.rotation.x = -Math.PI / 2; add(fl);
-  const wallCol = { bakery: 0xffd6e6, thrift: 0xc7e3d4, deco: 0xfff3e0, karaoke: 0x2f1a63, dentist: 0xcdeee6, kitchen: 0xffe9c9, garden: 0x9bd47a, bath: 0xbfe3f7 }[theme];
+  const wallCol = { bakery: 0xffd6e6, thrift: 0xc7e3d4, deco: 0xfff3e0, karaoke: 0x2f1a63, dentist: 0xcdeee6, kitchen: 0xffe9c9, garden: 0x9bd47a, bath: 0xbfe3f7, living: 0xffe3c4, entry: 0xffe3c4 }[theme];
   const wallTex = theme === 'bakery' ? stripeTex('#ffd6e6', '#fff0f6', 14) : null; if (wallTex) wallTex.repeat.set(3.4, 1);
   const wallM = add(mesh(rbox(26, 10, 0.2, 0.05), std(wallCol, wallTex ? { map: wallTex } : { emissive: wallCol, emissiveIntensity: theme === 'karaoke' ? 0.35 : 0.12 }), 0, 4.7, -3.0, false));
   if (theme === 'kitchen') { const ft = paintTex('#D9A56E', ['#E8BC8A', '#C98F55', '#EFC99A'], 200, { planks: 9, ang: 0, len: 90, bw: 6, seed: 4, w: 512, h: 512 }); ft.repeat.set(2.4, 1.6); fl.material = std(0xffffff, { map: ft }); const wt = paintTex('#FFE6BF', ['#FFF0D2', '#F7D9A4', '#FFE0B8', '#F2CC95'], 240, { seed: 12 }); wt.repeat.set(4, 1.5); wallM.material = std(0xffffff, { map: wt }); }
+  if (theme === 'living' || theme === 'entry') { const ft = paintTex('#D9A56E', ['#E8BC8A', '#C98F55', '#EFC99A'], 200, { planks: 9, ang: 0, len: 90, bw: 6, seed: 4, w: 512, h: 512 }); ft.repeat.set(2.4, 1.6); fl.material = std(0xffffff, { map: ft }); const wt = paintTex('#FFE2C2', ['#FFEFD6', '#F7D2A0', '#FFDDB4', '#F2C58E'], 240, { seed: 41 }); wt.repeat.set(4, 1.5); wallM.material = std(0xffffff, { map: wt }); if (theme === 'entry') wallM.visible = false; }
   if (theme === 'bath') { const wt = paintTex('#CDEBF5', ['#E3F6FB', '#B8DCEB', '#D8F0F2', '#A9D3E6'], 240, { seed: 21 }); wt.repeat.set(4, 1.5); wallM.material = std(0xffffff, { map: wt }); const ft = paintTex('#F2E4CF', ['#FFF3E0', '#E6D2B5', '#F7E9D4'], 160, { seed: 22 }); ft.repeat.set(2.4, 1.6); fl.material = std(0xffffff, { map: ft }); }
   if (theme === 'garden') { const gt = paintTex('#8ED069', ['#A7DD7C', '#76BF58', '#B9E58C', '#68B050'], 420, { seed: 31, ang: 1.2, len: 30, bw: 8, w: 512, h: 512 }); gt.repeat.set(3.4, 2.4); fl.material = std(0xffffff, { map: gt }); wallM.material = new THREE.MeshBasicMaterial({ color: 0xffffff }); wallM.visible = false; const bd = mesh(new THREE.PlaneGeometry(19, 9.5), new THREE.MeshBasicMaterial({ map: skyTexture(new Date().getHours(), true), fog: false }), 0, 4.6, -3.1, false); scene.add(bd); }
   add(mesh(rbox(14, 0.18, 0.2, 0.04), std(0xffffff), 0, 0.09, -2.88, false));
-  const sign = mesh(new THREE.PlaneGeometry(2.9, 0.9), new THREE.MeshBasicMaterial({ map: signTex({ bakery: 'Boulangerie', thrift: 'Friperie', deco: 'Déco', karaoke: 'Karaoké', dentist: 'Dentiste', kitchen: 'Cuisine', garden: 'Jardin', bath: 'Salle de bain' }[theme], { bakery: '#e0457b', thrift: '#ff7ac8', deco: '#2f8f6b', karaoke: '#7df9ff', dentist: '#2f8fb0', kitchen: '#d9822b', garden: '#2f8f6b', bath: '#3a8fd1' }[theme], { bakery: '#fffaf0', thrift: null, deco: '#fffaf0', karaoke: null, dentist: '#fffaf0', kitchen: '#fffaf0', garden: '#fffaf0', bath: '#fffaf0' }[theme], { thrift: '#ff3fa8', karaoke: '#18c8ff' }[theme]), transparent: true }), 0, 3.85, -2.86, false);
+  const sign = mesh(new THREE.PlaneGeometry(2.9, 0.9), new THREE.MeshBasicMaterial({ map: signTex({ bakery: 'Boulangerie', thrift: 'Friperie', deco: 'Déco', karaoke: 'Karaoké', dentist: 'Dentiste', kitchen: 'Cuisine', garden: 'Jardin', bath: 'Salle de bain', living: 'Salon', entry: 'Entrée' }[theme], { bakery: '#e0457b', thrift: '#ff7ac8', deco: '#2f8f6b', karaoke: '#7df9ff', dentist: '#2f8fb0', kitchen: '#d9822b', garden: '#2f8f6b', bath: '#3a8fd1', living: '#d9822b', entry: '#d9822b' }[theme], { bakery: '#fffaf0', thrift: null, deco: '#fffaf0', karaoke: null, dentist: '#fffaf0', kitchen: '#fffaf0', garden: '#fffaf0', bath: '#fffaf0', living: '#fffaf0', entry: '#fffaf0' }[theme], { thrift: '#ff3fa8', karaoke: '#18c8ff' }[theme]), transparent: true }), 0, 3.85, -2.86, false);
   add(sign);
-  const plotsApi = { set: () => {} };
+  const plotsApi = { set: () => {} }, anch = {};
+  let job = null;
   let item = null, decorG = null, ch = null, spinT = 0, singing = false, T = 0, running = true, camZ = 6.6, narrow = false;
   let pos = [0, 0, 1.4], sc = 1.25;
   if (theme === 'bakery') {
@@ -1439,6 +1441,7 @@ export function initInterior(host, theme, getOpts, hooks) {
       const hint = sph(0.12, new THREE.MeshBasicMaterial({ color: 0xffffff }), 1, 1, 0.3, 0, 0.55, 0.62); hint.visible = true; g.add(hint); g.userData.hint = hint;
       g.position.set(-2.3 + (i % 3) * 1.7, 0, -1.55 + Math.floor(i / 3) * 1.3); add(g); plotG.push(g);
     }
+    anch.plotG = plotG;
     plotsApi.set = (list) => {
       plotG.forEach((g, i) => {
         const pl = list && list[i], pg = g.userData.plant;
@@ -1510,6 +1513,42 @@ export function initInterior(host, theme, getOpts, hooks) {
     // plante suspendue
     { add(mesh(new THREE.CylinderGeometry(0.01, 0.01, 0.9, 4), std(0x7a5a3a), 3.9, 3.7, -2.5, false)); add(mesh(new THREE.CylinderGeometry(0.22, 0.14, 0.26, 12), std(0xffb89a), 3.9, 3.1, -2.5)); for (let i = 0; i < 7; i++) { const a = i / 7 * 6.28; add(sph(0.12, std(0x6fcf7a), 0.7, 2.2, 0.5, 3.9 + Math.cos(a) * 0.2, 2.75 - (i % 3) * 0.12, -2.5 + Math.sin(a) * 0.2)); } }
     anim.push(motesIn(room, 22, [-0.5, 0.3, -0.5, 3.2, 3.0, 2.0], 0xfff6e0, 0.05));
+  } else if (theme === 'living') {
+    pos = [1.2, 0, 1.9]; sc = 1.2; sign.visible = false;
+    const wood = std(0xc98f55), cream = std(0xfff7ea);
+    // canapé
+    add(mesh(rbox(3.4, 0.7, 1.2, 0.25), std(0xff9ab8), 1.2, 0.35, -1.5)); add(mesh(rbox(3.4, 1.0, 0.4, 0.2), std(0xf27fa3), 1.2, 1.05, -2.0)); [-1.7, 1.7].forEach((x2) => add(mesh(rbox(0.4, 0.85, 1.2, 0.18), std(0xf27fa3), 1.2 + x2, 0.55, -1.5)));
+    add(mesh(rbox(0.7, 0.55, 0.2, 0.1), std(0xfff0b8), 0.3, 0.95, -1.35)); add(mesh(rbox(0.6, 0.5, 0.2, 0.1), std(0xbdf3dc), 2.2, 0.92, -1.35));
+    // tapis, table basse, thé fumant
+    add(mesh(new THREE.CylinderGeometry(2.2, 2.2, 0.05, 40), std(0xbdf3dc), 0.8, 0.03, 0.9)); add(mesh(new THREE.CylinderGeometry(1.6, 1.6, 0.06, 40), std(0xfff6ea), 0.8, 0.04, 0.9));
+    add(mesh(new THREE.CylinderGeometry(0.55, 0.55, 0.06, 20), wood, -1.8, 0.5, 0.4)); add(mesh(new THREE.CylinderGeometry(0.06, 0.06, 0.5, 8), wood, -1.8, 0.25, 0.4)); add(mesh(new THREE.CylinderGeometry(0.1, 0.07, 0.12, 12), std(0xffffff), -1.8, 0.6, 0.4));
+    anim.push(steamAt(room, -1.8, 0.72, 0.4, 5, { size: 0.15, rise: 0.7, op: 0.5, speed: 0.22 }));
+    // fenêtre peinte, tableau, plante, lampe
+    { const wf = new THREE.Group(); wf.position.set(-2.4, 3.0, -2.86); wf.add(mesh(rbox(2.2, 1.7, 0.1, 0.05), std(0xffffff), 0, 0, 0, false)); wf.add(mesh(new THREE.PlaneGeometry(2.0, 1.5), new THREE.MeshBasicMaterial({ map: skyTexture(new Date().getHours()) }), 0, 0, 0.06, false)); wf.add(mesh(rbox(0.07, 1.5, 0.06, 0.02), std(0xffffff), 0, 0, 0.09, false)); add(wf); }
+    shaftAt(room, 0xfff0c0, 2.0, 4.6, -1.2, 2.0, -2.2, 0.42, 0.2);
+    { const f1 = framedPainting('hills', 1.2, 0.9); f1.position.set(2.4, 3.1, -2.86); add(f1); }
+    add(mesh(new THREE.CylinderGeometry(0.38, 0.3, 0.55, 16), std(0xffb89a), 4.2, 0.28, -1.8)); for (let i = 0; i < 7; i++) { const a = i / 7 * 6.28; add(sph(0.3, std(0x6fcf7a), 0.5, 1.5, 0.3, 4.2 + Math.cos(a) * 0.25, 1.1 + (i % 2) * 0.2, -1.8 + Math.sin(a) * 0.25)); }
+    add(mesh(new THREE.CylinderGeometry(0.04, 0.04, 2.0, 8), wood, -3.8, 1.0, -1.6)); add(mesh(new THREE.CylinderGeometry(0.3, 0.45, 0.5, 20, 1, true), std(0xfff0c9, { emissive: 0xffc15a, emissiveIntensity: 0.9, side: THREE.DoubleSide }), -3.8, 2.2, -1.6));
+    anim.push(((gl2) => (t) => { gl2.material.opacity = 0.6 + Math.sin(t * 1.5) * 0.06; })(glowAt(room, 0xffc67a, 2.8, -3.8, 2.2, -1.6, 0.6)));
+    anim.push(motesIn(room, 34, [0.6, 0.3, -0.4, 3.4, 3.2, 2.2], 0xfff2c8, 0.05));
+    anch.sofa = [1.2, -0.55]; anch.phone = true;
+  } else if (theme === 'entry') {
+    pos = [0.4, 0, 1.4]; sc = 1.2; sign.visible = false;
+    const wm = std(0xffffff, { map: wallM.material.map }); wm.map = paintTex('#FFE2C2', ['#FFEFD6', '#F7D2A0', '#FFDDB4'], 240, { seed: 41 }); wm.map.repeat.set(3, 1.5);
+    // mur avec ouverture pour la porte
+    add(mesh(rbox(8.0, 5.5, 0.3, 0.04), wm, -4.9, 2.75, -3.0, false)); add(mesh(rbox(8.0, 5.5, 0.3, 0.04), wm, 4.9, 2.75, -3.0, false)); add(mesh(rbox(1.8, 2.9, 0.3, 0.04), wm, 0, 4.05, -3.0, false));
+    add(mesh(rbox(0.18, 2.7, 0.34, 0.03), std(0xffffff), -0.98, 1.35, -3.0)); add(mesh(rbox(0.18, 2.7, 0.34, 0.03), std(0xffffff), 0.98, 1.35, -3.0)); add(mesh(rbox(2.14, 0.18, 0.34, 0.03), std(0xffffff), 0, 2.7, -3.0));
+    // dehors : ciel peint, sol de pierre, haie
+    scene.add(mesh(new THREE.PlaneGeometry(24, 9), new THREE.MeshBasicMaterial({ map: skyTexture(new Date().getHours(), true), fog: false }), 0, 4.2, -9, false));
+    const out = mesh(new THREE.PlaneGeometry(26, 7), std(0x9ccf7a), 0, 0.001, -6.5, false); out.rotation.x = -Math.PI / 2; add(out); const path = mesh(new THREE.PlaneGeometry(2.6, 7), std(0xe3d6bd), 0, 0.01, -6.5, false); path.rotation.x = -Math.PI / 2; add(path);
+    for (let i = 0; i < 9; i++) add(sph(0.8, std([0x6fbf59, 0x5aae4c, 0x84cc63][i % 3]), 1.2, 0.9, 0.9, -8 + i * 2, 0.8, -7.4));
+    // la porte (charnière à gauche, s'ouvre vers l'intérieur)
+    const hinge = new THREE.Group(); hinge.position.set(-0.9, 0, -2.95); const slab = mesh(rbox(1.8, 2.6, 0.12, 0.05), std(0xff9ac4), 0.9, 1.3, 0); hinge.add(slab); hinge.add(sph(0.07, std(0xffd24a, { metalness: 0.4, roughness: 0.4 }), 1, 1, 1, 1.5, 1.3, 0.1)); hinge.add(mesh(rbox(1.2, 1.6, 0.04, 0.05), std(0xffb3d6), 0.9, 1.5, 0.08)); add(hinge); anch.hinge = hinge;
+    add(mesh(rbox(1.9, 0.06, 1.2, 0.02), std(0xffd0ea), 0, 0.03, -1.9, false));
+    { const f1 = framedPainting('hills', 1.1, 0.8); f1.position.set(-3.0, 2.9, -2.82); add(f1); const f2 = framedPainting('dusk', 0.9, 0.7); f2.position.set(3.0, 2.9, -2.82); add(f2); }
+    anch.entry = true;
+    shaftAt(room, 0xfff0c0, 2.2, 4.6, 1.0, 2.0, -2.0, -0.42, 0.14);
+    anim.push(motesIn(room, 22, [0, 0.3, -1.0, 3.0, 3.0, 2.0], 0xfff2c8, 0.05));
   } else if (theme === 'dentist') {
     pos = [1.5, 0, 1.5]; sc = 1.15;
     const white = std(0xffffff, { roughness: 0.4 }), teal = std(0x56c6c0), grey = std(0xbfc9d6, { metalness: 0.5, roughness: 0.3 });
@@ -1582,7 +1621,7 @@ export function initInterior(host, theme, getOpts, hooks) {
       const b2 = new THREE.Box3().setFromObject(g); g.position.set(1.5 - (b2.min.x + b2.max.x) / 2, 0.2 - b2.min.y, 1.3 - (b2.min.z + b2.max.z) / 2); room.add(g); decorG = g;
     }
   }
-  function resize() { const w = host.clientWidth || 320, h = host.clientHeight || 300; renderer.setSize(w, h, false); canvas.style.width = '100%'; canvas.style.height = '100%'; camera.aspect = w / h; camera.fov = w / h < 1 ? 44 : 34; camZ = (w / h < 0.8 ? 9.6 : 6.6) * ({ garden: 1.55, kitchen: 1.12, bath: 1.2 }[theme] || 1); camera.position.z = camZ; camera.position.y = theme === 'garden' ? 5.6 : 1.9; narrow = w / h < 0.8; if (ch) ch.root.position.x = pos[0] * (narrow ? 0.55 : 1); camera.updateProjectionMatrix(); }
+  function resize() { const w = host.clientWidth || 320, h = host.clientHeight || 300; renderer.setSize(w, h, false); canvas.style.width = '100%'; canvas.style.height = '100%'; camera.aspect = w / h; camera.fov = w / h < 1 ? 44 : 34; camZ = (w / h < 0.8 ? 9.6 : 6.6) * ({ garden: 1.55, kitchen: 1.12, bath: 1.2 }[theme] || 1); camera.position.z = camZ; camera.position.y = theme === 'garden' ? 5.6 : 1.9; narrow = w / h < 0.8; if (ch && !job) ch.root.position.x = pos[0] * (narrow ? 0.55 : 1); camera.updateProjectionMatrix(); }
   new ResizeObserver(resize).observe(host); resize();
   canvas.style.touchAction = 'none';
   const ray = new THREE.Raycaster(), pt = new THREE.Vector2();
@@ -1594,29 +1633,133 @@ export function initInterior(host, theme, getOpts, hooks) {
     if (o && o.userData.pick) hooks.onPick(o.userData.pick);
   });
   canvas.addEventListener('pointerup', () => { if (ch) { ch.hop(4.6); ch.setEmotion('happy'); fx.emit('heart', 4, ch.root.position, sc); setTimeout(() => ch && ch.setEmotion(singing ? 'happy' : 'neutral'), 1400); } });
+  /* ===== Animations de Mika dans les pièces : séquences marche / gestes / accessoires ===== */
+  let moving = false, held = null, heldOff = [0.55, 1.05, 0.55], camFX = 0, tableDish = null, drv = null, drvMoving = false, pkg = null;
+  const emoSprite = (e, size) => { const c = document.createElement('canvas'); c.width = c.height = 128; const g = c.getContext('2d'); g.font = '92px "Apple Color Emoji","Segoe UI Emoji","Noto Color Emoji",sans-serif'; g.textAlign = 'center'; g.textBaseline = 'middle'; g.fillText(e, 64, 72); const t = new THREE.CanvasTexture(c); t.colorSpace = THREE.SRGBColorSpace; const sp = new THREE.Sprite(new THREE.SpriteMaterial({ map: t, transparent: true, depthTest: false })); sp.scale.setScalar(size || 0.6); sp.renderOrder = 6; scene.add(sp); return sp; };
+  const drop3 = (o) => { if (!o) return; scene.remove(o); o.material && o.material.dispose && o.material.dispose(); };
+  const home = () => pos[0] * (narrow ? 0.55 : 1);
+  const S = {
+    walk: (x, z, fa) => (dt) => { const p = ch.root.position, dx = x - p.x, dz = z - p.z, d = Math.hypot(dx, dz); if (d < 0.06) { moving = false; ch.face(fa || 0); return true; } moving = true; const sp = Math.min(d, 2.1 * dt); p.x += dx / d * sp; p.z += dz / d * sp; ch.face(Math.atan2(dx, dz) * 0.7); return false; },
+    wait: (sec, fn) => { let t = 0; return (dt) => { t += dt; if (fn) fn(Math.min(1, t / sec), dt, t); return t >= sec; }; },
+    call: (fn) => () => { fn(); return true; },
+    glide: (x, y, z, sec, arc) => { let t = 0, a, b, c; return (dt) => { const p = ch.root.position; if (t === 0) { a = p.x; b = ch.baseY; c = p.z; } t += dt; const k = Math.min(1, t / sec), e = k * k * (3 - 2 * k); p.x = a + (x - a) * e; p.z = c + (z - c) * e; ch.baseY = b + (y - b) * e + Math.sin(k * Math.PI) * (arc || 0); return k >= 1; }; }
+  };
+  const holdSet = (o, off) => { if (held && held !== o) drop3(held); held = o; if (off) heldOff = off; };
+  function finishJob() { const j = job; job = null; moving = false; ch.baseY = 0; ch.roll = 0; ch.setTalking(false); if (held) { drop3(held); held = null; } if (j && j.done) { try { j.done(); } catch (e) { /* ignore */ } } }
+  function startJob(steps, done) { if (job) finishJob(); job = { steps, i: 0, done }; }
+  const standPlot = (i) => [-2.3 + (i % 3) * 1.7 + 0.88, -1.55 + Math.floor(i / 3) * 1.3 + 0.3];
+  const plotWorld = (i) => [-2.3 + (i % 3) * 1.7, 0.3, -1.55 + Math.floor(i / 3) * 1.3];
+  const TABLE = [-2.0, 1.4], EATAT = [-0.95, 2.0];
+  const ACT = {
+    bath(arg, cb) {
+      startJob([
+        S.walk(-0.5, -0.4), S.call(() => ch.hop(4.5)), S.wait(0.5),
+        S.glide(-2.0, 0.55, -1.45, 0.9, 0.7), S.call(() => { ch.setEmotion('happy'); holdSet(emoSprite('🧽', 0.5), [0.5, 0.95, 0.4]); fx.emit('bubble', 4, ch.root.position, sc); }),
+        S.wait(3.8, (k, dt, t) => { ch.roll = Math.sin(t * 5) * 0.14; ch.face(Math.sin(t * 2.5) * 0.45); ch.setTalking(Math.sin(t * 9) > 0); heldOff = [0.5 + Math.sin(t * 8) * 0.18, 0.95 + Math.cos(t * 8) * 0.1, 0.4]; if (Math.random() < dt * 6) fx.emit('bubble', 1, ch.root.position, sc); }),
+        S.call(() => { ch.roll = 0; ch.setTalking(false); drop3(held); held = null; fx.emit('star', 6, ch.root.position, sc); ch.hop(4.5); }), S.wait(0.4),
+        S.glide(-0.6, 0, -0.4, 0.8, 0.8), S.walk(home(), pos[2]), S.call(() => { ch.setEmotion('love'); fx.emit('heart', 5, ch.root.position, sc); ch.hop(3.6); })
+      ], cb);
+    },
+    plant(arg, cb) {
+      const i = arg.i, st = standPlot(i), pw = plotWorld(i);
+      startJob([
+        S.walk(st[0], st[1], -0.4), S.call(() => { holdSet(emoSprite('🌰', 0.4), [0.5, 0.9, 0.5]); ch.setEmotion('happy'); }),
+        S.wait(0.7, (k) => { ch.baseY = -0.1 * Math.sin(k * Math.PI); ch.roll = 0.12 * Math.sin(k * Math.PI); }),
+        S.call(() => { drop3(held); held = null; fx.emit('drop', 3, { x: pw[0], y: 0.4, z: pw[2] }, 1); ch.baseY = 0; ch.roll = 0; ch.hop(3.2); cb && cb('planted'); }),
+        S.wait(0.6), S.walk(home(), pos[2])
+      ], null);
+    },
+    harvest(arg, cb) {
+      const i = arg.i, st = standPlot(i), pw = plotWorld(i); let sp = null;
+      startJob([
+        S.walk(st[0], st[1], -0.4), S.call(() => { ch.setEmotion('happy'); sp = emoSprite(arg.e || '🍅', 0.5); sp.position.set(pw[0], 0.5, pw[2]); }),
+        S.wait(0.9, (k) => { sp.position.set(pw[0] + (ch.root.position.x + 0.5 * sc - pw[0]) * k, 0.5 + k * 0.5 + Math.sin(k * Math.PI) * 0.5, pw[2] + (ch.root.position.z + 0.5 * sc - pw[2]) * k); sp.scale.setScalar(0.5 + k * 0.2); ch.baseY = 0.1 * Math.sin(k * Math.PI); }),
+        S.call(() => { drop3(sp); sp = null; holdSet(emoSprite(arg.e || '🍅', 0.7), [0.2, 1.7, 0.3]); fx.emit('star', 6, ch.root.position, sc); fx.emit('heart', 3, ch.root.position, sc); ch.hop(5); cb && cb('harvested'); }),
+        S.wait(1.0), S.walk(home(), pos[2])
+      ], () => { if (sp) drop3(sp); });
+    },
+    water(arg, cb) {
+      const list = (arg && arg.list) || [], steps = [];
+      list.forEach((i) => { const st = standPlot(i), pw = plotWorld(i); steps.push(S.walk(st[0], st[1], -0.4)); steps.push(S.call(() => { holdSet(emoSprite('🚿', 0.55), [0.55, 1.0, 0.5]); ch.setEmotion('happy'); })); steps.push(S.wait(1.0, (k, dt) => { ch.roll = -0.2 * Math.sin(Math.min(1, k * 3) * Math.PI / 2); if (Math.random() < dt * 14) fx.emit('drop', 1, { x: pw[0] + (Math.random() - 0.5) * 0.8, y: 0.9, z: pw[2] + (Math.random() - 0.5) * 0.5 }, 1); })); steps.push(S.call(() => { ch.roll = 0; })); });
+      steps.push(S.call(() => { ch.hop(4); })); steps.push(S.walk(home(), pos[2]));
+      startJob(steps, cb);
+    },
+    cook(arg, cb) {
+      if (tableDish) { drop3(tableDish); tableDish = null; }
+      startJob([
+        S.walk(2.9, -1.2, -0.5), S.call(() => { holdSet(emoSprite(arg.ing || '🥬', 0.5), [0.5, 1.0, 0.5]); ch.setEmotion('happy'); ch.hop(3); }), S.wait(0.9),
+        S.walk(0.2, -1.15, 0.45), S.call(() => { holdSet(emoSprite('🥄', 0.55), [0.45, 1.0, 0.35]); }),
+        S.wait(3.2, (k, dt, t) => { ch.face(Math.sin(t * 3) * 0.45); ch.setTalking(Math.sin(t * 6) > 0.4); heldOff = [0.45 + Math.sin(t * 7) * 0.12, 1.0, 0.35 + Math.cos(t * 7) * 0.1]; if (Math.random() < dt * 3) ch.hop(2); if (Math.random() < dt * 4) fx.emit('star', 1, ch.root.position, sc); }),
+        S.call(() => { ch.setTalking(false); holdSet(emoSprite(arg.e || '🍲', 0.7), [0.2, 1.35, 0.55]); ch.hop(4.6); fx.emit('heart', 4, ch.root.position, sc); }), S.wait(0.6),
+        S.walk(EATAT[0], EATAT[1] - 0.3, 0.3), S.call(() => { drop3(held); held = null; tableDish = emoSprite(arg.e || '🍲', 0.75); tableDish.position.set(TABLE[0], 1.2, TABLE[1]); ch.hop(3); })
+      ], cb);
+    },
+    eat(arg, cb) {
+      const steps = [];
+      if (!tableDish) steps.push(S.call(() => { tableDish = emoSprite(arg.e || '🍲', 0.75); tableDish.position.set(TABLE[0], 1.2, TABLE[1]); fx.emit('star', 5, { x: TABLE[0], y: 1.2, z: TABLE[1] }, 1); }));
+      steps.push(S.walk(EATAT[0], EATAT[1], 0.35)); steps.push(S.call(() => { ch.setEmotion('happy'); }));
+      for (let b = 0; b < 4; b++) steps.push(S.wait(0.9, (k, dt, t) => { ch.setTalking(Math.sin(t * 14) > 0); ch.baseY = 0.02 + Math.abs(Math.sin(t * 7)) * 0.05; if (tableDish && k > 0.8) tableDish.scale.setScalar(Math.max(0.15, 0.75 - (b + k) * 0.17)); }));
+      steps.push(S.call(() => { ch.setTalking(false); ch.baseY = 0; drop3(tableDish); tableDish = null; ch.setEmotion('love'); fx.emit('heart', 8, ch.root.position, sc); ch.hop(5); }));
+      steps.push(S.wait(1.1));
+      startJob(steps, cb);
+    },
+    order(arg, cb) {
+      const sf = anch.sofa || [1.2, -0.55]; let ok = null;
+      startJob([
+        S.walk(sf[0], sf[1] + 1.0), S.glide(sf[0], 0.45, sf[1] + 0.3, 0.6, 0.3), S.call(() => { holdSet(emoSprite('📱', 0.55), [0.0, 1.0, 0.6]); ch.setEmotion('happy'); }),
+        S.wait(2.6, (k, dt, t) => { ch.face(Math.sin(t * 1.2) * 0.2); heldOff = [0.0, 1.0 + Math.sin(t * 12) * 0.03, 0.6]; if (Math.random() < dt * 3.5) { ch.hop(1.6); fx.emit('star', 1, { x: ch.root.position.x, y: ch.root.position.y + 1.2, z: ch.root.position.z + 0.5 }, 1); } }),
+        S.call(() => { ch.setEmotion('wow'); ch.hop(5); ok = emoSprite('📦', 0.7); ok.position.set(ch.root.position.x, 2.7, ch.root.position.z + 0.3); fx.emit('heart', 5, ch.root.position, sc); }),
+        S.wait(1.4, (k) => { if (ok) { ok.position.y = 2.7 + k * 0.5; ok.material.opacity = 1 - k * k; } }),
+        S.call(() => { drop3(ok); ok = null; }), S.glide(sf[0] - 0.2, 0, sf[1] + 1.4, 0.6, 0.4)
+      ], () => { if (ok) drop3(ok); cb && cb(); });
+    },
+    receive(arg, cb) {
+      const hg = anch.hinge; if (!hg) { cb && cb(); return; }
+      drv = createCharacter({ mika: true, color: 0xffb347, ears: 'none', eyes: 'happy', topper: 'pom', acc: ['hat'], shape: 'round', tail: 'none' }); drv.root.scale.setScalar(1.2); drv.root.position.set(0, 0, -5.2); drv.face(0); scene.add(drv.root);
+      pkg = new THREE.Group(); pkg.add(mesh(rbox(0.6, 0.5, 0.5, 0.05), std(0xc99a64), 0, 0, 0)); pkg.add(mesh(rbox(0.62, 0.08, 0.12, 0.02), std(0xfff0c8), 0, 0.12, 0, false)); pkg.visible = false; scene.add(pkg);
+      const D = (x, z, fa) => (dt) => { const p = drv.root.position, dx = x - p.x, dz = z - p.z, d = Math.hypot(dx, dz); if (d < 0.06) { drvMoving = false; drv.face(fa || 0); return true; } drvMoving = true; const sp = Math.min(d, 1.8 * dt); p.x += dx / d * sp; p.z += dz / d * sp; drv.face(Math.atan2(dx, dz) * 0.7); return false; };
+      let doorK = 0; const doorTo = (target, sec) => { let t = 0, a = null; return (dt) => { if (a === null) a = doorK; t += dt; const k = Math.min(1, t / sec); doorK = a + (target - a) * k * k * (3 - 2 * k); hg.rotation.y = -doorK * 1.75; return k >= 1; }; };
+      let carry = 'drv';
+      anch.pkgTick = () => { if (!pkg) return; const o = carry === 'me' ? ch : drv; if (o) pkg.position.set(o.root.position.x + 0.1, o.root.position.y + 0.8, o.root.position.z + 0.55); };
+      startJob([
+        S.call(() => { fx.emit('star', 4, { x: 0, y: 2.6, z: -2.4 }, 1); ch.hop(4); ch.setEmotion('wow'); }), S.wait(0.5),
+        S.walk(-0.95, -1.35, 0.4), doorTo(1, 1.0), S.call(() => { pkg.visible = true; carry = 'drv'; ch.setEmotion('happy'); }),
+        D(0.2, -2.1, -0.5), S.call(() => { drv.hop(4); }), S.wait(0.7),
+        S.call(() => { carry = 'me'; ch.hop(5); fx.emit('heart', 6, ch.root.position, sc); ch.setEmotion('love'); }), S.wait(0.8),
+        S.call(() => { drv.hop(4); }), S.wait(0.6), D(0, -3.6, 0), D(0, -6.4, 0),
+        doorTo(0, 0.9), S.walk(home(), pos[2])
+      ], () => { carry = ''; if (pkg) { scene.remove(pkg); pkg = null; } if (drv) { scene.remove(drv.root); drv.dispose(); drv = null; } anch.pkgTick = null; cb && cb(); });
+    }
+  };
+
   const clock = new THREE.Clock(); let visible = true;
   if ('IntersectionObserver' in window) new IntersectionObserver((es) => { visible = es[0].isIntersecting; }, { threshold: 0.01 }).observe(host);
   function frame() {
     if (!running) return; requestAnimationFrame(frame);
     if (!visible || document.hidden) { clock.getDelta(); return; }
     const dt = Math.min(0.05, clock.getDelta()); T += dt;
-    camera.position.x = Math.sin(T * 0.25) * 0.35; camera.lookAt(camera.position.x * 0.3, theme === 'garden' ? 0.0 : 1.25, theme === 'garden' ? -0.5 : 0);
+    camFX += (((job && narrow) ? Math.max(-2.6, Math.min(2.6, ch.root.position.x * 0.8)) : 0) - camFX) * Math.min(1, dt * 2.5);
+    camera.position.x = camFX + Math.sin(T * 0.25) * 0.35; camera.lookAt(camFX + Math.sin(T * 0.25) * 0.1, theme === 'garden' ? 0.0 : 1.25, theme === 'garden' ? -0.5 : 0);
     anim.forEach((f) => f(T));
+    if (job) { const stp = job.steps[job.i]; if (!stp) finishJob(); else if (stp(dt)) job.i++; }
+    if (held) { held.position.set(ch.root.position.x + heldOff[0] * sc, ch.root.position.y + heldOff[1] * sc, ch.root.position.z + heldOff[2] * sc); }
+    if (drv) drv.update(dt, T, drvMoving, false); if (anch.pkgTick) anch.pkgTick();
     if (decorG) { decorG.rotation.y += dt * 0.5; }
     if (singing && ch) { ch.setTalking(Math.sin(T * 9) > -0.2); ch.face(Math.sin(T * 2) * 0.35); if (ch.st.y < 0.02 && Math.random() < dt * 1.2) ch.hop(2.6); if (Math.random() < dt * 2) fx.emit('star', 1, ch.root.position, sc); }
-    else if (ch) { ch.setTalking(false); if (theme !== 'bakery') ch.face(Math.sin(T * 0.6) * 0.3); }
-    if (ch) ch.update(dt, T, false, false); fx.update(dt);
+    else if (ch && !job) { ch.setTalking(false); if (theme !== 'bakery') ch.face(Math.sin(T * 0.6) * 0.3); }
+    if (ch) ch.update(dt, T, moving, false); fx.update(dt);
     if (Math.random() < dt * 0.6) fx.emit('star', 1, new THREE.Vector3((Math.random() - 0.5) * 6, 1 + Math.random() * 2, 0.5), 1);
     renderer.render(scene, camera);
   }
   frame();
   return {
+    act(kind, arg, cb) { if (ACT[kind]) ACT[kind](arg || {}, cb); else if (cb) cb(); }, busy() { return !!job; }, cancel() { if (job) finishJob(); },
     setItem, setPlots(list) { plotsApi.set(list); }, rebuild() { build(); ch.hop(3.6); },
     bubbles() { if (ch) { ch.setEmotion('happy'); ch.hop(4); fx.emit('heart', 6, ch.root.position, sc); for (let i = 0; i < 5; i++) setTimeout(() => ch && fx.emit('star', 2, ch.root.position, sc), i * 350); } },
     emote(e) { if (ch) { ch.setEmotion(e); ch.hop(4); } },
     sing(on) { singing = !!on; if (ch) ch.setEmotion(singing ? 'happy' : 'neutral'); },
     lyrics(a, b, prog, title) { if (camera.userData.lyrics) camera.userData.lyrics(a, b, prog, title); },
-    destroy() { running = false; if (ch) ch.dispose(); renderer.dispose(); renderer.forceContextLoss && renderer.forceContextLoss(); if (canvas.parentNode) canvas.parentNode.removeChild(canvas); }
+    destroy() { running = false; job = null; if (drv) drv.dispose(); if (ch) ch.dispose(); renderer.dispose(); renderer.forceContextLoss && renderer.forceContextLoss(); if (canvas.parentNode) canvas.parentNode.removeChild(canvas); }
   };
 }
 

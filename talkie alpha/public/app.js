@@ -2197,7 +2197,7 @@
     if (nm) { nick = nm; store('tablee.nick', nick); $('nick').value = nick; }
     send({ t: 'nick', nick: nick, av: myAv });
     closeAvSheet(); renderMoi();
-    if (m3d) { m3d.setLook(Mika3DMod.avatarOpts(myAv)); m3d.emit('heart', 8); }
+    if (m3d) { m3d.setLook(Mika3DMod.avatarOpts(baseAv())); m3d.emit('heart', 8); }
     if (first) { if (store('talkie.voice') == null && canSpeak) { voiceOn = true; store('talkie.voice', '1'); renderVoice(); } toast('Bienvenue, ' + nick + ' ! 💚'); setTab('chambre'); cmpOpen(); setTimeout(maybeTuto, 2500); } else toast('Mika a changé de look ✨');
   }
   $('btn-edit-av').addEventListener('click', openAvEditor);
@@ -2342,7 +2342,7 @@
     return {
       speak: !!(voiceOn && cloudTts && gesture), vox: vox().tts, kind: kind, ui: (window.I18N && I18N.lang === 'en') ? 'en' : 'fr', name: nick, hour: new Date().getHours(), day: new Date().toLocaleDateString(uiLang() === 'en' ? 'en-GB' : 'fr-FR', { weekday: 'long' }),
       awayH: kind === 'open' ? last : null, visits: mem.visits, streak: mem.streak, bond: cmp.bond,
-      life: lifeText(), mmood: mikaMood().m, mwhy: mikaMood().why, asleep: sleepOn(), moods: cmp.moods.slice(-5).map(function (x) { return x.m; }), facts: cmp.facts, follow: cmp.follow, quests: questSummary(), pet: nick, needs: needsText(),
+      boredom: boredLevel(), recent: recentOpenings(), life: lifeText(), mmood: mikaMood().m, mwhy: mikaMood().why, asleep: sleepOn(), moods: cmp.moods.slice(-5).map(function (x) { return x.m; }), facts: cmp.facts, follow: cmp.follow, quests: questSummary(), pet: nick, needs: needsText(),
       messages: cmp.thread.slice(-16).map(function (x) { return { r: x.r, t: x.t }; })
     };
   }
@@ -2394,6 +2394,7 @@
     var qr = [];
     chips.forEach(function (c) { qr.push([c, function () { cmpSend(c); }]); });
     if (r.care) qr = [['🫂 Merci Mika', function () { cmpSend('Merci Mika'); }], ['📞 Le 3114', function () { mikaSay('Le 3114 : gratuit, 24 h sur 24, en France. Tu peux les appeler ou leur écrire, ils sont là 💚', false, 'love'); }]];
+    if (r.go && GO_LABEL[r.go]) qr.unshift([GO_LABEL[r.go], function () { goDo(r.go); }, 'yes']);
     if (r.salon) qr.push(['💬 Aller au Salon', function () { setTab('salon'); }, 'yes']);
     if (!moodToday() && kind === 'open') $('mood-row').hidden = false;
     setQr(qr);
@@ -2524,20 +2525,33 @@
     'Basilic a sorti une nouvelle feuille et elle est super fière', 'elle a essayé de faire un gâteau, il ressemble à un nuage plat', 'elle a trouvé un pétale tout rose derrière le radiateur',
     'un oiseau est venu sur sa fenêtre et ils se sont regardés 10 minutes', 'elle s’est fâchée toute seule contre un puzzle de 500 pièces, puis a gagné', 'elle a appris une chanson et la chante faux avec beaucoup d’amour',
     'elle a rêvé qu’elle était un onigiri géant', 'elle a rangé sa chambre… et ne retrouve plus rien', 'elle a failli avoir une crise de nerfs devant sa boîte mail imaginaire, puis a mangé un mochi',
-    'elle a inventé un nouveau mot : « douxtranquille »', 'elle a cru que la lune la suivait (c’est vrai, elle la suit)', 'elle a fait un concours de bulles avec le canapé (le canapé a perdu)'
+    'elle a inventé un nouveau mot : « douxtranquille »', 'elle a cru que la lune la suivait (c’est vrai, elle la suit)', 'elle a fait un concours de bulles avec le canapé (le canapé a perdu)',
+    'elle a renversé du thé sur son tapis préféré et a fait comme si de rien n’était', 'elle a découvert une miette de gâteau vieille de trois jours sous le lit et l’a adoptée', 'elle a essayé de danser comme dans un clip, elle a fini par terre en riant',
+    'elle a dessiné un portrait de sa plante, Basilic n’est pas flattée', 'elle a trouvé une vieille playlist qui lui a fait monter les larmes aux yeux', 'elle a regardé la pluie pendant une heure en inventant des histoires',
+    'elle a voulu faire du yoga, elle s’est endormie en position de l’arbre', 'elle a goûté un fruit bizarre et elle hésite encore entre génie et catastrophe', 'elle a fait un câlin à un coussin qui sentait bon la lessive',
+    'elle s’est perdue dans ses pensées en regardant une tasse pendant dix minutes', 'elle a parlé à son reflet et il lui a répondu (enfin, elle croit)', 'elle a construit une cabane de coussins et refuse d’en sortir',
+    'elle a essayé de siffler, ça a fait un bruit de bouilloire', 'elle a trouvé que les nuages avaient la forme d’un onigiri et elle a eu faim pour la journée', 'elle a mis ses chaussettes à l’envers et ça porte bonheur apparemment',
+    'elle a écrit une lettre à elle-même dans dix ans et l’a cachée sous le tapis', 'elle a fait un pari avec elle-même (elle a perdu, elle doit manger un mochi)', 'elle a eu un grand moment de doute sur la vie, puis une tartine l’a consolée'
   ];
   var LIFE_WISH = [
-    { id: 'feed', t: 'un bon petit plat', e: '🍙' }, { id: 'hug', t: 'un gros câlin', e: '🤗' }, { id: 'play', t: 'jouer un peu avec toi', e: '🎈' },
-    { id: 'nap', t: 'une petite sieste', e: '😴' }, { id: 'water', t: 'arroser Basilic', e: '🌱' }, { id: 'wash', t: 'un bain moussant', e: '🛁' }
+    { id: 'feed', t: 'un bon petit plat', e: '🍙', go: 'cook' }, { id: 'hug', t: 'un gros câlin', e: '🤗', go: 'hug' }, { id: 'play', t: 'jouer un peu avec toi', e: '🎈', go: 'play' },
+    { id: 'nap', t: 'une petite sieste', e: '😴', go: 'nap' }, { id: 'water', t: 'arroser Basilic', e: '🌱', go: 'garden' }, { id: 'wash', t: 'un bain moussant', e: '🛁', go: 'bath' },
+    { id: 'garden', t: 'planter quelque chose au jardin', e: '🌷', go: 'garden' }, { id: 'cook', t: 'cuisiner un truc avec ses récoltes', e: '🍳', go: 'cook' }, { id: 'food', t: 'se faire livrer un petit plaisir', e: '🛵', go: 'food' }
   ];
+  function wishSlot() { return todayKey() + 's' + Math.floor(new Date().getHours() / 4); }
   function lifeNow() {
     var d = new Date(), h = d.getHours(), key = todayKey(), hs = hash(key + (nick || ''));
     var act = LIFE_ACT[0][1];
     for (var i = 0; i < LIFE_ACT.length; i++) if (h >= LIFE_ACT[i][0][0] && h < LIFE_ACT[i][0][1]) act = LIFE_ACT[i][1];
-    var evt = LIFE_EVT[hs % LIFE_EVT.length], wish = LIFE_WISH[(hs >> 3) % LIFE_WISH.length];
-    return { act: act[0], e: act[1], evt: evt, wish: wish, wishDone: game.wish === key };
+    var slot = h < 12 ? 0 : h < 18 ? 1 : 2, evts = [];
+    for (var k = 0; k <= slot; k++) evts.push(LIFE_EVT[(hs + k * 7 + (hs >> 5) * k) % LIFE_EVT.length]);
+    var wish = LIFE_WISH[(hash(wishSlot() + (nick || ''))) % LIFE_WISH.length];
+    return { act: act[0], e: act[1], evt: evts[evts.length - 1], evts: evts, wish: wish, wishDone: game.wish === wishSlot() };
   }
-  function lifeText() { var l = lifeNow(); return 'En ce moment, Mika ' + l.act + '. Ce qui lui est arrivé aujourd’hui : ' + l.evt + '. Son envie du jour : ' + l.wish.t + (l.wishDone ? ' (déjà exaucée, elle est ravie)' : '') + '.'; }
+  function boredLevel() { var m = (Date.now() - Math.max(lastTouch, lastUserAt || 0)) / 60000; return m < 3 ? 0 : m < 8 ? 1 : m < 20 ? 2 : 3; }
+  var lastTouch = Date.now();
+  ['pointerdown', 'keydown', 'touchstart'].forEach(function (ev) { document.addEventListener(ev, function () { lastTouch = Date.now(); }, { passive: true }); });
+  function lifeText() { var l = lifeNow(), b = boredLevel(); return 'En ce moment, Mika ' + l.act + '. Ce qui lui est arrivé aujourd’hui (dans l’ordre) : ' + l.evts.join(' ; puis ') + '. Son envie du moment : ' + l.wish.t + (l.wishDone ? ' (déjà exaucée, elle est ravie)' : '') + '.' + (b >= 2 ? ' Elle s’ennuie (ça fait un moment que personne ne lui parle ni ne joue avec elle).' : ''); }
   function renderLife() {
     var b = $('life-line'); if (!b) return;
     var l = lifeNow();
@@ -2561,17 +2575,32 @@
   function wishCheck(id) {
     var l = lifeNow();
     if (l.wishDone || l.wish.id !== id) return;
-    game.wish = todayKey(); saveGame(); renderLife();
+    game.wish = wishSlot(); saveGame(); renderLife();
     earn(5);
     setTimeout(function () { mikaSay(pick(['Tu as deviné mon envie du jour ?! 🥹 Merci, +5 pétales pour toi 🌸', 'C’était exactement ce dont j’avais envie… tu me connais trop bien 💚 (+5 🌸)']), false, 'happy'); }, 1200);
   }
-  var storyT = null;
+  var storyT = null, lastTopic = '', topicN = 0;
+  function pickTopic() {
+    var l = lifeNow(), b = boredLevel(), pool = ['day', 'observe', 'curious', 'dream', 'confess', 'game', 'callback', 'day', 'curious'];
+    if (!l.wishDone) pool.push('desire', 'desire');
+    if (b >= 1) pool.push('bored', 'bored'); if (b >= 2) pool.push('bored', 'bored', 'bored');
+    if (!cmp.facts.length) pool = pool.filter(function (x) { return x !== 'callback'; });
+    var t, g = 0; do { t = pool[Math.floor(Math.random() * pool.length)]; } while (t === lastTopic && g++ < 8);
+    lastTopic = t; return t;
+  }
+  function recentOpenings() { return cmp.thread.filter(function (x) { return x.r === 'm'; }).slice(-4).map(function (x) { return x.t.split(/\s+/).slice(0, 4).join(' '); }); }
   function scheduleStory() {
     clearTimeout(storyT);
+    var b = boredLevel();
     storyT = setTimeout(function () {
-      if (!room && !document.hidden && curTab === 'chambre' && !cmpBusy && cmpOpened && !asleep() && !document.body.classList.contains('kb')) callCompanion('story');
+      if (!room && !document.hidden && curTab === 'chambre' && lifeMode === 'talk' && !cmpBusy && cmpOpened && !asleep() && !document.body.classList.contains('kb') && Date.now() - lastUserAt > 25000) callCompanion('story', { topic: pickTopic(), boredom: boredLevel(), recent: recentOpenings() });
       scheduleStory();
-    }, 110000 + Math.random() * 70000);
+    }, (b >= 2 ? 50000 : 75000) + Math.random() * 50000);
+  }
+  var GO_LABEL = { garden: '🌱 Au jardin', cook: '🍳 À la cuisine', bath: '🛁 Au bain', food: '🛵 Commander', monde: '🌍 Dans le Monde', nap: '😴 Sieste', hug: '🤗 Câlin', play: '🎈 Jouer' };
+  function goDo(g) {
+    var m = { garden: function () { setLifeMode('garden'); }, cook: function () { setLifeMode('cook'); }, bath: function () { setLifeMode('bath'); }, food: function () { setLifeMode('food'); }, monde: goMonde, nap: doNap, hug: doHug, play: doPlay }[g];
+    if (m) m();
   }
 
   /* ---------- Cuisine, jardin, livraison : Mika a de quoi s'occuper ---------- */
@@ -2601,7 +2630,13 @@
   function addInv(k, n) { game.inv = game.inv || {}; game.inv[k] = Math.max(0, Math.min(99, inv(k) + n)); saveGame(); }
   var lifeMode = 'talk', lifeTick = null, liveFns = [];
   function tickLife() { liveFns.slice().forEach(function (f) { f(); }); }
-  var THEME_OF = { cook: 'kitchen', garden: 'garden', bath: 'bath' }, TITLE_OF = { cook: '🍳 La cuisine', garden: '🌱 Le jardin', bath: '🛁 La salle de bain', food: '🛵 Livraison' };
+  var THEME_OF = { cook: 'kitchen', garden: 'garden', bath: 'bath', food: 'living', door: 'entry' }, TITLE_OF = { cook: '🍳 La cuisine', garden: '🌱 Le jardin', bath: '🛁 La salle de bain', food: '🛵 Livraison', door: '🚪 La porte' };
+  var actPending = null, plotHold = false;
+  function actBusy() { return !!(rmScene && rmScene.busy && rmScene.busy()); }
+  function runAct(kind, arg, cb, force) {
+    var fin = function (r) { if (fin.d) return; fin.d = 1; if (actPending === fin) actPending = null; if (cb) cb(r); }; fin.force = !!force;
+    if (rmScene && rmScene.act && !actBusy()) { actPending = fin; try { rmScene.act(kind, arg || {}, fin); } catch (e) { fin(); } } else setTimeout(fin, 300);
+  }
   var rmScene = null, rmMirror = null, musicOn = true;
   function setLifeMode(m) {
     lifeMode = m; clearInterval(lifeTick); lifeTick = null;
@@ -2611,20 +2646,20 @@
   function openRoom(m) {
     var host = $('rm-stage'); closeRoom(true); lifeMode = m;
     $('rm').hidden = false; $('rm-title').textContent = TITLE_OF[m]; $('rm-pet').textContent = '🌸 ' + game.petals;
-    host.textContent = ''; host.hidden = false; $('rm').classList.toggle('nostage', m === 'food');
-    if (m === 'food') host.hidden = true;
-    else if (window.Mika3DMod && Mika3DMod.initInterior && m3d) {
-      try { rmScene = Mika3DMod.initInterior(host, THEME_OF[m], function () { return Mika3DMod.avatarOpts(myAv); }, { onPick: rmPick }); } catch (e) { rmScene = null; }
+    host.textContent = ''; host.hidden = false; $('rm').classList.remove('nostage');
+    if (window.Mika3DMod && Mika3DMod.initInterior && m3d) {
+      try { rmScene = Mika3DMod.initInterior(host, THEME_OF[m], function () { return Mika3DMod.avatarOpts(baseAv()); }, { onPick: rmPick }); } catch (e) { rmScene = null; }
     }
-    if (!rmScene && m !== 'food') { host.hidden = true; $('rm').classList.add('nostage'); }
+    if (!rmScene) { host.hidden = true; $('rm').classList.add('nostage'); }
     if (!rmMirror) { rmMirror = new MutationObserver(function () { var t = $('mika-say').textContent; $('rm-say').textContent = t || '…'; $('rm-say').classList.toggle('thinking', $('mika-say').classList.contains('thinking')); }); rmMirror.observe($('mika-say'), { childList: true, characterData: true, subtree: true }); }
     $('rm-say').textContent = $('mika-say').textContent || '…';
     renderLife2(); lifeTick = setInterval(tickLife, 1000);
-    if (musicOn && m !== 'food') startAmbient(m === 'garden' ? 'garden' : 'kitchen'); else stopAmbient();
+    if (musicOn && m !== 'door') startAmbient(m === 'garden' ? 'garden' : 'kitchen'); else stopAmbient();
     dir.engaged = true; bumpIdle();
   }
   function closeRoom(keepOpen) {
-    clearInterval(lifeTick); lifeTick = null; stopAmbient();
+    clearInterval(lifeTick); lifeTick = null; stopAmbient(); plotHold = false;
+    if (actPending && actPending.force) { var pf = actPending; actPending = null; setTimeout(function () { pf(); }, 50); } else actPending = null;
     if (rmScene) { try { rmScene.destroy(); } catch (e) { /* ignore */ } rmScene = null; }
     if (!keepOpen) { $('rm').hidden = true; lifeMode = 'talk'; }
   }
@@ -2636,14 +2671,13 @@
     else if (/^plot\d$/.test(id)) { var b = document.querySelectorAll('#rm-panel .plot')[+id.slice(4)]; if (b) b.click(); }
   }
   function waterAll() {
-    var n = 0; (game.garden || []).forEach(function (pl) { if (pl && pl.w < 2 && plotInfo(pl).prog < 1) { pl.w++; n++; } });
-    if (n) { saveGame(); progressQuest('water'); toast('💦 ' + n + ' plante' + (n > 1 ? 's' : '') + ' arrosée' + (n > 1 ? 's' : '') + ' !'); mood('happy', 1500); renderLife2(); if (rmScene) rmScene.emote('happy'); } else toast('Rien à arroser pour l’instant 🌿');
+    if (actBusy()) return; var n = 0, wl = []; (game.garden || []).forEach(function (pl, ix) { if (pl && pl.w < 2 && plotInfo(pl).prog < 1) { pl.w++; n++; wl.push(ix); } });
+    if (n) { saveGame(); progressQuest('water'); toast('💦 ' + n + ' plante' + (n > 1 ? 's' : '') + ' arrosée' + (n > 1 ? 's' : '') + ' !'); mood('happy', 1500); renderLife2(); if (rmScene) rmScene.act('water', { list: wl }); } else toast('Rien à arroser pour l’instant 🌿');
   }
   function doBath() {
-    decayCare(); if (care.p >= 92) { toast('Mika est déjà toute propre 🫧'); return; }
-    if (rmScene) rmScene.bubbles(); bump('p', 60); progressQuest('wash'); mood('love', 2600);
-    setTimeout(function () { mikaSay(pick(['Splash ! Les bulles, c’est la vie 🫧', 'Mmm, de l’eau chaude… je fonds 🛁', 'Tout propre, tout doux ! Merci 💚']), false, 'love'); }, 600);
-    renderLife2();
+    if (actBusy()) return; decayCare(); if (care.p >= 92) { toast('Mika est déjà toute propre 🫧'); return; }
+    bump('p', 60); progressQuest('wash'); mood('love', 2600); renderLife2();
+    runAct('bath', null, function () { mikaSay(pick(['Splash ! Les bulles, c’est la vie 🫧', 'Mmm, de l’eau chaude… je fonds 🛁', 'Tout propre, tout doux ! Merci 💚']), false, 'love'); renderLife2(); }, true);
   }
   function renderBath(box) {
     var head = el('div', 'lp-h'); head.appendChild(el('b', null, '🛁 Bain moussant')); head.appendChild(el('small', null, 'Propreté ' + Math.round(care.p) + '%')); box.appendChild(head);
@@ -2687,7 +2721,7 @@
   }
   function renderLife2() {
     var box = $('rm-panel'), scroll = box.scrollTop; box.textContent = ''; liveFns = []; $('rm-pet').textContent = '🌸 ' + game.petals;
-    if (lifeMode === 'cook') renderKitchen(box); else if (lifeMode === 'garden') { renderGarden(box); if (rmScene) rmScene.setPlots((game.garden || []).map(function (pl) { if (!pl) return null; var f = plotInfo(pl); return { c: pl.c, w: pl.w, stage: f.prog >= 1 ? 3 : f.prog < 0.34 ? 0 : f.prog < 0.67 ? 1 : 2 }; })); } else if (lifeMode === 'bath') renderBath(box); else if (lifeMode === 'food') renderDelivery(box);
+    if (lifeMode === 'cook') renderKitchen(box); else if (lifeMode === 'garden') { renderGarden(box); if (rmScene && !plotHold) rmScene.setPlots((game.garden || []).map(function (pl) { if (!pl) return null; var f = plotInfo(pl); return { c: pl.c, w: pl.w, stage: f.prog >= 1 ? 3 : f.prog < 0.34 ? 0 : f.prog < 0.67 ? 1 : 2 }; })); } else if (lifeMode === 'bath') renderBath(box); else if (lifeMode === 'food') renderDelivery(box);
     box.scrollTop = scroll;
   }
   /* — Jardin — */
@@ -2697,6 +2731,12 @@
     return { cr: cr, prog: Math.min(1, Math.max(0, prog)), left: Math.max(0, Math.ceil((dur - (Date.now() - pl.t0) - pl.w * 0.18 * dur) / 60000)) };
   }
   function freeSeeds() { var d = todayKey(); if (!game.seeds || game.seeds.d !== d) { game.seeds = { d: d, n: 0 }; saveGame(); } return Math.max(0, 4 - game.seeds.n); }
+  function plotAct(kind, arg) {
+    wishCheck('garden');
+    if (!rmScene || !rmScene.act) { renderLife2(); return; }
+    plotHold = true; var rel = function () { if (!plotHold) return; plotHold = false; renderLife2(); };
+    renderLife2(); rmScene.act(kind, arg, rel); setTimeout(rel, 9000);
+  }
   function renderGarden(box) {
     var head = el('div', 'lp-h'); head.appendChild(el('b', null, '🌱 Le jardin de Mika'));
     head.appendChild(el('small', null, freeSeeds() + ' graine' + (freeSeeds() > 1 ? 's' : '') + ' offerte' + (freeSeeds() > 1 ? 's' : '') + ' aujourd’hui'));
@@ -2714,8 +2754,9 @@
         var smallEl = b.querySelector('small'), fillEl = bar.firstChild;
         liveFns.push(function () { var g = plotInfo(pl), d2 = g.prog >= 1, st2 = g.prog < 0.34 ? 0 : g.prog < 0.67 ? 1 : 2; if (d2 !== done || (!d2 && st2 !== stage0)) { renderLife2(); return; } if (!d2) { smallEl.textContent = (pl.w >= 2 ? '' : '💧 ') + g.left + ' min'; fillEl.style.width = Math.round(g.prog * 100) + '%'; } });
         b.addEventListener('click', function () {
-          if (done) { addInv(pl.c, 1); game.garden[i] = null; earn(1); saveGame(); toast('+1 ' + f.cr.e + ' ' + f.cr.t + ' · +1 🌸'); sfx.join(); if (m3d) m3d.emit && m3d.emit('heart', 4); renderLife2(); }
-          else if (pl.w < 2) { pl.w++; saveGame(); progressQuest('water'); toast('💦 Arrosé ! Ça pousse plus vite.'); mood('happy', 1800); renderLife2(); }
+          if (actBusy()) { toast('Une seconde, Mika est occupée 🌸'); return; }
+          if (done) { addInv(pl.c, 1); game.garden[i] = null; earn(1); saveGame(); toast('+1 ' + f.cr.e + ' ' + f.cr.t + ' · +1 🌸'); sfx.join(); plotAct('harvest', { i: i, e: f.cr.e }); }
+          else if (pl.w < 2) { pl.w++; saveGame(); progressQuest('water'); toast('💦 Arrosé ! Ça pousse plus vite.'); mood('happy', 1800); renderLife2(); if (rmScene) rmScene.act('water', { list: [i] }); }
           else toast('Elle a assez bu, patience ' + f.cr.e);
         });
       }
@@ -2729,7 +2770,7 @@
         b.appendChild(el('small', null, free ? 'gratuit' : '🌸 ' + cr.price));
         b.addEventListener('click', function () {
           if (!free) { if (game.petals < cr.price) { toast('Il te manque ' + (cr.price - game.petals) + ' 🌸'); return; } game.petals -= cr.price; renderPetals(); } else game.seeds.n++;
-          game.garden[gSeed] = { c: k, t0: Date.now(), w: 0 }; gSeed = null; saveGame(); fsMark('garden'); mood('happy', 1500); renderLife2();
+          var gi = gSeed; game.garden[gSeed] = { c: k, t0: Date.now(), w: 0 }; gSeed = null; saveGame(); fsMark('garden'); mood('happy', 1500); plotAct('plant', { i: gi, e: cr.e });
         });
         pick2.appendChild(b);
       });
@@ -2763,19 +2804,10 @@
     });
   }
   function cookDish(r) {
-    decayCare(); if (care.h >= 94) { toast('Mika n’a pas faim pour l’instant 🥹'); return; }
-    var ov = $('cookfx'); ov.hidden = false; ov.querySelector('.cf-t').textContent = 'Mika cuisine : ' + r.t + '…'; ov.querySelector('.cf-e').textContent = '🍳';
-    var steps = ['🔪', '🥄', '🔥', r.e], i = 0;
-    var iv = setInterval(function () {
-      ov.querySelector('.cf-e').textContent = steps[Math.min(i++, 3)];
-      if (i >= 4) {
-        clearInterval(iv); setTimeout(function () {
-          ov.hidden = true;
-          Object.keys(r.need).forEach(function (k) { addInv(k, -r.need[k]); });
-          serveDish(r);
-        }, 700);
-      }
-    }, 800);
+    if (actBusy()) return; decayCare(); if (care.h >= 94) { toast('Mika n’a pas faim pour l’instant 🥹'); return; }
+    var ing = Object.keys(r.need)[0]; ing = ing ? CROPS[ing].e : '🍚';
+    Object.keys(r.need).forEach(function (k) { addInv(k, -r.need[k]); }); renderLife2(); toast('🍳 Mika cuisine : ' + r.t);
+    wishCheck('cook'); runAct('cook', { e: r.e, ing: ing }, function () { runAct('eat', { e: r.e }, function () { serveDish(r); }, true); }, true);
   }
   /* — Livraison — */
   function renderDelivery(box) {
@@ -2804,18 +2836,21 @@
     if (game.petals < m.price) { toast('Il te manque ' + (m.price - game.petals) + ' 🌸 : cultive ou joue pour en gagner !'); return; }
     game.petals -= m.price; renderPetals();
     game.orders = (game.orders || []).filter(function (o) { return !o.got; }); game.orders.push({ id: m.id, at: Date.now(), eta: m.eta, got: false }); saveGame();
-    mood('wow', 1600); toast('📦 Commande passée : ' + m.t + ' !'); renderLife2();
+    wishCheck('food'); mood('wow', 1600); toast('📦 Commande passée : ' + m.t + ' !'); renderLife2(); runAct('order', null, function () { renderLife2(); });
   }
   var doorO = null, doorWatch = null;
   function openDoor(o) {
     var m = MENU.filter(function (x) { return x.id === o.id; })[0]; if (!m) return;
-    doorO = o; var ov = $('doorfx'); ov.hidden = false; ov.className = 'doorfx go';
-    ov.querySelector('.df-bag').textContent = '🛍️'; ov.querySelector('.df-t').textContent = 'Ding dong ! Le livreur est devant la porte…';
-    ov.querySelector('.df-bag').onclick = function () {
-      if (!doorO) return; var oo = doorO; doorO = null; ov.className = 'doorfx got'; ov.querySelector('.df-t').textContent = 'Merci ! Bon appétit ' + m.e;
-      oo.got = true; saveGame();
-      setTimeout(function () { ov.hidden = true; serveDish(m, 'Ça sent trop bon ! ' + m.e + ' Merci de m’avoir gâtée 💚'); }, 1500);
-    };
+    if (!window.Mika3DMod || !m3d) { o.got = true; saveGame(); serveDish(m, 'Ça sent trop bon ! ' + m.e + ' Merci de m’avoir gâtée 💚'); return; }
+    openRoom('door');
+    setTimeout(function () {
+      runAct('receive', { e: m.e }, function () {
+        if (lifeMode !== 'door') return;
+        o.got = true; saveGame();
+        openRoom('cook');
+        setTimeout(function () { runAct('eat', { e: m.e }, function () { serveDish(m, 'Ça sent trop bon ! ' + m.e + ' Merci de m’avoir gâtée 💚'); }, true); }, 700);
+      });
+    }, 500);
   }
   function doorClose() { $('doorfx').hidden = true; doorO = null; }
   document.addEventListener('click', function (e) { var t = e.target; if (t && t.id === 'door-x') doorClose(); });
@@ -2856,9 +2891,13 @@
     if (care.s < 25 || away > 30) return { m: 'sad', why: 'elle s’est sentie seule, tu lui as manqué' };
     if (care.e < 25) return { m: 'tired', why: 'elle est épuisée' };
     if (away > 6) return { m: 'happy', why: 'elle est tellement contente que tu reviennes, elle t’attendait' };
+    if (boredLevel() >= 2) return { m: 'bored', why: 'elle s’ennuie, ça fait un moment qu’on n’a rien fait ensemble' };
     if (hs < 18) return { m: 'sad', why: SAD_EVT[hs % SAD_EVT.length] };
     if (hs < 30) return { m: 'tired', why: 'elle a mal dormi' };
-    if (hs < 62) return { m: 'excited', why: 'elle a plein d’énergie et d’envies aujourd’hui' };
+    if (hs < 44) return { m: 'excited', why: 'elle a plein d’énergie et d’envies aujourd’hui' };
+    if (hs < 56) return { m: 'playful', why: 'elle a envie de jouer et de taquiner' };
+    if (hs < 68) return { m: 'curious', why: 'elle est curieuse de tout et pose plein de questions' };
+    if (hs < 80) return { m: 'cozy', why: 'elle est dans une bulle douce, plaid et thé' };
     return { m: 'happy', why: 'elle est de bonne humeur' };
   }
   function sleepOn() { return !!(game.sleepUntil && Date.now() < game.sleepUntil); }
@@ -3077,7 +3116,7 @@
   }
   function goMonde() { mikaSay('Allons voir qui est là ! 🌍', false, 'happy'); setTimeout(function () { setTab('monde'); }, 700); }
   var OBJ = {
-    fridge: function () { openFood(); }, bath: doWash, toilet: doToilet, bed: doNap, pc: goMonde, door: goMonde,
+    fridge: function () { setLifeMode('cook'); }, bath: function () { setLifeMode('bath'); }, toilet: doToilet, bed: doNap, pc: goMonde, door: goMonde,
     plant: function (d) { doWater(d && d.idx); }
   };
   Array.prototype.forEach.call(document.querySelectorAll('#care button'), function (b) {
@@ -3107,7 +3146,7 @@
       if (shopSel.kind === 'bout' && !(game.bobOn.indexOf(shopSel.id) >= 0 && shopSel.own)) bl.push(shopSel.id);
       return { mika: true, color: 0xf2b27a, ears: 'bear', eyes: 'dot', acc: bl };
     }
-    var o = Mika3DMod.avatarOpts(myAv), list = accList().slice();
+    var o = Mika3DMod.avatarOpts(baseAv()), list = accList().slice();
     if (shopSel && shopSel.kind === 'outfit') { if (HEAD.indexOf(shopSel.id) >= 0) list = list.filter(function (x) { return HEAD.indexOf(x) < 0; }); if (list.indexOf(shopSel.id) < 0) list.push(shopSel.id); }
     o.acc = list; return o;
   }
@@ -3585,7 +3624,7 @@
   }
   function init3d() {
     if (!window.Mika3DMod || /[?&]no3d/.test(location.search)) return;
-    try { m3d = Mika3DMod.init($('mika-stage'), { preserve: /[?&]shot/.test(location.search), look: Mika3DMod.avatarOpts(myAv) }); } catch (e) { m3d = null; }
+    try { m3d = Mika3DMod.init($('mika-stage'), { preserve: /[?&]shot/.test(location.search), look: Mika3DMod.avatarOpts(baseAv()) }); } catch (e) { m3d = null; }
     if (!m3d) return;
     document.body.classList.add('has3d');
     new MutationObserver(syncMika3d).observe($('mika-av'), { attributes: true, childList: true, subtree: true, attributeFilter: ['class'] });
@@ -3748,7 +3787,7 @@
   function hwIndex() { return /h[0-5]$/.test(myAv) ? +String(myAv).slice(-1) : -1; }
   function setCostume(i) {
     myAv = i < 0 ? baseAv() : baseAv() + 'h' + i; store('talkie.av', myAv);
-    if (m3d) { try { m3d.setLook(Mika3DMod.avatarOpts(myAv)); } catch (e) { /* ignore */ } }
+    if (m3d) { try { m3d.setLook(Mika3DMod.avatarOpts(baseAv())); } catch (e) { /* ignore */ } }
     send({ t: 'nick', nick: nick, av: myAv });
     if (plazaScene && plazaMe) { try { plazaScene.setCode(plazaMe, myAv); } catch (e) { /* ignore */ } }
   }
@@ -3825,7 +3864,7 @@
     st.theme = theme; st.sel = null; shopSel = null;
     $('store').hidden = false; $('store-t').textContent = STORE[theme].t; storeMsg(STORE[theme].hi);
     var host = $('store-stage'); host.textContent = '';
-    st.scene = Mika3DMod.initInterior(host, theme, function () { return theme === 'thrift' ? shopLook() : Mika3DMod.avatarOpts(myAv); });
+    st.scene = Mika3DMod.initInterior(host, theme, function () { return theme === 'thrift' ? shopLook() : Mika3DMod.avatarOpts(theme === 'dentist' ? myAv : baseAv()); });
     if (st.scene && theme === 'bakery') { /* le gâteau du jour */ }
     if (!st.scene) { $('store').hidden = true; toast('😢'); return; }
     if (theme !== 'thrift') { /* l'avatar porte déjà son look */ }
@@ -4090,7 +4129,7 @@
   }
   function initAuth(cfg) {
     if (!cfg || !cfg.url || !cfg.key) return;
-    var sc = document.createElement('script'); sc.src = '/supa.js?v=29';
+    var sc = document.createElement('script'); sc.src = '/supa.js?v=31';
     sc.onload = function () {
       try { sb = window.MikaSupa.create(cfg.url, cfg.key); } catch (e) { sb = null; return; }
       renderAcct();
