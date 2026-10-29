@@ -121,13 +121,11 @@ function ssmlBody(text) {
     let seg = raw.trim(); if (!seg) return '';
     if (seg === '§B§') return '<break time="650ms"/>';
     let rate = 0, pitch = 0, pause = 220;
-    if (/!+$/.test(seg)) { rate += 8; pitch += 7; pause = 180; }
-    else if (/\?$/.test(seg)) { pitch += 5; rate -= 2; pause = 260; }
-    else if (/(\.{3}|…)$/.test(seg)) { rate -= 14; pitch -= 4; pause = 520; }
-    else { rate -= 2; pause = 320; }
-    if (/\b(ha ha|hi hi|hé hé)\b/i.test(seg)) { rate += 12; pitch += 8; pause = 160; }
-    if (/\b(pfou|hum…|hum)\b/i.test(seg)) { rate -= 10; pitch -= 6; pause = 450; }
-    if (/^[A-ZÉÈÀ]{3,}[^a-z]*$/.test(seg) || /\b[A-ZÉÈÀ]{4,}\b/.test(seg)) { rate += 6; pitch += 6; }
+    if (/!+$/.test(seg)) { rate += 4; pitch += 3; pause = 180; }
+    else if (/\?$/.test(seg)) { pitch += 2; rate -= 1; pause = 260; }
+    else if (/(\.{3}|…)$/.test(seg)) { rate -= 8; pitch -= 2; pause = 520; }
+    else { rate -= 1; pause = 320; }
+    if (/\b[A-ZÉÈÀ]{4,}\b/.test(seg)) { rate += 3; pitch += 3; }
     // les virgules deviennent de vraies respirations
     const body = xml(seg).replace(/§B§/g, '<break time="650ms"/>').replace(/,\s*/g, ', <break time="140ms"/>');
     return '<prosody rate="' + pct(rate) + '" pitch="' + pct(pitch) + '">' + body + '</prosody>' + (i < parts.length - 1 ? '<break time="' + pause + 'ms"/>' : '');
@@ -150,9 +148,10 @@ async function edgeOnce(input, voiceName, pitch, rate, signal) {
     return Buffer.concat(chunks);
   } finally { try { tts.close(); } catch (e) { /* ignore */ } }
 }
+const EDGE_PLAIN = process.env.TTS_EDGE_PLAIN === '1'; // lecture simple, sans variations de rythme
 const edgeBad = {}; // voix qui a échoué récemment -> jusqu'à quand on l'évite
 const EDGE_FALL = { fr: ['fr-FR-VivienneMultilingualNeural', 'fr-FR-DeniseNeural', 'fr-FR-BrigitteNeural', 'fr-FR-CelesteNeural', 'fr-FR-YvetteNeural'], en: ['en-US-JennyNeural', 'en-US-AriaNeural'] };
-let edgeWhy = '';
+let edgeWhy = '', edgeLast = '';
 async function edgeSynth(text, voice, lang, emo, signal) {
   const v = (lang === 'en' ? EDGE_EN : EDGE_FR)[voice] || (lang === 'en' ? EDGE_EN : EDGE_FR).coral;
   const em = EDGE_EMO[emo] || [0, 0];
@@ -163,18 +162,19 @@ async function edgeSynth(text, voice, lang, emo, signal) {
   // Si la voix demandée est indisponible (retirée, bloquée…), on essaie les suivantes : la voix française ne doit jamais disparaître.
   const names = [v[0]].concat(EDGE_FALL[lang === 'en' ? 'en' : 'fr']).filter((n, i, a) => a.indexOf(n) === i);
   const ok = names.filter((n) => !(edgeBad[n] > Date.now()));
+  if (!ok.length || ok[0] !== names[0]) { /* la voix principale est en pause : on la retente quand même une fois */ if (ok.indexOf(names[0]) < 0) ok.unshift(names[0]); }
   let lastErr = null;
   for (const name of (ok.length ? ok : names)) {
     if (signal && signal.aborted) break;
     try {
       let buf = null;
       const pt = name === v[0] ? pitch : pct(num(v[1]) + em[0] + 6); // voix de remplacement : un peu plus aiguë pour rester proche du kawaii
-      try { buf = await edgeOnce(ssmlBody(said), name, pt, rate, signal); } catch (e) { buf = null; }
+      if (!EDGE_PLAIN) { try { buf = await edgeOnce(ssmlBody(said), name, pt, rate, signal); } catch (e) { buf = null; } }
       if (!buf || buf.length < 200) buf = await edgeOnce(xml(said.replace(/§B§/g, '...')), name, pt, rate, signal);
-      if (buf && buf.length >= 200) { edgeWhy = ''; return buf; }
+      if (buf && buf.length >= 200) { edgeWhy = ''; edgeLast = name; return buf; }
       throw new Error('audio vide');
     } catch (e) {
-      lastErr = e; edgeBad[name] = Date.now() + 10 * 60000; edgeWhy = name + ' : ' + (e.message || e);
+      lastErr = e; edgeBad[name] = Date.now() + 45000; edgeWhy = name + ' : ' + (e.message || e);
       console.warn('[talkie] voix gratuite ' + name + ' indisponible (' + (e.message || e) + ') → essai de la suivante');
     }
   }
@@ -240,9 +240,9 @@ async function check() {
   try {
     if (EL_KEY) {
       try { await elTry('Coucou, c’est moi !', EL_VOICES.coral, AbortSignal.timeout(15000), 'happy'); return { ok: true, ms: Date.now() - t0, model: EL_MODEL, provider: 'elevenlabs', msg: 'Voix ElevenLabs active ✅' }; }
-      catch (e) { if (EDGE_ON) { try { await edgeSynth('Coucou, c’est moi !', 'coral', 'fr', 'happy', AbortSignal.timeout(15000)); return { ok: true, ms: Date.now() - t0, provider: 'edge', msg: 'Voix gratuite active ✅ (ElevenLabs indisponible : ' + (e.api === 402 || e.api === 429 ? 'plus de crédit' : 'erreur ' + (e.api || '?')) + ')' }; } catch (e2) { /* on continue vers le diagnostic ElevenLabs */ } } const dd = String(e.detail || ''); const why = e.api === 401 ? 'La clé ElevenLabs est refusée (401) : recopie-la.' : e.api === 402 || e.api === 429 || /quota|limit/i.test(dd) ? 'ElevenLabs dit que le quota est atteint : ajoute du crédit ou passe à un abonnement.' : e.api === 404 || /voice/i.test(dd) ? 'ElevenLabs refuse cette voix (' + (e.api || '?') + ') : ajoute-la d’abord à « My Voices », vérifie l’identifiant, et sache que les voix de la bibliothèque exigent un abonnement payant (le plan gratuit ne les autorise pas via l’API).' : 'Erreur ElevenLabs : ' + (e.message || '') + (dd ? ' — ' + dd : ''); elWhy = why; if (!KEY) return { ok: false, why: 'eleven', status: e.api || null, msg: why }; }
+      catch (e) { if (EDGE_ON) { try { await edgeSynth('Coucou, c’est moi !', 'coral', 'fr', 'happy', AbortSignal.timeout(15000)); return { ok: true, ms: Date.now() - t0, provider: 'edge', voice: edgeLast, msg: 'Voix gratuite active ✅ (' + edgeLast + ') · ElevenLabs indisponible : ' + (e.api === 402 || e.api === 429 ? 'plus de crédit' : 'erreur ' + (e.api || '?')) + ')' }; } catch (e2) { /* on continue vers le diagnostic ElevenLabs */ } } const dd = String(e.detail || ''); const why = e.api === 401 ? 'La clé ElevenLabs est refusée (401) : recopie-la.' : e.api === 402 || e.api === 429 || /quota|limit/i.test(dd) ? 'ElevenLabs dit que le quota est atteint : ajoute du crédit ou passe à un abonnement.' : e.api === 404 || /voice/i.test(dd) ? 'ElevenLabs refuse cette voix (' + (e.api || '?') + ') : ajoute-la d’abord à « My Voices », vérifie l’identifiant, et sache que les voix de la bibliothèque exigent un abonnement payant (le plan gratuit ne les autorise pas via l’API).' : 'Erreur ElevenLabs : ' + (e.message || '') + (dd ? ' — ' + dd : ''); elWhy = why; if (!KEY) return { ok: false, why: 'eleven', status: e.api || null, msg: why }; }
     }
-    if (!KEY && EDGE_ON && !EL_KEY) { await edgeSynth('Coucou, c’est moi !', 'coral', 'fr', 'happy', AbortSignal.timeout(15000)); return { ok: true, ms: Date.now() - t0, provider: 'edge', msg: 'Voix gratuite active ✅' }; }
+    if (!KEY && EDGE_ON && !EL_KEY) { await edgeSynth('Coucou, c’est moi !', 'coral', 'fr', 'happy', AbortSignal.timeout(15000)); return { ok: true, ms: Date.now() - t0, provider: 'edge', msg: 'Voix gratuite active ✅ (' + edgeLast + ')' }; }
     await synth('Coucou, c’est moi !', 'check', { voice: 'shimmer', lang: 'fr' });
     return { ok: true, ms: Date.now() - t0, model: MODEL, provider: 'openai', msg: 'Voix OpenAI active ✅' + (EL_KEY ? ' ⚠️ ElevenLabs ne marche PAS, OpenAI a pris le relais. Raison : ' + (elWhy || 'inconnue') : '') };
   } catch (e) {

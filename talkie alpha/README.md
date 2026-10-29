@@ -161,3 +161,6 @@ Boubou écrit maintenant deux versions de chaque réplique : `say` (affichée) e
 - **Nuit** : Mika dort 6 h (réveil possible), récupère son énergie.
 - **Humeur de Mika** (contente, triste, fatiguée, survoltée) transmise à l'IA : elle accueille avec joie, ou se confie sur sa journée ; prompt plus émotif et moins « assistant ».
 - 2000 pétales offerts (une fois) pour la bêta ; une seule voix : Kawaii, avec voix de remplacement proche si la principale échoue.
+
+## v30
+- Voix gratuite : variations de rythme réduites (timbre plus stable), voix principale retentée avant tout changement de voix, pause de remplacement réduite à 45 s, 'Tester la voix' affiche le nom de la voix utilisée. TTS_EDGE_PLAIN=1 coupe toutes les variations (lecture simple comme avant).
