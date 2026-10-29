@@ -164,3 +164,7 @@ Boubou écrit maintenant deux versions de chaque réplique : `say` (affichée) e
 
 ## v30
 - Voix gratuite : variations de rythme réduites (timbre plus stable), voix principale retentée avant tout changement de voix, pause de remplacement réduite à 45 s, 'Tester la voix' affiche le nom de la voix utilisée. TTS_EDGE_PLAIN=1 coupe toutes les variations (lecture simple comme avant).
+
+## v31 — Refonte Ghibli des scènes 3D
+- Kit commun (`src3d/scene3d.js`) : tone mapping doux, vignette + grain, textures « gouache », fumée/vapeur en sprites, halos, rayons de soleil, poussière dorée.
+- Chambre (tableaux, tasse qui fume, lampe qui rayonne, fenêtre peinte), Cuisine (casserole + théière qui fument), Salle de bain (vapeur, bougies, fenêtre), Jardin (ciel peint, haie bouffante, fleurs, pollen, rayons).
