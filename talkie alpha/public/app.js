@@ -260,6 +260,7 @@
     try {
       var j = JSON.parse(store('talkie.game') || '{}');
       g.petals = Math.max(0, Number(j.petals) || 0);
+      if (!j.beta) { g.petals += 2000; } g.beta = 1; // cadeau de la bêta : 2000 pétales pour essayer la boutique
       if (j.q && typeof j.q.d === 'string') g.q = { d: j.q.d, ids: Array.isArray(j.q.ids) ? j.q.ids.slice(0, 5) : [], done: Array.isArray(j.q.done) ? j.q.done.slice(0, 5) : [] };
       if (typeof j.park === 'string') g.park = j.park.slice(0, 12);
       if (j.sing && typeof j.sing === 'object') { g.sing = {}; Object.keys(j.sing).slice(0, 12).forEach(function (x) { if (typeof j.sing[x] === 'string') g.sing[x.slice(0, 12)] = j.sing[x].slice(0, 12); }); }
@@ -270,9 +271,11 @@
       if (j.fs && typeof j.fs === 'object') { g.fs = {}; ['talk', 'feed', 'garden', 'monde'].forEach(function (k) { if (j.fs[k]) g.fs[k] = 1; }); }
       ['owned', 'decorOwn', 'decorOn', 'bown', 'bobOn'].forEach(function (k) { if (Array.isArray(j[k])) g[k] = j[k].filter(function (x) { return typeof x === 'string'; }).slice(0, 20); });
     } catch (er) { /* ignore */ }
+    if (!g.beta) { g.petals += 2000; g.beta = 1; }
     return g;
   })();
   function saveGame() { store('talkie.game', JSON.stringify(game)); }
+  saveGame();
   function unlocked(w) { return !w.premium && (game.owned.indexOf(w.id) >= 0 || (w.need && ((mem && mem.visits) || 0) >= w.need)); }
   function accList() { return WARD.filter(function (w) { return unlocked(w) && (equip ? equip.indexOf(w.id) >= 0 : true); }).map(function (w) { return w.id; }); }
   function accClasses(force) {
@@ -1057,13 +1060,15 @@
   var canSpeak = !!AC || canTTS;
   var voiceOn = canSpeak && store('talkie.voice') === '1';
   var VOX = [
-    { id: 'kawaii', fr: 'Kawaii ✨', en: 'Kawaii ✨', tts: 'coral', pitch: 1.7, rate: 1.1, cr: 1.08 },
+    { id: 'kawaii', fr: 'Kawaii ✨', en: 'Kawaii ✨', tts: 'coral', pitch: 1.7, rate: 1.1, cr: 1.08 }
+  ];
+  var VOX_OLD = [
     { id: 'douce', fr: 'Douce', en: 'Soft', tts: 'shimmer', pitch: 1.45, rate: 1.02, cr: 1.04 },
     { id: 'petillante', fr: 'Pétillante', en: 'Bubbly', tts: 'nova', pitch: 1.75, rate: 1.1, cr: 1.06 },
     { id: 'calme', fr: 'Calme', en: 'Calm', tts: 'sage', pitch: 1.15, rate: 0.96, cr: 1.0 },
     { id: 'grave', fr: 'Grave', en: 'Deep', tts: 'onyx', pitch: 0.85, rate: 0.95, cr: 0.93 }
   ];
-  function vox() { var id = store('talkie.vx'); for (var i = 0; i < VOX.length; i++) if (VOX[i].id === id) return VOX[i]; return VOX[0]; }
+  function vox() { return VOX[0]; }
   var cloudTts = false, cloudRate = 1, cloudProv = '';
   var gesture = false;
   var actx = null, seq = null;
@@ -2337,7 +2342,7 @@
     return {
       speak: !!(voiceOn && cloudTts && gesture), vox: vox().tts, kind: kind, ui: (window.I18N && I18N.lang === 'en') ? 'en' : 'fr', name: nick, hour: new Date().getHours(), day: new Date().toLocaleDateString(uiLang() === 'en' ? 'en-GB' : 'fr-FR', { weekday: 'long' }),
       awayH: kind === 'open' ? last : null, visits: mem.visits, streak: mem.streak, bond: cmp.bond,
-      life: lifeText(), moods: cmp.moods.slice(-5).map(function (x) { return x.m; }), facts: cmp.facts, follow: cmp.follow, quests: questSummary(), pet: nick, needs: needsText(),
+      life: lifeText(), mmood: mikaMood().m, mwhy: mikaMood().why, asleep: sleepOn(), moods: cmp.moods.slice(-5).map(function (x) { return x.m; }), facts: cmp.facts, follow: cmp.follow, quests: questSummary(), pet: nick, needs: needsText(),
       messages: cmp.thread.slice(-16).map(function (x) { return { r: x.r, t: x.t }; })
     };
   }
@@ -2572,37 +2577,117 @@
   /* ---------- Cuisine, jardin, livraison : Mika a de quoi s'occuper ---------- */
   var CROPS = {
     herbe: { e: '🌿', t: 'Basilic', min: 20, price: 2 }, tomate: { e: '🍅', t: 'Tomate', min: 45, price: 3 }, carotte: { e: '🥕', t: 'Carotte', min: 60, price: 3 },
-    fraise: { e: '🍓', t: 'Fraise', min: 90, price: 4 }, citrouille: { e: '🎃', t: 'Citrouille', min: 120, price: 5 }
+    fraise: { e: '🍓', t: 'Fraise', min: 90, price: 4 }, citrouille: { e: '🎃', t: 'Citrouille', min: 120, price: 5 },
+    ciboulette: { e: '🌱', t: 'Ciboulette', min: 30, price: 2 }, piment: { e: '🌶️', t: 'Piment', min: 75, price: 4 }
   };
   var RECIPES = [
     { id: 'onigiri', e: '🍙', t: 'Onigiri', need: {}, h: 22, s: 4 },
     { id: 'salade', e: '🥗', t: 'Salade fraîche', need: { tomate: 2 }, h: 32, s: 8 },
     { id: 'soupe', e: '🍲', t: 'Soupe douce', need: { carotte: 2, herbe: 1 }, h: 38, en: 10 },
     { id: 'tartine', e: '🍞', t: 'Tartine fraise', need: { fraise: 2 }, h: 30, s: 12 },
-    { id: 'potage', e: '🎃', t: 'Soupe de citrouille', need: { citrouille: 1, herbe: 1 }, h: 45, s: 14 }
+    { id: 'potage', e: '🎃', t: 'Soupe de citrouille', need: { citrouille: 1, herbe: 1 }, h: 45, s: 14 },
+    { id: 'miso', e: '🥣', t: 'Soupe miso', need: { ciboulette: 2, carotte: 1 }, h: 36, en: 12 },
+    { id: 'pates', e: '🍝', t: 'Pâtes pimentées', need: { tomate: 2, piment: 1 }, h: 48, s: 8 },
+    { id: 'gyozam', e: '🥟', t: 'Gyoza maison', need: { ciboulette: 1, carotte: 1, piment: 1 }, h: 50, s: 14 }
   ];
   var MENU = [
     { id: 'ramen', e: '🍜', t: 'Ramen', r: 'Mochi Express', price: 12, h: 40, eta: 55 }, { id: 'sushi', e: '🍣', t: 'Sushis', r: 'Sakura Sushi', price: 14, h: 36, eta: 70 },
     { id: 'pizza', e: '🍕', t: 'Pizza', r: 'Pizza Luigi', price: 10, h: 34, eta: 60 }, { id: 'bubble', e: '🧋', t: 'Bubble tea', r: 'Boba Dreams', price: 6, h: 8, en: 18, eta: 40 },
-    { id: 'crepe', e: '🥞', t: 'Crêpes', r: 'Maison Crêpe', price: 8, h: 28, s: 10, eta: 45 }, { id: 'burger', e: '🍔', t: 'Burger', r: 'Burger Club', price: 12, h: 38, eta: 65 }
+    { id: 'crepe', e: '🥞', t: 'Crêpes', r: 'Maison Crêpe', price: 8, h: 28, s: 10, eta: 45 }, { id: 'burger', e: '🍔', t: 'Burger', r: 'Burger Club', price: 12, h: 38, eta: 65 },
+    { id: 'gyoza', e: '🥟', t: 'Gyoza', r: 'Gyoza House', price: 9, h: 32, s: 8, eta: 50 }, { id: 'maki', e: '🍱', t: 'Bento sushi', r: 'Sakura Sushi', price: 15, h: 42, s: 8, eta: 70 }, { id: 'udon', e: '🍲', t: 'Udon', r: 'Mochi Express', price: 11, h: 38, en: 6, eta: 55 }
   ];
   function fsMark(k) { if (!game.fs) game.fs = {}; if (!game.fs[k]) { game.fs[k] = 1; saveGame(); renderSteps(); } }
   function inv(k) { return (game.inv && game.inv[k]) || 0; }
   function addInv(k, n) { game.inv = game.inv || {}; game.inv[k] = Math.max(0, Math.min(99, inv(k) + n)); saveGame(); }
   var lifeMode = 'talk', lifeTick = null, liveFns = [];
   function tickLife() { liveFns.slice().forEach(function (f) { f(); }); }
+  var THEME_OF = { cook: 'kitchen', garden: 'garden', bath: 'bath' }, TITLE_OF = { cook: '🍳 La cuisine', garden: '🌱 Le jardin', bath: '🛁 La salle de bain', food: '🛵 Livraison' };
+  var rmScene = null, rmMirror = null, musicOn = true;
   function setLifeMode(m) {
-    lifeMode = m;
-    var c = $('cmp'); c.classList.toggle('lm', m !== 'talk');
-    Array.prototype.forEach.call(document.querySelectorAll('#lifetabs button'), function (b) { b.setAttribute('aria-pressed', String(b.getAttribute('data-m') === m)); });
-    clearInterval(lifeTick); lifeTick = null;
-    if (m === 'talk') { $('lifepanel').hidden = true; return; }
-    $('lifepanel').hidden = false; renderLife2();
-    if (m === 'garden' || m === 'food') lifeTick = setInterval(tickLife, 1000);
+    lifeMode = m; clearInterval(lifeTick); lifeTick = null;
+    if (m === 'talk') { closeRoom(); return; }
+    openRoom(m);
+  }
+  function openRoom(m) {
+    var host = $('rm-stage'); closeRoom(true); lifeMode = m;
+    $('rm').hidden = false; $('rm-title').textContent = TITLE_OF[m]; $('rm-pet').textContent = '🌸 ' + game.petals;
+    host.textContent = ''; host.hidden = false; $('rm').classList.toggle('nostage', m === 'food');
+    if (m === 'food') host.hidden = true;
+    else if (window.Mika3DMod && Mika3DMod.initInterior && m3d) {
+      try { rmScene = Mika3DMod.initInterior(host, THEME_OF[m], function () { return Mika3DMod.avatarOpts(myAv); }, { onPick: rmPick }); } catch (e) { rmScene = null; }
+    }
+    if (!rmScene && m !== 'food') { host.hidden = true; $('rm').classList.add('nostage'); }
+    if (!rmMirror) { rmMirror = new MutationObserver(function () { var t = $('mika-say').textContent; $('rm-say').textContent = t || '…'; $('rm-say').classList.toggle('thinking', $('mika-say').classList.contains('thinking')); }); rmMirror.observe($('mika-say'), { childList: true, characterData: true, subtree: true }); }
+    $('rm-say').textContent = $('mika-say').textContent || '…';
+    renderLife2(); lifeTick = setInterval(tickLife, 1000);
+    if (musicOn && m !== 'food') startAmbient(m === 'garden' ? 'garden' : 'kitchen'); else stopAmbient();
+    dir.engaged = true; bumpIdle();
+  }
+  function closeRoom(keepOpen) {
+    clearInterval(lifeTick); lifeTick = null; stopAmbient();
+    if (rmScene) { try { rmScene.destroy(); } catch (e) { /* ignore */ } rmScene = null; }
+    if (!keepOpen) { $('rm').hidden = true; lifeMode = 'talk'; }
+  }
+  function rmPick(id) {
+    if (id === 'stove') { toast('🍳 Choisis une recette en bas'); if (rmScene) rmScene.emote('happy'); }
+    else if (id === 'fridge') { var st = Object.keys(CROPS).filter(function (k) { return inv(k) > 0; }).map(function (k) { return CROPS[k].e + '×' + inv(k); }).join(' '); toast(st ? 'Dans le frigo : ' + st : 'Le frigo est vide : va au jardin 🌱'); }
+    else if (id === 'tub') { doBath(); }
+    else if (id === 'can') { waterAll(); }
+    else if (/^plot\d$/.test(id)) { var b = document.querySelectorAll('#rm-panel .plot')[+id.slice(4)]; if (b) b.click(); }
+  }
+  function waterAll() {
+    var n = 0; (game.garden || []).forEach(function (pl) { if (pl && pl.w < 2 && plotInfo(pl).prog < 1) { pl.w++; n++; } });
+    if (n) { saveGame(); progressQuest('water'); toast('💦 ' + n + ' plante' + (n > 1 ? 's' : '') + ' arrosée' + (n > 1 ? 's' : '') + ' !'); mood('happy', 1500); renderLife2(); if (rmScene) rmScene.emote('happy'); } else toast('Rien à arroser pour l’instant 🌿');
+  }
+  function doBath() {
+    decayCare(); if (care.p >= 92) { toast('Mika est déjà toute propre 🫧'); return; }
+    if (rmScene) rmScene.bubbles(); bump('p', 60); progressQuest('wash'); mood('love', 2600);
+    setTimeout(function () { mikaSay(pick(['Splash ! Les bulles, c’est la vie 🫧', 'Mmm, de l’eau chaude… je fonds 🛁', 'Tout propre, tout doux ! Merci 💚']), false, 'love'); }, 600);
+    renderLife2();
+  }
+  function renderBath(box) {
+    var head = el('div', 'lp-h'); head.appendChild(el('b', null, '🛁 Bain moussant')); head.appendChild(el('small', null, 'Propreté ' + Math.round(care.p) + '%')); box.appendChild(head);
+    var b = el('button', 'primary', '🫧 Prendre un bain'); b.type = 'button'; b.addEventListener('click', doBath); box.appendChild(b);
+    box.appendChild(el('p', 'lp-n', 'Touche aussi la baignoire dans la pièce. Un bain rend Mika plus heureuse et plus douce.'));
+  }
+  /* — Musique d'ambiance (douce, façon conte) : générée en direct, jamais la même — */
+  var amb = null;
+  function stopAmbient() { if (amb) { clearInterval(amb.iv); try { amb.g.gain.setTargetAtTime(0.0001, actx.currentTime, 0.4); setTimeout(function () { try { amb.g.disconnect(); } catch (e) { /* ignore */ } amb = null; }, 900); } catch (e) { amb = null; } } }
+  function startAmbient(kind) {
+    stopAmbient(); if (!audioReady()) return;
+    var g = actx.createGain(); g.gain.value = 0.0001; g.connect(actx.destination); g.gain.setTargetAtTime(0.5, actx.currentTime, 1.2);
+    var delay = actx.createDelay(1); delay.delayTime.value = 0.32; var fb = actx.createGain(); fb.gain.value = 0.32; var wet = actx.createGain(); wet.gain.value = 0.35;
+    delay.connect(fb); fb.connect(delay); delay.connect(wet); wet.connect(g);
+    var scale = kind === 'garden' ? [0, 2, 4, 7, 9] : [0, 2, 4, 5, 7, 9], root = kind === 'garden' ? 261.63 : 293.66, beat = kind === 'garden' ? 0.62 : 0.5;
+    var prog = kind === 'garden' ? [[0, 4, 7], [-3, 0, 4], [-5, -1, 2], [-7, -3, 0]] : [[0, 4, 7], [5, 9, 12], [-3, 0, 4], [-5, -1, 2]];
+    var bar = 0, melIdx = 2, seed = hash(kind + 'm');
+    function note(f, t, dur, vol, type, vib) {
+      var o = actx.createOscillator(), og = actx.createGain(); o.type = type; o.frequency.value = f;
+      if (vib) { var l = actx.createOscillator(), lg = actx.createGain(); l.frequency.value = 5; lg.gain.value = f * 0.006; l.connect(lg); lg.connect(o.frequency); l.start(t); l.stop(t + dur + 0.1); }
+      og.gain.setValueAtTime(0.0001, t); og.gain.exponentialRampToValueAtTime(vol, t + 0.03); og.gain.exponentialRampToValueAtTime(0.0001, t + dur);
+      o.connect(og); og.connect(g); og.connect(delay); o.start(t); o.stop(t + dur + 0.05);
+    }
+    function schedule() {
+      var t0 = actx.currentTime + 0.1, ch = prog[bar % prog.length], len = 3; // mesures à 3 temps, comme une valse tranquille
+      for (var b = 0; b < len; b++) {
+        var cf = root * Math.pow(2, ch[b % 3] / 12) / 2;
+        note(cf, t0 + b * beat, beat * 1.8, 0.16, 'sine', false);            // harpe grave
+        note(cf * 2, t0 + b * beat + beat * 0.5, beat * 1.2, 0.07, 'triangle', false);
+      }
+      // mélodie : marche douce dans la gamme, 2 à 3 notes par mesure
+      var steps = [0, 1.5, 2].slice(0, 2 + (seed + bar) % 2);
+      steps.forEach(function (sp, i) {
+        seed = (seed * 1103515245 + 12345) & 0x7fffffff; var mv = (seed % 5) - 2; melIdx = Math.max(1, Math.min(scale.length + 3, melIdx + mv));
+        var deg = scale[melIdx % scale.length] + 12 * Math.floor(melIdx / scale.length);
+        note(root * 2 * Math.pow(2, deg / 12), t0 + sp * beat, beat * (i === steps.length - 1 ? 2.4 : 1.2), 0.11, kind === 'garden' ? 'sine' : 'triangle', kind === 'garden');
+      });
+      bar++;
+    }
+    amb = { g: g, iv: setInterval(schedule, beat * 3 * 1000) }; schedule();
   }
   function renderLife2() {
-    var box = $('lifepanel'), scroll = box.scrollTop; box.textContent = ''; liveFns = [];
-    if (lifeMode === 'cook') renderKitchen(box); else if (lifeMode === 'garden') renderGarden(box); else if (lifeMode === 'food') renderDelivery(box);
+    var box = $('rm-panel'), scroll = box.scrollTop; box.textContent = ''; liveFns = []; $('rm-pet').textContent = '🌸 ' + game.petals;
+    if (lifeMode === 'cook') renderKitchen(box); else if (lifeMode === 'garden') { renderGarden(box); if (rmScene) rmScene.setPlots((game.garden || []).map(function (pl) { if (!pl) return null; var f = plotInfo(pl); return { c: pl.c, w: pl.w, stage: f.prog >= 1 ? 3 : f.prog < 0.34 ? 0 : f.prog < 0.67 ? 1 : 2 }; })); } else if (lifeMode === 'bath') renderBath(box); else if (lifeMode === 'food') renderDelivery(box);
     box.scrollTop = scroll;
   }
   /* — Jardin — */
@@ -2670,7 +2755,7 @@
     RECIPES.forEach(function (r) {
       var ok = Object.keys(r.need).every(function (k) { return inv(k) >= r.need[k]; });
       var row = el('div', 'rec' + (ok ? '' : ' no'));
-      row.appendChild(el('span', 'ri', r.e)); var mid = el('div', 'rm'); mid.appendChild(el('b', null, r.t));
+      row.appendChild(el('span', 'ri', r.e)); var mid = el('div', 'rmid'); mid.appendChild(el('b', null, r.t));
       mid.appendChild(el('small', null, Object.keys(r.need).length ? Object.keys(r.need).map(function (k) { return CROPS[k].e + ' ' + Math.min(inv(k), r.need[k]) + '/' + r.need[k]; }).join('  ') : 'Riz du placard · toujours possible'));
       row.appendChild(mid);
       var b = el('button', ok ? 'primary' : 'ghost', 'Cuisiner'); b.type = 'button'; b.disabled = !ok;
@@ -2735,7 +2820,13 @@
   function doorClose() { $('doorfx').hidden = true; doorO = null; }
   document.addEventListener('click', function (e) { var t = e.target; if (t && t.id === 'door-x') doorClose(); });
   (function () {
-    Array.prototype.forEach.call(document.querySelectorAll('#lifetabs button'), function (b) { b.addEventListener('click', function () { var m = b.getAttribute('data-m'); setLifeMode(lifeMode === m ? 'talk' : m); }); });
+    renderNightBtn();
+    var RMAP = { kitchen: 'cook', bath: 'bath', garden: 'garden', food: 'food' };
+    Array.prototype.forEach.call(document.querySelectorAll('#lifetabs [data-room]'), function (b) { b.addEventListener('click', function () { setLifeMode(RMAP[b.getAttribute('data-room')]); }); });
+    $('night-btn').addEventListener('click', doNight);
+    $('rm-back').addEventListener('click', function () { setLifeMode('talk'); });
+    $('rm-music').addEventListener('click', function () { musicOn = !musicOn; $('rm-music').textContent = musicOn ? '🎵' : '🔇'; if (musicOn && lifeMode !== 'food' && lifeMode !== 'talk') startAmbient(lifeMode === 'garden' ? 'garden' : 'kitchen'); else stopAmbient(); });
+    $('rm-form').addEventListener('submit', function (ev) { ev.preventDefault(); var v = $('rm-in').value; $('rm-in').value = ''; cmpSend(v); });
     setInterval(function () { // la sonnette : sa commande est arrivée
       (game.orders || []).forEach(function (o) {
         if (!o.got && !o.rang && Date.now() > o.at + o.eta * 1000) { o.rang = true; var m = MENU.filter(function (x) { return x.id === o.id; })[0]; toast('🛵 Ding dong ! ' + (m ? m.t : 'La commande') + ' est arrivée'); if (typeof sfx !== 'undefined' && sfx.join) sfx.join(); if (lifeMode === 'food') renderLife2(); }
@@ -2754,6 +2845,40 @@
     list.forEach(function (x) { box.appendChild(el('span', fs[x[0]] ? 'ok' : '', (fs[x[0]] ? '✅ ' : '⬜ ') + x[1].slice(3))); });
     var h = el('button', 'ghost', '🎓 Revoir le tuto'); h.type = 'button'; h.addEventListener('click', function () { tutoStart(); }); box.appendChild(h);
   }
+
+  /* ---------- L'humeur de Mika : elle est contente de te revoir, ou triste et se confie ---------- */
+  var SAD_EVT = ['elle a cassé sa tasse préférée ce matin et elle y repense encore', 'Basilic a perdu une feuille et elle est inquiète', 'il pleuvait et elle n’a pas pu sortir, elle s’est sentie toute petite', 'elle a fait un cauchemar où elle perdait ses pétales', 'elle s’est trouvée seule un moment et ça lui a serré le cœur', 'elle a raté sa recette et se sent un peu nulle'];
+  function mikaMood() {
+    decayCare();
+    var away = prevVisit.last ? (Date.now() - prevVisit.last) / 3600000 : 0, hs = hash(todayKey() + (nick || '') + 'm') % 100;
+    if (game.sleepUntil && Date.now() < game.sleepUntil) return { m: 'sleepy', why: 'elle dort profondément' };
+    if (care.h < 28) return { m: 'sad', why: 'elle a très faim et se sent un peu abandonnée' };
+    if (care.s < 25 || away > 30) return { m: 'sad', why: 'elle s’est sentie seule, tu lui as manqué' };
+    if (care.e < 25) return { m: 'tired', why: 'elle est épuisée' };
+    if (away > 6) return { m: 'happy', why: 'elle est tellement contente que tu reviennes, elle t’attendait' };
+    if (hs < 18) return { m: 'sad', why: SAD_EVT[hs % SAD_EVT.length] };
+    if (hs < 30) return { m: 'tired', why: 'elle a mal dormi' };
+    if (hs < 62) return { m: 'excited', why: 'elle a plein d’énergie et d’envies aujourd’hui' };
+    return { m: 'happy', why: 'elle est de bonne humeur' };
+  }
+  function sleepOn() { return !!(game.sleepUntil && Date.now() < game.sleepUntil); }
+  function doNight() {
+    if (sleepOn()) { wakeUp(true); return; }
+    decayCare();
+    if (care.e > 85) { mikaSay('Je n’ai pas sommeil du tout, regarde ! ✨ On fait un truc ensemble ?', false, 'happy'); return; }
+    game.sleepUntil = Date.now() + 6 * 3600000; game.sleepAt = Date.now(); saveGame();
+    mikaSay('D’accord… une vraie nuit. Bonne nuit, à tout à l’heure 🌙', true, 'sleep'); mood('sleep');
+    if (m3d) { try { m3d.act('nap', 8000); } catch (e) { /* ignore */ } }
+    renderNightBtn();
+  }
+  function wakeUp(manual) {
+    var slept = Math.max(0, Date.now() - (game.sleepAt || Date.now())) / 3600000;
+    game.sleepUntil = 0; saveGame(); care.e = Math.min(100, care.e + Math.min(70, slept * 14)); store('talkie.care', JSON.stringify(care)); renderNeeds();
+    mood(manual && slept < 2 ? 'sad' : 'happy', 3000); renderNightBtn();
+    mikaSay(manual && slept < 2 ? 'Mmh… déjà ? J’avais pas fini de rêver… 🥺' : 'Ahhh, quelle nuit ! Je me sens toute neuve ☀️ Bonjour toi !', false, false);
+  }
+  function renderNightBtn() { var b = $('night-btn'); if (b) b.textContent = sleepOn() ? '☀️ Réveiller' : '🌙 Nuit'; }
+  setInterval(function () { if (game.sleepUntil && Date.now() >= game.sleepUntil) wakeUp(false); }, 20000);
   function nudge() {
     if (room || document.hidden || curTab !== 'chambre' || cmpBusy || asleep()) return;
     if (cmpNudges >= 2 || !cmpOpened || !cmp.thread.length || cmp.thread[cmp.thread.length - 1].r !== 'm') return;
@@ -3873,7 +3998,7 @@
 
   function renderVox() {
     ['av-vox', 'vox-set'].forEach(function (id) {
-      var box = $(id); if (!box) return; box.textContent = '';
+      var box = $(id); if (!box) return; box.textContent = ''; if (box.parentNode) box.parentNode.hidden = true; return;
       VOX.forEach(function (v) {
         var b = el('button', 'voxchip', (uiLang() === 'en' ? v.en : v.fr)); b.type = 'button'; b.setAttribute('aria-pressed', String(vox().id === v.id));
         b.addEventListener('click', function () { store('talkie.vx', v.id); if (!voiceOn && canSpeak) { voiceOn = true; store('talkie.voice', '1'); renderVoice(); } renderVox(); previewVox(); });
@@ -3965,7 +4090,7 @@
   }
   function initAuth(cfg) {
     if (!cfg || !cfg.url || !cfg.key) return;
-    var sc = document.createElement('script'); sc.src = '/supa.js?v=28';
+    var sc = document.createElement('script'); sc.src = '/supa.js?v=29';
     sc.onload = function () {
       try { sb = window.MikaSupa.create(cfg.url, cfg.key); } catch (e) { sb = null; return; }
       renderAcct();

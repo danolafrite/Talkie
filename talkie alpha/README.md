@@ -153,3 +153,11 @@ Boubou écrit maintenant deux versions de chaque réplique : `say` (affichée) e
 - Voix gratuite FR : si la voix demandée est indisponible, les suivantes sont essayées automatiquement (Eloise → Denise → Vivienne → Rémy → Henri).
 - IA : réponses courtes (accueil, anecdotes) via le modèle rapide, tokens réduits.
 - **Cuisine / Jardin / Livraison** (onglets sous la bulle de Mika) : 6 parcelles à croissance en temps réel, 5 recettes avec récoltes, menu de livraison avec scooter et récupération du sac devant la porte.
+
+## v29 — La maison de Mika
+- Pièces **3D immersives** : Cuisine, Jardin (6 parcelles 3D qui poussent en temps réel, arrosoir, papillons), Salle de bain (baignoire à bulles). Touche les objets pour agir. On peut parler à Mika dans chaque pièce (barre de texte toujours là).
+- Musique d'ambiance douce générée en direct (cuisine / jardin), bouton 🎵 pour couper.
+- Nouvelles cultures : ciboulette, piment ; recettes miso, pâtes pimentées, gyoza maison ; livraison : gyoza, bento sushi, udon.
+- **Nuit** : Mika dort 6 h (réveil possible), récupère son énergie.
+- **Humeur de Mika** (contente, triste, fatiguée, survoltée) transmise à l'IA : elle accueille avec joie, ou se confie sur sa journée ; prompt plus émotif et moins « assistant ».
+- 2000 pétales offerts (une fois) pour la bêta ; une seule voix : Kawaii, avec voix de remplacement proche si la principale échoue.

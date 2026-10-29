@@ -151,7 +151,7 @@ async function edgeOnce(input, voiceName, pitch, rate, signal) {
   } finally { try { tts.close(); } catch (e) { /* ignore */ } }
 }
 const edgeBad = {}; // voix qui a échoué récemment -> jusqu'à quand on l'évite
-const EDGE_FALL = { fr: ['fr-FR-DeniseNeural', 'fr-FR-VivienneMultilingualNeural', 'fr-FR-RemyMultilingualNeural', 'fr-FR-HenriNeural'], en: ['en-US-JennyNeural', 'en-US-AriaNeural'] };
+const EDGE_FALL = { fr: ['fr-FR-VivienneMultilingualNeural', 'fr-FR-DeniseNeural', 'fr-FR-BrigitteNeural', 'fr-FR-CelesteNeural', 'fr-FR-YvetteNeural'], en: ['en-US-JennyNeural', 'en-US-AriaNeural'] };
 let edgeWhy = '';
 async function edgeSynth(text, voice, lang, emo, signal) {
   const v = (lang === 'en' ? EDGE_EN : EDGE_FR)[voice] || (lang === 'en' ? EDGE_EN : EDGE_FR).coral;
@@ -168,8 +168,9 @@ async function edgeSynth(text, voice, lang, emo, signal) {
     if (signal && signal.aborted) break;
     try {
       let buf = null;
-      try { buf = await edgeOnce(ssmlBody(said), name, pitch, rate, signal); } catch (e) { buf = null; }
-      if (!buf || buf.length < 200) buf = await edgeOnce(xml(said.replace(/§B§/g, '...')), name, pitch, rate, signal);
+      const pt = name === v[0] ? pitch : pct(num(v[1]) + em[0] + 6); // voix de remplacement : un peu plus aiguë pour rester proche du kawaii
+      try { buf = await edgeOnce(ssmlBody(said), name, pt, rate, signal); } catch (e) { buf = null; }
+      if (!buf || buf.length < 200) buf = await edgeOnce(xml(said.replace(/§B§/g, '...')), name, pt, rate, signal);
       if (buf && buf.length >= 200) { edgeWhy = ''; return buf; }
       throw new Error('audio vide');
     } catch (e) {

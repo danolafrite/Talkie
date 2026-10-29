@@ -1205,24 +1205,26 @@ function garment(x, y, z, col, kind) {
   else { g.add(mesh(rbox(0.3, 0.38, 0.06, 0.03), m, 0, -0.17, 0, false)); [-1, 1].forEach((sd) => { const sl = mesh(rbox(0.16, 0.08, 0.06, 0.03), m, sd * 0.2, -0.04, 0, false); sl.rotation.z = -sd * 0.5; g.add(sl); }); }
   return g;
 }
-export function initInterior(host, theme, getOpts) {
+export function initInterior(host, theme, getOpts, hooks) {
+  hooks = hooks || {};
   let renderer; try { renderer = new THREE.WebGLRenderer({ antialias: true, alpha: false, powerPreference: 'low-power' }); } catch (e) { return null; }
   renderer.setPixelRatio(Math.min(window.devicePixelRatio || 1, 2));
   const canvas = renderer.domElement; canvas.className = 'scene3d'; host.insertBefore(canvas, host.firstChild);
-  const scene = new THREE.Scene(); const BG = { bakery: 0xffe9f0, thrift: 0xefe3d0, deco: 0xe6f3ee, karaoke: 0x241447, dentist: 0xdff5ef }[theme] || 0xffffff; scene.background = new THREE.Color(BG);
+  const scene = new THREE.Scene(); const BG = { bakery: 0xffe9f0, thrift: 0xefe3d0, deco: 0xe6f3ee, karaoke: 0x241447, dentist: 0xdff5ef, kitchen: 0xfff1dc, garden: 0xbfe8ff, bath: 0xdff3ff }[theme] || 0xffffff; scene.background = new THREE.Color(BG);
   standardLights(scene);
   const camera = new THREE.PerspectiveCamera(34, 1, 0.1, 40); camera.position.set(0, 1.9, 6.6); camera.lookAt(0, 1.25, 0);
   const fx = createFx(scene), anim = [];
   const room = new THREE.Group(); scene.add(room);
   const add = (o) => { room.add(o); return o; };
-  const floorMat = { bakery: () => std(0xffffff, { map: checkTex('#fff4f8', '#ffc4dc', 5) }), thrift: () => std(0xd8a56e, { map: stripeTex('#d9a96f', '#c8935b', 14) }), deco: () => std(0xf3e6d3, { map: checkTex('#f6ece0', '#e9d9c3', 5) }), karaoke: () => std(0x3a2370, { roughness: 0.3 }), dentist: () => std(0xffffff, { map: checkTex('#ffffff', '#cfeee6', 6) }) }[theme]();
+  const floorMat = { bakery: () => std(0xffffff, { map: checkTex('#fff4f8', '#ffc4dc', 5) }), thrift: () => std(0xd8a56e, { map: stripeTex('#d9a96f', '#c8935b', 14) }), deco: () => std(0xf3e6d3, { map: checkTex('#f6ece0', '#e9d9c3', 5) }), karaoke: () => std(0x3a2370, { roughness: 0.3 }), dentist: () => std(0xffffff, { map: checkTex('#ffffff', '#cfeee6', 6) }), kitchen: () => std(0xd9a56e, { map: stripeTex('#e0b078', '#cf9b62', 12) }), garden: () => std(0x86cf62, { roughness: 1 }), bath: () => std(0xffffff, { map: checkTex('#f4fbff', '#cfe6f7', 7) }) }[theme]();
   const fl = mesh(new THREE.PlaneGeometry(26, 16), floorMat, 0, 0, 4.5, false); floorMat.map && floorMat.map.repeat.multiplyScalar(1.8); fl.rotation.x = -Math.PI / 2; add(fl);
-  const wallCol = { bakery: 0xffd6e6, thrift: 0xc7e3d4, deco: 0xfff3e0, karaoke: 0x2f1a63, dentist: 0xcdeee6 }[theme];
+  const wallCol = { bakery: 0xffd6e6, thrift: 0xc7e3d4, deco: 0xfff3e0, karaoke: 0x2f1a63, dentist: 0xcdeee6, kitchen: 0xffe9c9, garden: 0x9bd47a, bath: 0xbfe3f7 }[theme];
   const wallTex = theme === 'bakery' ? stripeTex('#ffd6e6', '#fff0f6', 14) : null; if (wallTex) wallTex.repeat.set(3.4, 1);
   add(mesh(rbox(26, 10, 0.2, 0.05), std(wallCol, wallTex ? { map: wallTex } : { emissive: wallCol, emissiveIntensity: theme === 'karaoke' ? 0.35 : 0.12 }), 0, 4.7, -3.0, false));
   add(mesh(rbox(14, 0.18, 0.2, 0.04), std(0xffffff), 0, 0.09, -2.88, false));
-  const sign = mesh(new THREE.PlaneGeometry(2.9, 0.9), new THREE.MeshBasicMaterial({ map: signTex({ bakery: 'Boulangerie', thrift: 'Friperie', deco: 'Déco', karaoke: 'Karaoké', dentist: 'Dentiste' }[theme], { bakery: '#e0457b', thrift: '#ff7ac8', deco: '#2f8f6b', karaoke: '#7df9ff', dentist: '#2f8fb0' }[theme], { bakery: '#fffaf0', thrift: null, deco: '#fffaf0', karaoke: null, dentist: '#fffaf0' }[theme], { thrift: '#ff3fa8', karaoke: '#18c8ff' }[theme]), transparent: true }), 0, 3.85, -2.86, false);
+  const sign = mesh(new THREE.PlaneGeometry(2.9, 0.9), new THREE.MeshBasicMaterial({ map: signTex({ bakery: 'Boulangerie', thrift: 'Friperie', deco: 'Déco', karaoke: 'Karaoké', dentist: 'Dentiste', kitchen: 'Cuisine', garden: 'Jardin', bath: 'Salle de bain' }[theme], { bakery: '#e0457b', thrift: '#ff7ac8', deco: '#2f8f6b', karaoke: '#7df9ff', dentist: '#2f8fb0', kitchen: '#d9822b', garden: '#2f8f6b', bath: '#3a8fd1' }[theme], { bakery: '#fffaf0', thrift: null, deco: '#fffaf0', karaoke: null, dentist: '#fffaf0', kitchen: '#fffaf0', garden: '#fffaf0', bath: '#fffaf0' }[theme], { thrift: '#ff3fa8', karaoke: '#18c8ff' }[theme]), transparent: true }), 0, 3.85, -2.86, false);
   add(sign);
+  const plotsApi = { set: () => {} };
   let item = null, decorG = null, ch = null, spinT = 0, singing = false, T = 0, running = true, camZ = 6.6, narrow = false;
   let pos = [0, 0, 1.4], sc = 1.25;
   if (theme === 'bakery') {
@@ -1274,6 +1276,110 @@ export function initInterior(host, theme, getOpts) {
     const arch = mesh(new THREE.TorusGeometry(0.9, 0.08, 8, 28, Math.PI), std(0xffffff), 2.2, 2.6, -2.85, false); add(arch); add(mesh(new THREE.CircleGeometry(0.9, 28, 0, Math.PI), new THREE.MeshBasicMaterial({ color: 0xbfe9ff }), 2.2, 2.6, -2.86, false));
     add(mesh(new THREE.CylinderGeometry(0.62, 0.7, 0.2, 28), std(0xffffff), 1.5, 0.1, 1.3)); // piédestal
     const pl = new THREE.PointLight(0xfff0d0, 0.8, 14); pl.position.set(0, 3.6, 2); scene.add(pl);
+  } else if (theme === 'kitchen') {
+    pos = [0.2, 0, 1.7]; sc = 1.2;
+    const wood = std(0xc98f55), cream = std(0xfff7ea), tile = std(0xffffff, { map: checkTex('#ffffff', '#ffd9a8', 8) }), steel = std(0xc9d2dc, { metalness: 0.6, roughness: 0.3 });
+    add(mesh(new THREE.PlaneGeometry(14, 2.4), std(0xffffff, { map: checkTex('#fff8ee', '#ffd9a8', 14) }), 0, 1.7, -2.88, false)); // carrelage mural
+    add(mesh(rbox(9.5, 1.0, 0.9, 0.06), wood, 0.2, 0.5, -2.35)); add(mesh(rbox(9.6, 0.08, 1.0, 0.03), cream, 0.2, 1.04, -2.35));
+    // évier
+    add(mesh(rbox(1.3, 0.1, 0.7, 0.04), steel, -2.4, 1.07, -2.3)); const tap = add(mesh(new THREE.TorusGeometry(0.2, 0.04, 8, 16, Math.PI), steel, -2.4, 1.45, -2.55)); add(mesh(new THREE.CylinderGeometry(0.04, 0.04, 0.4, 8), steel, -2.4, 1.25, -2.62));
+    // cuisinière + casserole
+    const stove = new THREE.Group(); stove.userData.pick = 'stove';
+    stove.add(mesh(rbox(1.5, 1.05, 0.95, 0.08), std(0xe9edf2), 0, 0.52, 0)); stove.add(mesh(rbox(1.5, 0.06, 0.95, 0.03), std(0x2f3340), 0, 1.07, 0));
+    [[-0.38, -0.2], [0.38, -0.2], [-0.38, 0.22], [0.38, 0.22]].forEach((q) => { const rg = mesh(new THREE.TorusGeometry(0.16, 0.03, 8, 20), std(0x444a5a), q[0], 1.11, q[1]); rg.rotation.x = Math.PI / 2; stove.add(rg); });
+    const pot = new THREE.Group(); pot.add(mesh(new THREE.CylinderGeometry(0.28, 0.26, 0.3, 20), std(0xff8fa8), 0, 0.15, 0)); { const rim = mesh(new THREE.TorusGeometry(0.28, 0.025, 8, 20), std(0xff6f8e), 0, 0.3, 0); rim.rotation.x = Math.PI / 2; pot.add(rim); } pot.position.set(-0.38, 1.13, -0.2); stove.add(pot);
+    const steam = []; for (let i = 0; i < 4; i++) { const st2 = sph(0.09, std(0xffffff, { transparent: true, opacity: 0.55 }), 1, 1, 1, -0.38, 1.5, -0.2); steam.push(st2); stove.add(st2); }
+    anim.push((t) => { steam.forEach((m, i) => { const k = ((t * 0.45 + i / 4) % 1); m.position.y = 1.45 + k * 0.9; m.scale.setScalar(0.6 + k); m.material.opacity = 0.55 * (1 - k); m.position.x = -0.38 + Math.sin(t * 2 + i) * 0.08; }); });
+    stove.position.set(0.2, 0, -2.3); add(stove);
+    // frigo
+    const fridge = new THREE.Group(); fridge.userData.pick = 'fridge';
+    fridge.add(mesh(rbox(1.15, 2.7, 0.95, 0.12), std(0xbfe3ff), 0, 1.35, 0)); fridge.add(mesh(rbox(1.1, 0.04, 0.02, 0.01), std(0xffffff), 0, 1.75, 0.49)); fridge.add(mesh(rbox(0.07, 0.5, 0.07, 0.03), steel, 0.4, 2.2, 0.5)); fridge.add(mesh(rbox(0.07, 0.8, 0.07, 0.03), steel, 0.4, 1.0, 0.5));
+    [[-0.2, 2.1, 0xff6f8e], [0.1, 2.35, 0xffe27a], [-0.1, 1.2, 0x7df9ff]].forEach((q) => fridge.add(mesh(rbox(0.22, 0.22, 0.02, 0.04), std(q[2]), q[0], q[1], 0.49)));
+    fridge.position.set(3.6, 0, -2.25); add(fridge);
+    // étagère + bocaux
+    add(mesh(rbox(2.8, 0.08, 0.35, 0.02), wood, -2.2, 2.55, -2.8)); ['#ff8a5b', '#ffd166', '#7bd88f', '#ff6f8e', '#b9a6ff'].forEach((c, i) => { add(mesh(new THREE.CylinderGeometry(0.17, 0.17, 0.4, 14), new THREE.MeshStandardMaterial({ color: c, transparent: true, opacity: 0.85 }), -3.3 + i * 0.55, 2.8, -2.8)); add(mesh(new THREE.CylinderGeometry(0.15, 0.15, 0.06, 12), wood, -3.3 + i * 0.55, 3.03, -2.8)); });
+    // fenêtre + soleil
+    add(mesh(rbox(2.0, 1.6, 0.1, 0.05), std(0xffffff), 1.8, 3.1, -2.88, false)); add(mesh(new THREE.PlaneGeometry(1.8, 1.4), new THREE.MeshBasicMaterial({ color: 0xbfe8ff }), 1.8, 3.1, -2.82, false));
+    const sun = add(mesh(new THREE.CircleGeometry(0.22, 20), new THREE.MeshBasicMaterial({ color: 0xffe27a }), 2.25, 3.4, -2.8, false)); anim.push((t) => { sun.scale.setScalar(1 + Math.sin(t * 2) * 0.06); });
+    // table + chaises
+    add(mesh(new THREE.CylinderGeometry(0.9, 0.9, 0.08, 24), wood, -2.0, 0.85, 1.4)); add(mesh(new THREE.CylinderGeometry(0.1, 0.1, 0.85, 10), wood, -2.0, 0.42, 1.4));
+    [[-2.9, 1.4], [-1.1, 1.4]].forEach((q) => { add(mesh(rbox(0.5, 0.08, 0.5, 0.03), std(0xff8fc0), q[0], 0.5, q[1])); add(mesh(rbox(0.07, 0.5, 0.07, 0.02), wood, q[0] - 0.2, 0.25, q[1] - 0.2)); add(mesh(rbox(0.07, 0.5, 0.07, 0.02), wood, q[0] + 0.2, 0.25, q[1] + 0.2)); });
+    add(sph(0.25, std(0xff6f4f), 1, 0.85, 1, -2.0, 1.05, 1.4)); add(sph(0.2, std(0xffe27a), 1, 0.9, 1, -1.65, 0.98, 1.55)); // fruits sur la table
+    // lampe suspendue
+    add(mesh(new THREE.CylinderGeometry(0.02, 0.02, 1.6, 6), std(0x777777), -2.0, 4.3, 1.4, false)); const lm = add(mesh(new THREE.ConeGeometry(0.5, 0.45, 20, 1, true), std(0xffb347, { emissive: 0xffa23a, emissiveIntensity: 0.6, side: THREE.DoubleSide }), -2.0, 3.45, 1.4, false));
+    const kl = new THREE.PointLight(0xffe0a8, 0.8, 12); kl.position.set(-1, 3.4, 1.8); scene.add(kl);
+  } else if (theme === 'garden') {
+    pos = [2.5, 0, 1.7]; sc = 1.0; sign.visible = false;
+    // haie + clôture + arbre
+    add(mesh(rbox(26, 1.6, 0.8, 0.3), std(0x6fbf59), 0, 0.8, -2.7, false)); for (let i = 0; i < 12; i++) add(mesh(rbox(0.22, 1.2, 0.08, 0.03), std(0xf3dfb8), -5.5 + i * 1.0, 0.7, -2.2));
+    add(mesh(rbox(12, 0.1, 0.08, 0.02), std(0xf3dfb8), 0, 0.95, -2.18)); add(mesh(rbox(12, 0.1, 0.08, 0.02), std(0xf3dfb8), 0, 0.45, -2.18));
+    const tree = new THREE.Group(); tree.add(mesh(new THREE.CylinderGeometry(0.22, 0.32, 2.4, 10), std(0x9c6b43), 0, 1.2, 0)); [[0, 3.0, 0], [-0.9, 2.6, 0.2], [0.9, 2.7, -0.1], [0.1, 3.6, 0.1]].forEach((q) => tree.add(sph(1.0, std(0xffb7d5), 1.1, 0.95, 1.1, q[0], q[1], q[2]))); tree.position.set(-3.7, 0, -1.6); add(tree);
+    anim.push((t) => { tree.rotation.z = Math.sin(t * 0.8) * 0.012; });
+    // pétales qui tombent
+    const petals = []; for (let i = 0; i < 10; i++) { const pt = sph(0.05, std(0xffc9de), 1.4, 0.3, 1, 0, 0, 0); pt.userData.o = Math.random() * 6; petals.push(pt); add(pt); }
+    anim.push((t) => { petals.forEach((pt, i) => { const k = ((t * 0.25 + pt.userData.o) % 1); pt.position.set(-3.7 + Math.sin(t + i) * 1.6, 3.4 - k * 3.3, -1.6 + Math.cos(t * 0.8 + i) * 1.0); pt.rotation.z = t * 2 + i; }); });
+    // nuages + soleil
+    const clouds = [0, 1, 2].map((i) => { const c = new THREE.Group(); [0, 0.5, -0.5].forEach((o) => c.add(sph(0.5, new THREE.MeshBasicMaterial({ color: 0xffffff }), 1.3, 0.8, 0.6, o, o * 0.1, 0))); c.position.set(-6 + i * 4, 5.3 + i * 0.4, -4); add(c); return c; });
+    anim.push((t) => { clouds.forEach((c, i) => { c.position.x = ((t * 0.25 + i * 4 + 6) % 16) - 8; }); });
+    // 6 parcelles
+    const plotG = [], plotMark = [];
+    for (let i = 0; i < 6; i++) {
+      const g = new THREE.Group(); g.userData.pick = 'plot' + i;
+      const soil = mesh(rbox(1.35, 0.22, 1.05, 0.1), std(0x7a4b2a), 0, 0.11, 0); g.add(soil); g.userData.soil = soil;
+      g.add(mesh(rbox(1.5, 0.1, 0.1, 0.03), std(0xc98f55), 0, 0.22, 0.58)); g.add(mesh(rbox(1.5, 0.1, 0.1, 0.03), std(0xc98f55), 0, 0.22, -0.58));
+      const plant = new THREE.Group(); plant.position.y = 0.22; g.add(plant); g.userData.plant = plant;
+      const hint = sph(0.12, new THREE.MeshBasicMaterial({ color: 0xffffff }), 1, 1, 0.3, 0, 0.55, 0.62); hint.visible = true; g.add(hint); g.userData.hint = hint;
+      g.position.set(-2.3 + (i % 3) * 1.7, 0, -1.55 + Math.floor(i / 3) * 1.3); add(g); plotG.push(g);
+    }
+    plotsApi.set = (list) => {
+      plotG.forEach((g, i) => {
+        const pl = list && list[i], pg = g.userData.plant;
+        while (pg.children.length) { const c = pg.children[0]; pg.remove(c); c.geometry && c.geometry.dispose(); }
+        g.userData.soil.material.color.setHex(pl && pl.w ? 0x5a361d : 0x7a4b2a);
+        g.userData.hint.visible = !pl; g.userData.hint.material.color.setHex(0xffffff);
+        if (!pl) return;
+        const gr = std(0x5cc463), dg = std(0x3ea64a), st = pl.stage;
+        if (st === 0) { [-0.12, 0.12].forEach((x) => pg.add(sph(0.1, gr, 1, 1.4, 0.5, x, 0.1, 0))); pg.add(mesh(new THREE.CylinderGeometry(0.02, 0.02, 0.15, 5), dg, 0, 0.07, 0)); }
+        else if (st === 1) { for (let k = 0; k < 4; k++) { const a = k / 4 * Math.PI * 2; const lf = sph(0.16, gr, 1.5, 0.35, 0.7, Math.cos(a) * 0.16, 0.25, Math.sin(a) * 0.16); lf.rotation.y = -a; pg.add(lf); } pg.add(mesh(new THREE.CylinderGeometry(0.03, 0.03, 0.3, 6), dg, 0, 0.15, 0)); }
+        else {
+          for (let k = 0; k < 6; k++) { const a = k / 6 * Math.PI * 2; const lf = sph(0.2, st === 2 ? gr : dg, 1.6, 0.35, 0.7, Math.cos(a) * 0.22, 0.32, Math.sin(a) * 0.22); lf.rotation.y = -a; pg.add(lf); }
+          pg.add(mesh(new THREE.CylinderGeometry(0.04, 0.04, 0.4, 6), dg, 0, 0.2, 0));
+          if (st === 3) { const C = { tomate: [0xff4a3d, 0.17, 1], carotte: [0xff8a1f, 0.12, 2], fraise: [0xff3d6e, 0.12, 1], herbe: [0x2fbf55, 0.1, 0], citrouille: [0xff8a1f, 0.3, 1], ciboulette: [0x2fbf55, 0.07, 0], piment: [0xe02020, 0.1, 2] }[pl.c] || [0xffd23f, 0.15, 1];
+            if (C[2] === 1) for (let k = 0; k < 3; k++) pg.add(sph(C[1], std(C[0]), 1, pl.c === 'citrouille' ? 0.8 : 1, 1, (k - 1) * 0.28, 0.2 + (k % 2) * 0.12, 0.3));
+            else if (C[2] === 2) for (let k = 0; k < 4; k++) { const cn = mesh(new THREE.ConeGeometry(C[1], 0.45, 10), std(C[0]), (k - 1.5) * 0.22, 0.38, 0.2); cn.rotation.z = Math.PI; pg.add(cn); }
+            else for (let k = 0; k < 6; k++) pg.add(mesh(new THREE.CylinderGeometry(0.02, 0.03, 0.6, 5), std(C[0]), (k - 2.5) * 0.1, 0.45, 0.1));
+            const star = sph(0.08, new THREE.MeshBasicMaterial({ color: 0xffe27a }), 1, 1, 1, 0, 0.85, 0); star.userData.twinkle = true; pg.add(star);
+          }
+        }
+      });
+    };
+    // arrosoir + abeilles + papillons
+    const can = new THREE.Group(); can.userData.pick = 'can'; can.add(mesh(new THREE.CylinderGeometry(0.28, 0.26, 0.4, 16), std(0x56c6c0), 0, 0.2, 0)); { const sp = mesh(new THREE.CylinderGeometry(0.04, 0.05, 0.5, 8), std(0x56c6c0), 0.35, 0.4, 0); sp.rotation.z = -0.8; can.add(sp); } can.add(mesh(new THREE.TorusGeometry(0.16, 0.025, 8, 14, Math.PI), std(0x3fa8a2), -0.12, 0.45, 0)); can.position.set(-3.2, 0, 1.3); add(can);
+    const bf = [0, 1, 2].map((i) => { const b = new THREE.Group(); [-1, 1].forEach((sd) => b.add(sph(0.12, std([0xff8fc0, 0xffe27a, 0x8edbff][i]), 1.2, 0.2, 0.9, sd * 0.1, 0, 0))); b.add(sph(0.04, std(0x2a1b5e), 1, 1, 2, 0, 0, 0)); add(b); return b; });
+    anim.push((t) => { bf.forEach((b, i) => { b.position.set(Math.sin(t * 0.7 + i * 2) * 3.2, 1.5 + Math.sin(t * 1.3 + i) * 0.5, -0.3 + Math.cos(t * 0.5 + i * 2) * 1.4); b.rotation.y = t + i; b.children.forEach((c, k) => { if (k < 2) c.rotation.z = (k ? -1 : 1) * Math.sin(t * 16 + i) * 0.8; }); }); });
+    scene.fog = new THREE.Fog(0xbfe8ff, 14, 30);
+    const gl = new THREE.PointLight(0xfff3c0, 0.5, 14); gl.position.set(0, 4, 3); scene.add(gl);
+  } else if (theme === 'bath') {
+    pos = [1.7, 0, 1.6]; sc = 1.2;
+    const wht = std(0xffffff, { roughness: 0.3 }), blue = std(0x7cc6ff);
+    // baignoire
+    const tub = new THREE.Group(); tub.userData.pick = 'tub';
+    tub.add(mesh(rbox(3.0, 0.9, 1.4, 0.35), wht, 0, 0.45, 0)); tub.add(mesh(rbox(2.6, 0.12, 1.0, 0.2), std(0x9fdcff, { emissive: 0x6fc4ff, emissiveIntensity: 0.25 }), 0, 0.88, 0));
+    const bubs = []; for (let i = 0; i < 10; i++) { const b = sph(0.17 + Math.random() * 0.1, std(0xffffff, { transparent: true, opacity: 0.9 }), 1, 1, 1, -1.0 + (i % 5) * 0.5, 1.0 + Math.random() * 0.15, -0.2 + Math.floor(i / 5) * 0.4); bubs.push(b); tub.add(b); }
+    anim.push((t) => { bubs.forEach((b, i) => { b.position.y = 1.0 + Math.abs(Math.sin(t * 1.2 + i)) * 0.12; }); });
+    tub.add(sph(0.2, std(0xffe27a), 1.1, 0.95, 1.1, 0.8, 1.12, 0.1)); tub.add(sph(0.07, std(0xff8a1f), 1.4, 0.5, 0.8, 0.8, 1.1, 0.28)); // canard
+    [-1.15, 1.15].forEach((x) => tub.add(mesh(new THREE.CylinderGeometry(0.1, 0.12, 0.2, 10), std(0xc9d2dc, { metalness: 0.5 }), x, 0.0, 0.5)));
+    tub.position.set(-2.1, 0, -1.6); add(tub);
+    // robinet + douche
+    add(mesh(new THREE.CylinderGeometry(0.05, 0.05, 1.0, 8), std(0xc9d2dc, { metalness: 0.6 }), -3.4, 1.6, -2.7)); add(mesh(new THREE.CylinderGeometry(0.4, 0.15, 0.12, 14), std(0xc9d2dc, { metalness: 0.6 }), -3.0, 2.4, -2.6));
+    // lavabo + miroir
+    add(mesh(rbox(1.4, 0.9, 0.7, 0.1), wht, 2.5, 0.45, -2.45)); add(mesh(new THREE.CylinderGeometry(0.5, 0.4, 0.2, 18), std(0xeaf6ff), 2.5, 0.95, -2.45));
+    add(mesh(new THREE.CircleGeometry(0.85, 28), new THREE.MeshBasicMaterial({ color: 0xcfeeff }), 2.5, 2.4, -2.85, false)); add(mesh(new THREE.TorusGeometry(0.88, 0.07, 10, 28), std(0xff8fc0), 2.5, 2.4, -2.83));
+    // tapis + serviettes + plantes + bulles flottantes
+    add(mesh(new THREE.CylinderGeometry(0.9, 0.9, 0.05, 24), std(0xffb3d1), 0.0, 0.03, 0.6)); add(mesh(rbox(0.9, 0.1, 0.06, 0.02), std(0xc9d2dc), 0.5, 2.0, -2.85)); add(mesh(rbox(0.7, 1.0, 0.06, 0.04), std(0xff8fc0), 0.5, 1.4, -2.8));
+    const fl = []; for (let i = 0; i < 9; i++) { const b = sph(0.1 + Math.random() * 0.12, new THREE.MeshBasicMaterial({ color: 0xffffff, transparent: true, opacity: 0.45 }), 1, 1, 1, 0, 0, 0); b.userData.o = Math.random() * 7; fl.push(b); add(b); }
+    anim.push((t) => { fl.forEach((b, i) => { const k = ((t * 0.18 + b.userData.o) % 1); b.position.set(-3 + (i % 5) * 1.5 + Math.sin(t + i) * 0.3, 0.5 + k * 4, -1.5 + (i % 3) * 0.8); }); });
+    const bl = new THREE.PointLight(0xdff3ff, 0.7, 12); bl.position.set(0, 3.4, 2); scene.add(bl);
   } else if (theme === 'dentist') {
     pos = [1.5, 0, 1.5]; sc = 1.15;
     const white = std(0xffffff, { roughness: 0.4 }), teal = std(0x56c6c0), grey = std(0xbfc9d6, { metalness: 0.5, roughness: 0.3 });
@@ -1346,9 +1452,17 @@ export function initInterior(host, theme, getOpts) {
       const b2 = new THREE.Box3().setFromObject(g); g.position.set(1.5 - (b2.min.x + b2.max.x) / 2, 0.2 - b2.min.y, 1.3 - (b2.min.z + b2.max.z) / 2); room.add(g); decorG = g;
     }
   }
-  function resize() { const w = host.clientWidth || 320, h = host.clientHeight || 300; renderer.setSize(w, h, false); canvas.style.width = '100%'; canvas.style.height = '100%'; camera.aspect = w / h; camera.fov = w / h < 1 ? 44 : 34; camZ = w / h < 0.8 ? 9.6 : 6.6; camera.position.z = camZ; narrow = w / h < 0.8; if (ch) ch.root.position.x = pos[0] * (narrow ? 0.55 : 1); camera.updateProjectionMatrix(); }
+  function resize() { const w = host.clientWidth || 320, h = host.clientHeight || 300; renderer.setSize(w, h, false); canvas.style.width = '100%'; canvas.style.height = '100%'; camera.aspect = w / h; camera.fov = w / h < 1 ? 44 : 34; camZ = (w / h < 0.8 ? 9.6 : 6.6) * ({ garden: 1.55, kitchen: 1.12, bath: 1.2 }[theme] || 1); camera.position.z = camZ; camera.position.y = theme === 'garden' ? 5.6 : 1.9; narrow = w / h < 0.8; if (ch) ch.root.position.x = pos[0] * (narrow ? 0.55 : 1); camera.updateProjectionMatrix(); }
   new ResizeObserver(resize).observe(host); resize();
   canvas.style.touchAction = 'none';
+  const ray = new THREE.Raycaster(), pt = new THREE.Vector2();
+  canvas.addEventListener('pointerup', (ev) => {
+    if (!hooks.onPick) return;
+    const r = canvas.getBoundingClientRect(); pt.set(((ev.clientX - r.left) / r.width) * 2 - 1, -((ev.clientY - r.top) / r.height) * 2 + 1); ray.setFromCamera(pt, camera);
+    const hit = ray.intersectObjects(room.children, true)[0]; if (!hit) return;
+    let o = hit.object; while (o && !(o.userData && o.userData.pick)) o = o.parent;
+    if (o && o.userData.pick) hooks.onPick(o.userData.pick);
+  });
   canvas.addEventListener('pointerup', () => { if (ch) { ch.hop(4.6); ch.setEmotion('happy'); fx.emit('heart', 4, ch.root.position, sc); setTimeout(() => ch && ch.setEmotion(singing ? 'happy' : 'neutral'), 1400); } });
   const clock = new THREE.Clock(); let visible = true;
   if ('IntersectionObserver' in window) new IntersectionObserver((es) => { visible = es[0].isIntersecting; }, { threshold: 0.01 }).observe(host);
@@ -1356,7 +1470,7 @@ export function initInterior(host, theme, getOpts) {
     if (!running) return; requestAnimationFrame(frame);
     if (!visible || document.hidden) { clock.getDelta(); return; }
     const dt = Math.min(0.05, clock.getDelta()); T += dt;
-    camera.position.x = Math.sin(T * 0.25) * 0.35; camera.lookAt(camera.position.x * 0.3, 1.25, 0);
+    camera.position.x = Math.sin(T * 0.25) * 0.35; camera.lookAt(camera.position.x * 0.3, theme === 'garden' ? 0.0 : 1.25, theme === 'garden' ? -0.5 : 0);
     anim.forEach((f) => f(T));
     if (decorG) { decorG.rotation.y += dt * 0.5; }
     if (singing && ch) { ch.setTalking(Math.sin(T * 9) > -0.2); ch.face(Math.sin(T * 2) * 0.35); if (ch.st.y < 0.02 && Math.random() < dt * 1.2) ch.hop(2.6); if (Math.random() < dt * 2) fx.emit('star', 1, ch.root.position, sc); }
@@ -1367,7 +1481,8 @@ export function initInterior(host, theme, getOpts) {
   }
   frame();
   return {
-    setItem, rebuild() { build(); ch.hop(3.6); },
+    setItem, setPlots(list) { plotsApi.set(list); }, rebuild() { build(); ch.hop(3.6); },
+    bubbles() { if (ch) { ch.setEmotion('happy'); ch.hop(4); fx.emit('heart', 6, ch.root.position, sc); for (let i = 0; i < 5; i++) setTimeout(() => ch && fx.emit('star', 2, ch.root.position, sc), i * 350); } },
     emote(e) { if (ch) { ch.setEmotion(e); ch.hop(4); } },
     sing(on) { singing = !!on; if (ch) ch.setEmotion(singing ? 'happy' : 'neutral'); },
     lyrics(a, b, prog, title) { if (camera.userData.lyrics) camera.userData.lyrics(a, b, prog, title); },
