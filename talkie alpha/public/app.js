@@ -2687,9 +2687,20 @@
   /* — Musique d'ambiance (douce, façon conte) : générée en direct, jamais la même — */
   var amb = null;
   function stopAmbient() { if (amb) { clearInterval(amb.iv); try { amb.g.gain.setTargetAtTime(0.0001, actx.currentTime, 0.4); setTimeout(function () { try { amb.g.disconnect(); } catch (e) { /* ignore */ } amb = null; }, 900); } catch (e) { amb = null; } } }
+  /* iPhone : le mode silencieux coupe WebAudio ; en passant par un élément <audio> (flux média), la musique reste audible */
+  var ambMsd = null, ambEl = null, isIOS = /iP(hone|ad|od)/.test(navigator.userAgent) || (navigator.platform === 'MacIntel' && navigator.maxTouchPoints > 1);
+  function ambOut() {
+    if (!isIOS || !actx.createMediaStreamDestination) return actx.destination;
+    try {
+      if (!ambMsd) { ambMsd = actx.createMediaStreamDestination(); ambEl = new Audio(); ambEl.setAttribute('playsinline', ''); ambEl.srcObject = ambMsd.stream; }
+      var pr = ambEl.play(); if (pr && pr.catch) pr.catch(function () { /* au prochain toucher */ });
+      return ambMsd;
+    } catch (e) { return actx.destination; }
+  }
   function startAmbient(kind) {
     stopAmbient(); if (!audioReady()) return;
-    var g = actx.createGain(); g.gain.value = 0.0001; g.connect(actx.destination); g.gain.setTargetAtTime(0.5, actx.currentTime, 1.2);
+    try { if (navigator.audioSession) navigator.audioSession.type = 'playback'; } catch (e) { /* ignore */ }
+    var g = actx.createGain(); g.gain.value = 0.0001; g.connect(ambOut()); g.gain.setTargetAtTime(0.5, actx.currentTime, 1.2);
     var delay = actx.createDelay(1); delay.delayTime.value = 0.32; var fb = actx.createGain(); fb.gain.value = 0.32; var wet = actx.createGain(); wet.gain.value = 0.35;
     delay.connect(fb); fb.connect(delay); delay.connect(wet); wet.connect(g);
     var scale = kind === 'garden' ? [0, 2, 4, 7, 9] : [0, 2, 4, 5, 7, 9], root = kind === 'garden' ? 261.63 : 293.66, beat = kind === 'garden' ? 0.62 : 0.5;
@@ -2717,7 +2728,8 @@
       });
       bar++;
     }
-    amb = { g: g, iv: setInterval(schedule, beat * 3 * 1000) }; schedule();
+    amb = { g: g, iv: setInterval(function () { if (actx.state === 'suspended') { try { actx.resume(); } catch (e) { /* ignore */ } return; } if (ambEl && ambEl.paused) { try { ambEl.play(); } catch (e) { /* ignore */ } } schedule(); }, beat * 3 * 1000) };
+    if (actx.state === 'running') schedule(); else try { actx.resume().then(schedule); } catch (e) { schedule(); }
   }
   function renderLife2() {
     var box = $('rm-panel'), scroll = box.scrollTop; box.textContent = ''; liveFns = []; $('rm-pet').textContent = '🌸 ' + game.petals;
@@ -3890,7 +3902,7 @@
     try { if (!actx) actx = new AC(); if (actx.state === 'suspended') actx.resume(); } catch (e) { toast('Le son est bloqué : touche l’écran puis réessaie 🔊'); return; }
     stopSong(); stopSpeaking();
     var beat = 60 / song.bpm, t0 = actx.currentTime + 0.4, t = t0, marks = [];
-    var master = actx.createGain(); master.gain.value = 0.5; master.connect(actx.destination);
+    var master = actx.createGain(); master.gain.value = 0.5; master.connect(ambOut());
     song.lines.forEach(function (ln) {
       var start = t;
       ln[1].forEach(function (nd) {
@@ -4129,7 +4141,7 @@
   }
   function initAuth(cfg) {
     if (!cfg || !cfg.url || !cfg.key) return;
-    var sc = document.createElement('script'); sc.src = '/supa.js?v=31';
+    var sc = document.createElement('script'); sc.src = '/supa.js?v=32';
     sc.onload = function () {
       try { sb = window.MikaSupa.create(cfg.url, cfg.key); } catch (e) { sb = null; return; }
       renderAcct();

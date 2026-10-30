@@ -174,3 +174,5 @@ Boubou écrit maintenant deux versions de chaque réplique : `say` (affichée) e
 - Animations 3D : bain (Mika entre dans la baignoire et se lave), jardin (planter, arroser, récolter), cuisine (va chercher, cuisine, pose le plat sur la table puis mange), livraison (commande sur le téléphone dans le salon, puis la porte s'ouvre sur le livreur et le colis).
 - La baignoire et le frigo de la chambre ouvrent les nouvelles pièces.
 - Vie de Mika : plusieurs événements par jour, envies qui changent toutes les 4 h, ennui si personne ne joue, humeurs en plus (ennuyée, curieuse, joueuse, câline), messages spontanés par thèmes (journée, envie, curiosité, rêve, confidence, jeu, souvenir) avec bouton « go » vers l'activité.
+
+## v32b — iPhone : la musique d'ambiance et le karaoké passent par un flux média (audible même en mode silencieux) et attendent le déblocage du son.
